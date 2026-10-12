@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addShape, dragGizmoAlongX, dragGizmoAxis, openApp, openMenuItem, project, readCode, sceneState, settled } from './helpers';
+import { addShape, dragGizmoAlongX, dragGizmoAxis, hoveredAxis, openApp, openMenuItem, project, readCode, sceneState, settled } from './helpers';
 import { writeStl } from '../src/kernel/export/stl';
 
 test.beforeEach(async ({ page }) => {
@@ -51,6 +51,108 @@ test('un oggetto bloccato non mostra il gizmo e non si sposta con le frecce', as
   await page.keyboard.press('l');
   await page.keyboard.press('ArrowRight');
   expect((await sceneState(page)).nodes[id].position[0]).toBe(1);
+});
+
+/** Un cubo grande (40 mm) con dentro uno piccolo (10 mm), entrambi centrati in (0, 0, 20). Restituisce gli id. */
+async function enclosedCubes(page: import('@playwright/test').Page): Promise<{ big: string; small: string }> {
+  await addShape(page, 'Cubo');
+  await addShape(page, 'Cubo');
+  const [big, small] = (await sceneState(page)).rootIds as string[];
+  await page.evaluate(([b, s]) => {
+    const st = window.__construct!.store.getState();
+    st.updateNode(b, { size: [40, 40, 40], position: [0, 0, 20] } as never);
+    st.updateNode(s, { size: [10, 10, 10], position: [0, 0, 20] } as never);
+  }, [big, small]);
+  await settled(page);
+  return { big, small };
+}
+
+test('un oggetto racchiuso in un altro si sposta col gizmo senza selezionare quello che gli sta davanti', async ({ page }) => {
+  const { big, small } = await enclosedCubes(page);
+  await page.evaluate((id) => window.__construct!.store.getState().select([id]), small);
+  await page.keyboard.press('w');
+  await page.waitForTimeout(100);
+  await dragGizmoAxis(page, [0, 0, 20], 'X');
+
+  // Il piccolo si è spostato e la selezione è rimasta sul piccolo
+  await expect.poll(async () => (await sceneState(page)).nodes[small].position[0]).not.toBe(0);
+  expect((await sceneState(page)).nodes[big].position[0]).toBe(0);
+  expect(await page.evaluate(() => window.__construct!.store.getState().selection)).toEqual([small]);
+});
+
+const selectionOf = (page: import('@playwright/test').Page) => page.evaluate(() => window.__construct!.store.getState().selection);
+
+test('un oggetto bloccato viene attraversato dal clic se dietro ce n\'è uno libero, ma isolato si seleziona', async ({ page }) => {
+  const { big, small } = await enclosedCubes(page);
+  await page.evaluate((id) => window.__construct!.store.getState().updateNode(id, { locked: true }), big);
+  await page.evaluate(() => window.__construct!.store.getState().select([]));
+  const centre = await project(page, [0, 0, 20]);
+  await page.mouse.click(centre.x, centre.y);
+  expect(await selectionOf(page)).toEqual([small]);
+
+  // Bloccando anche il piccolo restano due bloccati: si sceglie il più vicino
+  await page.evaluate((id) => window.__construct!.store.getState().updateNode(id, { locked: true }), small);
+  await page.evaluate(() => window.__construct!.store.getState().select([]));
+  await page.waitForTimeout(400);
+  await page.mouse.click(centre.x, centre.y);
+  expect(await selectionOf(page)).toEqual([big]);
+});
+
+test('il clic ripetuto nello stesso punto scorre gli oggetti sovrapposti', async ({ page }) => {
+  const { big, small } = await enclosedCubes(page);
+  await page.evaluate(() => window.__construct!.store.getState().select([]));
+  const centre = await project(page, [0, 0, 20]);
+  const expected = [big, small, big];
+  for (const id of expected) {
+    // Almeno 350 ms tra i clic: prima sarebbe un doppio clic
+    await page.waitForTimeout(450);
+    await page.mouse.click(centre.x, centre.y);
+    expect(await selectionOf(page)).toEqual([id]);
+  }
+});
+
+test('il doppio clic su oggetti sovrapposti resta sull\'oggetto e passa a Sposta', async ({ page }) => {
+  const { big } = await enclosedCubes(page);
+  await page.evaluate(() => window.__construct!.store.getState().select([]));
+  const centre = await project(page, [0, 0, 20]);
+  await page.mouse.dblclick(centre.x, centre.y);
+  expect(await selectionOf(page)).toEqual([big]);
+  expect(await page.evaluate(() => window.__construct!.store.getState().gizmoMode)).toBe('translate');
+});
+
+test('trascinare la vista partendo da sopra un oggetto non cambia la selezione', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  await page.evaluate(() => window.__construct!.store.getState().select([]));
+  const centre = await project(page, [0, 0, 10]);
+  await page.mouse.move(centre.x, centre.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(centre.x + i * 8, centre.y);
+  await page.mouse.up();
+  expect(await selectionOf(page)).toEqual([]);
+  // Un clic fermo, invece, lo seleziona
+  await page.mouse.click(centre.x, centre.y);
+  expect((await selectionOf(page)).length).toBe(1);
+});
+
+test('un clic fermo su una maniglia del gizmo non cambia la selezione, nemmeno con un oggetto davanti', async ({ page }) => {
+  const { small } = await enclosedCubes(page);
+  await page.evaluate((id) => window.__construct!.store.getState().select([id]), small);
+  await page.keyboard.press('w');
+  await page.waitForTimeout(100);
+  // Porta il puntatore sulla maniglia X (come nell'helper di trascinamento)
+  const origin = await project(page, [0, 0, 20]);
+  const ahead = await project(page, [1, 0, 20]);
+  const len = Math.hypot(ahead.x - origin.x, ahead.y - origin.y);
+  let found: { x: number; y: number } | undefined;
+  for (let d = 10; d <= 140 && !found; d += 6) {
+    const pt = { x: origin.x + ((ahead.x - origin.x) / len) * d, y: origin.y + ((ahead.y - origin.y) / len) * d };
+    await page.mouse.move(pt.x, pt.y);
+    if ((await hoveredAxis(page)) === 'X') found = pt;
+  }
+  expect(found, 'la maniglia X deve essere raggiungibile').toBeDefined();
+  await page.mouse.down();
+  await page.mouse.up();
+  expect(await selectionOf(page)).toEqual([small]);
 });
 
 test('con due oggetti selezionati la barra propone la Differenza', async ({ page }) => {

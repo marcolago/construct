@@ -5,8 +5,10 @@ import { useThree } from '@react-three/fiber';
 import type { ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { NodeMesh } from '../kernel/evaluate';
-import { useSceneStore } from '../scene/store';
+import { isLocked, useSceneStore } from '../scene/store';
 import { useViewportPalette } from './palette';
+import { isRepeatClick, pickTarget, rememberClick, setPressedOnGizmo, wasPressedOnGizmo } from './pick';
+import type { PickHit } from './pick';
 import { round } from '../scene/math';
 import { halfHeight } from '../scene/defaults';
 import { applyScale } from '../scene/resize';
@@ -47,17 +49,39 @@ function nodeMatrix(position: Vec3, rotation: Vec3): THREE.Matrix4 {
   return new THREE.Matrix4().compose(new THREE.Vector3(...position), new THREE.Quaternion().setFromEuler(euler), new THREE.Vector3(1, 1, 1));
 }
 
+/**
+ * Clic su un oggetto: lo seleziona (con Maiusc si aggiunge alla selezione, con Alt si sceglie la singola parte di un
+ * gruppo). Avviene al rilascio del tasto e solo se il puntatore non si è mosso: un trascinamento è la rotazione della
+ * vista, e non deve cambiare la selezione. Se il tasto è stato premuto su una maniglia del gizmo il clic non seleziona
+ * l'oggetto che le sta davanti. Tra più oggetti sovrapposti vale la scelta di `pickTarget` (bloccati attraversati,
+ * clic ripetuto nello stesso punto che scorre i candidati).
+ */
+function selectFromClick(e: ThreeEvent<MouseEvent>): void {
+  if (e.button !== 0 || e.delta > 3) return;
+  e.stopPropagation();
+  if (wasPressedOnGizmo()) return;
+  const { scene, selection, select } = useSceneStore.getState();
+  const { clientX, clientY, timeStamp } = e.nativeEvent;
+  // Le mesh della scena portano la propria identità in userData: gli altri oggetti colpiti (overlay) si ignorano
+  const hits = e.intersections.flatMap((i) => {
+    const pick = i.object.userData.pick as PickHit | undefined;
+    return pick ? [pick] : [];
+  });
+  const target = pickTarget({ hits, alt: e.altKey, selection, repeat: isRepeatClick(clientX, clientY, timeStamp), isLocked: (id) => isLocked(scene, id) });
+  rememberClick(clientX, clientY, timeStamp);
+  if (target) select([target], e.shiftKey);
+}
+
 interface PartProps {
   mesh: NodeMesh;
   selected: boolean;
   locked: boolean;
-  onPointerDown: (e: ThreeEvent<PointerEvent>, mesh: NodeMesh) => void;
   onDoubleClick: (e: ThreeEvent<MouseEvent>, mesh: NodeMesh) => void;
   onContextMenu: (e: ThreeEvent<MouseEvent>, mesh: NodeMesh) => void;
 }
 
 /** Una mesh dell'oggetto, nel suo colore, con il contorno di selezione. */
-function Part({ mesh, selected, locked, onPointerDown, onDoubleClick, onContextMenu }: PartProps) {
+function Part({ mesh, selected, locked, onDoubleClick, onContextMenu }: PartProps) {
   const palette = useViewportPalette();
   // Geometria da buffer; "flatShading" sul materiale evita lo smussamento degli spigoli
   const geometry = useMemo(() => {
@@ -109,7 +133,8 @@ function Part({ mesh, selected, locked, onPointerDown, onDoubleClick, onContextM
   return (
     <mesh
       geometry={geometry}
-      onPointerDown={tool ? undefined : (e) => onPointerDown(e, mesh)}
+      // Identità della mesh per la scelta dell'oggetto sotto il clic (vedi selectFromClick)
+      userData={{ pick: { id: mesh.id, path: mesh.path } satisfies PickHit }}
       onDoubleClick={tool ? undefined : (e) => onDoubleClick(e, mesh)}
       onContextMenu={tool ? undefined : (e) => onContextMenu(e, mesh)}
       onPointerMove={
@@ -180,7 +205,9 @@ function Part({ mesh, selected, locked, onPointerDown, onDoubleClick, onContextM
               if (tool === 'corner') pickCorner(mesh, cornerUnder(e), e.shiftKey);
               else pickFace(mesh, faceAt(e));
             }
-          : undefined
+          : tool
+          ? undefined
+          : selectFromClick
       }
     >
       <meshStandardMaterial
@@ -232,6 +259,27 @@ export function SceneObject({ rootId, meshes, selection, locked, showGizmo }: Pr
     }
   }, [controls]);
 
+  // Al premere del tasto si ricorda se il puntatore è su una maniglia del gizmo: il clic che segue non deve selezionare
+  // l'oggetto che sta davanti al gizmo (vedi selectFromClick). L'hover si ricalcola qui perché con il tocco non c'è
+  // movimento prima della pressione. Il listener è in cattura per girare prima di quelli di R3F
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    if (!controls) return;
+    const el = gl.domElement;
+    // pointerHover e axis sono pubblici a runtime ma privati nei tipi di three-stdlib
+    const gizmo = controls as unknown as { pointerHover: (p: { x: number; y: number; button: number }) => void; axis: string | null };
+    const onDown = (e: PointerEvent) => {
+      const rect = el.getBoundingClientRect();
+      gizmo.pointerHover({ x: ((e.clientX - rect.left) / rect.width) * 2 - 1, y: -((e.clientY - rect.top) / rect.height) * 2 + 1, button: e.button });
+      setPressedOnGizmo(gizmo.axis !== null);
+    };
+    el.addEventListener('pointerdown', onDown, true);
+    return () => {
+      el.removeEventListener('pointerdown', onDown, true);
+      setPressedOnGizmo(false);
+    };
+  }, [controls, gl]);
+
   // Quando arrivano le mesh ricalcolate, l'eventuale spostamento di anteprima non serve più
   useEffect(() => {
     const w = wrapper.current;
@@ -254,16 +302,8 @@ export function SceneObject({ rootId, meshes, selection, locked, showGizmo }: Pr
 
   if (!node) return null;
 
-  const onPointerDown = (e: ThreeEvent<PointerEvent>, mesh: NodeMesh) => {
-    // Solo il tasto sinistro seleziona; con Shift si aggiunge alla selezione.
-    // Un clic seleziona l'oggetto intero (il gruppo), Alt+clic la singola parte
-    if (e.button !== 0) return;
-    e.stopPropagation();
-    select([e.altKey ? mesh.id : mesh.path[0]], e.shiftKey);
-  };
-
   /**
-   * Doppio clic: l'oggetto è già selezionato dal primo clic del doppio clic (due pointerdown),
+   * Doppio clic: l'oggetto è già selezionato dal primo clic del doppio clic (due click),
    * quindi basta passare alla modalità Sposta (W) per mostrare il gizmo di spostamento.
    */
   const onDoubleClick = (e: ThreeEvent<MouseEvent>) => {
@@ -371,7 +411,7 @@ export function SceneObject({ rootId, meshes, selection, locked, showGizmo }: Pr
     <>
       <group ref={wrapper} matrixAutoUpdate={false}>
         {meshes.map((mesh) => (
-          <Part key={mesh.id} mesh={mesh} locked={locked} selected={selection.some((id) => mesh.path.includes(id))} onPointerDown={onPointerDown} onDoubleClick={onDoubleClick} onContextMenu={onContextMenu} />
+          <Part key={mesh.id} mesh={mesh} locked={locked} selected={selection.some((id) => mesh.path.includes(id))} onDoubleClick={onDoubleClick} onContextMenu={onContextMenu} />
         ))}
       </group>
 

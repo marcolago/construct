@@ -7,6 +7,7 @@ import { isLocked, useSceneStore } from '../scene/store';
 import { useResultStore } from '../kernel/useKernel';
 import { Bed } from './Bed';
 import { BusyOverlay } from './BusyOverlay';
+import { wasPressedOnGizmo } from './pick';
 import { useViewportPalette } from './palette';
 import { SceneObject } from './SceneObject';
 import { SelectionActions } from '../ui/SelectionActions/SelectionActions';
@@ -134,6 +135,8 @@ export function Viewport() {
         // Click nel vuoto: deseleziona
         // (con Raccordo o Smusso attivi un clic nel vuoto non deve toccare la selezione)
         onPointerMissed={(e) => {
+          // Un clic su una maniglia del gizmo non è un clic nel vuoto, anche se dietro non c'è nessun oggetto
+          if (wasPressedOnGizmo()) return;
           // Tasto destro nel vuoto (con uno strumento aperto l'oggetto è in anteprima: niente menu)
           if (e.button === 2 && !toolActive) openAddMenu(e);
           else if (e.button === 0 && !toolActive) select([]);

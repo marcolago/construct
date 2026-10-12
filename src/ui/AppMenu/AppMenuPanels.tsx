@@ -45,6 +45,7 @@ const SHORTCUTS: { title: string; rows: [string, string][] }[] = [
       ['Maiusc+J', 'Minkowski: il primo oggetto selezionato si allarga della forma degli altri (somma di Minkowski)'],
       ['F2', 'Rinomina l\'oggetto selezionato'],
       ['Alt+clic', 'Seleziona il singolo oggetto di un gruppo'],
+      ['Clic ripetuto', 'Con oggetti sovrapposti, un secondo clic nello stesso punto (dopo mezzo secondo) passa all\'oggetto che sta dietro; un oggetto bloccato viene attraversato dal clic se dietro ce n\'è uno libero'],
       ['Clic destro su un oggetto', 'Menu con i soli comandi applicabili alla selezione (se l\'oggetto non è selezionato lo seleziona)'],
       ['Clic destro nel vuoto', 'Menu con sottomenu per aggiungere una forma 3D, 2D, un simbolo o un\'emoji nel punto cliccato, più Importa, Esporta, Dimensioni del piano e Benvenuto'],
       ['Scheda Piatti', 'Un progetto può avere più piatti, ciascuno con i suoi oggetti: si vede un piatto alla volta; 3MF esporta tutti i piatti, STL chiede quale'],

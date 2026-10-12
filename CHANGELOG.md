@@ -18,6 +18,19 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.43.0] - 2026-10-12
+
+### Corretto
+- **"Aggiorna ora" non faceva nulla.** Il ricaricamento automatico del plugin PWA scatta solo se la pagina era già controllata da un service worker all'apertura; alla prima visita o dopo una ricarica forzata (Ctrl+F5) il service worker nuovo si attivava ma la pagina restava com'era, e serviva F5. Ora il pulsante ascolta direttamente `controllerchange` e ricarica, con un ricarico di riserva dopo 4 secondi, e mostra "Aggiornamento in corso…" mentre lavora. Riprodotto e verificato con un service worker vero in Chrome (prima visita e pagina già controllata).
+- **Impossibile spostare un oggetto racchiuso in un altro.** Il gizmo di un oggetto dentro un altro sta dietro la sua superficie: il clic per afferrare la maniglia selezionava invece l'oggetto davanti, il gizmo spariva e il trascinamento passava alla rotazione della vista. Ora, se il tasto viene premuto su una maniglia del gizmo, il clic non seleziona nulla (e un clic fermo sulla maniglia non deseleziona più).
+
+### Modificato
+- **La selezione con il clic avviene al rilascio del tasto**, e solo se il puntatore non si è mosso. Trascinare la vista partendo da sopra un oggetto non lo seleziona più. Doppio clic, Maiusc+clic e Alt+clic funzionano come prima.
+- **Un oggetto bloccato è trasparente ai clic** nella vista 3D: se dietro c'è un oggetto libero, il clic seleziona quello. Un bloccato da solo (o con dietro solo altri bloccati) si seleziona ancora, per poterlo sbloccare; dall'elenco Oggetti si sceglie sempre.
+
+### Aggiunto
+- **Clic ripetuto nello stesso punto.** Con oggetti sovrapposti, un secondo clic entro 4 pixel e dopo 350 ms (prima sarebbe un doppio clic, entro 3 secondi) passa all'oggetto successivo lungo il raggio, in modo circolare, con i bloccati in fondo. Un oggetto completamente racchiuso in uno pieno non è raggiungibile col raggio: per quello restano l'elenco Oggetti e il lucchetto.
+
 ## [0.42.0] - 2026-10-12
 
 ### Modificato

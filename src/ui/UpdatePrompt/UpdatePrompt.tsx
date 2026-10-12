@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { RefreshCw, Save, X } from 'lucide-react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { saveProject } from '../fileActions';
@@ -6,6 +7,8 @@ import './UpdatePrompt.scss';
 
 // Intervallo di controllo di una nuova versione mentre l'app resta aperta
 const CHECK_EVERY_MS = 60 * 60 * 1000;
+// Dopo questo tempo senza ricarico automatico la pagina si ricarica da sola
+const RELOAD_FALLBACK_MS = 4000;
 
 /**
  * Nuova versione: modale bloccante con il solo "Aggiorna" (l'aggiornamento è obbligatorio).
@@ -28,6 +31,21 @@ export function UpdatePrompt() {
     },
   });
 
+  const [updating, setUpdating] = useState(false);
+
+  /**
+   * Attiva il service worker nuovo e ricarica la pagina. Il ricarico automatico del plugin scatta solo se la pagina era
+   * già controllata da un service worker all'apertura: alla prima visita o dopo una ricarica forzata (Ctrl+F5) non
+   * scatta mai e il pulsante sembrava morto. Per questo si ascolta direttamente `controllerchange`, con un ricarico di
+   * riserva se l'evento non arriva.
+   */
+  const update = () => {
+    setUpdating(true);
+    navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload(), { once: true });
+    setTimeout(() => window.location.reload(), RELOAD_FALLBACK_MS);
+    void updateServiceWorker(true);
+  };
+
   return (
     <>
       <Modal open={needRefresh} title="Aggiornamento disponibile" dismissable={false} onClose={() => undefined}>
@@ -36,13 +54,13 @@ export function UpdatePrompt() {
           Se hai lavoro non salvato, salvalo prima: la pagina si ricaricherà.
         </p>
         <div className="modal__actions">
-          <button type="button" className="modal__button" onClick={saveProject}>
+          <button type="button" className="modal__button" onClick={saveProject} disabled={updating}>
             <Save size={14} />
             Salva progetto
           </button>
-          <button type="button" className="modal__button modal__button--primary" onClick={() => void updateServiceWorker(true)}>
+          <button type="button" className="modal__button modal__button--primary" onClick={update} disabled={updating}>
             <RefreshCw size={14} />
-            Aggiorna ora
+            {updating ? 'Aggiornamento in corso…' : 'Aggiorna ora'}
           </button>
         </div>
       </Modal>
