@@ -1,4 +1,4 @@
-import { SquareArrowDown, AlignHorizontalJustifyStart, ArrowDownToLine, FlipHorizontal2, Ruler, Copy, Lock, Unlock, Group, MousePointer2, Move3d, Rotate3d, RotateCw, Scissors, SquaresUnite, Scaling, ArrowUpFromLine, Trash2, Ungroup, CircleDashed } from 'lucide-react';
+import { SquareArrowDown, AlignHorizontalJustifyStart, ArrowDownToLine, Eye, EyeOff, FlipHorizontal2, Ruler, Copy, Lock, Unlock, Group, MousePointer2, Move3d, Rotate3d, RotateCw, Scissors, SquaresUnite, Scaling, ArrowUpFromLine, Trash2, Ungroup, CircleDashed } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { combineToBed, dropSelectionToBed, layDownSelection, lowestZByRoot } from '../kernel/placement';
 import { isLocked, useSceneStore } from '../scene/store';
@@ -31,7 +31,7 @@ export type CommandId =
   | 'group' | 'ungroup' | 'union' | 'hull' | 'minkowski' | 'hole'
   | 'fillet' | 'chamfer' | 'corner' | 'shell' | 'pattern' | 'split'
   | 'align' | 'mirror' | 'layflat' | 'lay' | 'drop' | 'array'
-  | 'duplicate' | 'lock' | 'delete' | 'measure';
+  | 'duplicate' | 'lock' | 'hide' | 'delete' | 'measure';
 
 /** Stato da cui dipende la disponibilità dei comandi: selezione, scena e strumenti aperti. */
 export interface CommandContext {
@@ -47,6 +47,8 @@ export interface CommandContext {
   /** Il nodo selezionato, se la selezione è uno solo. */
   single: SceneNode | undefined;
   allLocked: boolean;
+  /** Qualche oggetto del piatto attivo è nascosto: Nascondi, senza selezione, li mostra tutti. */
+  someHidden: boolean;
   allHoles: boolean;
   edgeTool: 'fillet' | 'chamfer' | 'corner' | null;
   shellActive: boolean;
@@ -83,6 +85,7 @@ export function makeContext(i: ContextInput): CommandContext {
     unlockedRoots: rootSelection.filter((id) => !isLocked(scene, id)),
     single: selection.length === 1 ? scene.nodes[selection[0]] : undefined,
     allLocked: hasSelection && selection.every((id) => scene.nodes[id]?.locked),
+    someHidden: scene.rootIds.some((id) => scene.nodes[id]?.hidden),
     allHoles: hasSelection && selection.every((id) => scene.nodes[id]?.mode === 'hole'),
   };
 }
@@ -157,7 +160,7 @@ const someOffBed = (c: CommandContext): boolean => {
 };
 
 /** Comandi che restano per una selezione tutta bloccata: tutto il resto la modificherebbe. */
-const ALLOWED_WHEN_LOCKED: CommandId[] = ['lock', 'duplicate', 'measure'];
+const ALLOWED_WHEN_LOCKED: CommandId[] = ['lock', 'duplicate', 'measure', 'hide'];
 
 const gizmo = (id: GizmoMode & CommandId, help: HelpKey, shortcut: string, Icon: typeof MousePointer2): Command => ({
   id,
@@ -232,17 +235,26 @@ export const COMMANDS: Record<CommandId, Command> = {
     id: 'lock', help: (c) => (c.allLocked ? 'unlock' : 'lock'), shortcut: 'L', icon: (c, size) => (c.allLocked ? <Lock size={size} /> : <Unlock size={size} />),
     enabled: (c) => c.hasSelection, active: (c) => c.allLocked, run: () => sceneState().toggleLockSelected(), menu: true,
   },
+  hide: {
+    // Con una selezione alla radice nasconde; senza, mostra tutti gli oggetti nascosti
+    id: 'hide', help: (c) => (c.rootSelection.length > 0 ? 'hide' : 'showAll'), shortcut: '⇧H', icon: (c, size) => (c.rootSelection.length > 0 ? <EyeOff size={size} /> : <Eye size={size} />),
+    enabled: (c) => c.rootSelection.length > 0 || c.someHidden, run: (c) => (c.rootSelection.length > 0 ? sceneState().hideSelected() : sceneState().showAllHidden()), menu: true,
+    inMenu: (c) => c.rootSelection.length > 0,
+  },
   delete: { id: 'delete', help: 'delete', shortcut: 'Del', icon: (_c, size) => <Trash2 size={size} />, enabled: (c) => c.hasSelection, run: () => sceneState().removeSelected(), menu: true },
   measure: { id: 'measure', help: 'measure', shortcut: 'I', icon: (_c, size) => <Ruler size={size} />, enabled: (c) => c.hasObjects, active: (c) => c.measureActive, run: () => toggleMeasure(), menu: true },
 };
 
+/** Tinta di una sezione della barra strumenti (vedi i token `tool-*` e Toolbar.scss). */
+export type SectionTone = 'transform' | 'combine' | 'modify' | 'arrange' | 'object';
+
 /** Gruppi della barra strumenti e del menu contestuale, nell'ordine in cui compaiono. */
-export const COMMAND_GROUPS: { label: string; ids: CommandId[] }[] = [
-  { label: 'Trasforma', ids: ['select', 'translate', 'rotate', 'resize', 'extrude'] },
-  { label: 'Combina', ids: ['group', 'ungroup', 'union', 'hull', 'minkowski', 'hole'] },
-  { label: 'Modifica', ids: ['fillet', 'chamfer', 'corner', 'shell', 'pattern', 'split'] },
-  { label: 'Disponi', ids: ['align', 'mirror', 'layflat', 'lay', 'drop', 'array'] },
-  { label: 'Oggetto', ids: ['duplicate', 'lock', 'delete', 'measure'] },
+export const COMMAND_GROUPS: { label: string; ids: CommandId[]; tone: SectionTone }[] = [
+  { label: 'Trasforma', ids: ['select', 'translate', 'rotate', 'resize', 'extrude'], tone: 'transform' },
+  { label: 'Combina', ids: ['group', 'ungroup', 'union', 'hull', 'minkowski', 'hole'], tone: 'combine' },
+  { label: 'Modifica', ids: ['fillet', 'chamfer', 'corner', 'shell', 'pattern', 'split'], tone: 'modify' },
+  { label: 'Disponi', ids: ['align', 'mirror', 'layflat', 'lay', 'drop', 'array'], tone: 'arrange' },
+  { label: 'Oggetto', ids: ['duplicate', 'lock', 'hide', 'delete', 'measure'], tone: 'object' },
 ];
 
 export const helpOf = (cmd: Command, c: CommandContext): HelpKey => (typeof cmd.help === 'function' ? cmd.help(c) : cmd.help);

@@ -25,7 +25,7 @@ function fullScene(): Scene {
     id: 'c', type: 'corner', name: 'Raccordo angolare', position: [10, 10, 20], rotation: [0, 0, 0], mode: 'solid', color: '#abcdef',
     treatment: 'fillet', directions: [[-1, 0, 0], [0, -1, 0], [0, 0, -1]], lengths: [20, 20, 20], distance: 3, segments: 32,
   };
-  const twisted = { ...shape2dDefaults('square'), id: 't', name: 'Quadrato torto', position: [5, 5, 0] as Vec3, twist: 45, scaleTop: 0.5 } as Shape2DNode;
+  const twisted = { ...shape2dDefaults('square'), id: 't', name: 'Quadrato torto', position: [5, 5, 0] as Vec3, twist: 45, scaleTop: 0.5, hidden: true } as Shape2DNode;
   return sceneOf(
     [
       // Formato attuale: la posizione sta sul gruppo del trattamento (s), non sul pezzo
@@ -48,6 +48,8 @@ describe('file di progetto JSON', () => {
     const scene = fullScene();
     const { scene: loaded } = sceneFromJson(sceneToJson(scene));
     expect(loaded).toEqual(scene);
+    // Lo stato nascosto si salva con il progetto
+    expect(loaded.nodes.t.hidden).toBe(true);
     // L'ordine degli oggetti alla radice e dei figli di ogni gruppo si conserva
     expect(loaded.rootIds).toEqual(['t', 'u']);
     expect((loaded.nodes.u as GroupNode).children).toEqual(['s', 'g']);

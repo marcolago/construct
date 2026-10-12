@@ -39,6 +39,33 @@
     color: color('text-muted');
   }
 
+  /*
+   * Tinta per sezione: --tone colora icone ed etichetta, il fondino al passaggio del mouse e il pulsante attivo.
+   * Le sezioni senza tinta (File, Vista) restano come prima. I contrasti sono verificati da styles/contrast.test.ts.
+   */
+  @each $tone in (transform, combine, modify, arrange, object) {
+    &__section--#{$tone} {
+      --tone: #{color('tool-#{$tone}')};
+
+      .toolbar__section-label {
+        color: var(--tone);
+      }
+
+      .toolbar__button:not(:disabled) {
+        color: var(--tone);
+
+        &:hover {
+          background: color-mix(in srgb, var(--tone) 12%, transparent);
+        }
+      }
+
+      .toolbar__button--active {
+        border-color: var(--tone);
+        background: color-mix(in srgb, var(--tone) 16%, transparent);
+      }
+    }
+  }
+
   &__divider {
     width: 1px;
     height: 36px;

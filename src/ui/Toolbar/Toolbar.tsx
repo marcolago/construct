@@ -14,7 +14,7 @@ import { ViewsMenu } from './ViewsMenu';
 import { AppMenu } from '../AppMenu/AppMenu';
 import { newProject } from '../fileActions';
 import { COMMANDS, COMMAND_GROUPS, helpOf, useCommandContext } from '../commands';
-import type { Command, CommandContext } from '../commands';
+import type { Command, CommandContext, SectionTone } from '../commands';
 import './Toolbar.scss';
 
 interface ButtonProps {
@@ -78,9 +78,9 @@ function CommandButton({ cmd, ctx }: { cmd: Command; ctx: CommandContext }) {
 }
 
 /** Sezione della barra: i pulsanti con il nome del gruppo sotto, per orientarsi a colpo d'occhio. */
-function Section({ label, children }: { label: string; children: ReactNode }) {
+function Section({ label, tone, children }: { label: string; tone?: SectionTone; children: ReactNode }) {
   return (
-    <div className="toolbar__section" role="group" aria-label={label}>
+    <div className={`toolbar__section${tone ? ` toolbar__section--${tone}` : ''}`} role="group" aria-label={label}>
       <span className="toolbar__section-label" aria-hidden="true">{label}</span>
       <div className="toolbar__group">{children}</div>
     </div>
@@ -103,10 +103,10 @@ export function Toolbar() {
         <ToolbarButton help="redo" shortcut="^Y" disabled={!canRedo} onClick={() => useSceneStore.temporal.getState().redo()}><Redo2 size={18} /></ToolbarButton>
       </Section>
 
-      {COMMAND_GROUPS.map(({ label, ids }) => (
+      {COMMAND_GROUPS.map(({ label, ids, tone }) => (
         <Fragment key={label}>
           <Divider />
-          <Section label={label}>
+          <Section label={label} tone={tone}>
             {ids.map((id) => (
               <CommandButton key={id} cmd={COMMANDS[id]} ctx={ctx} />
             ))}

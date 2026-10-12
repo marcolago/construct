@@ -77,6 +77,20 @@ describe.each(['light', 'dark'])('contrasto del tema %s', (name) => {
     expect(contrast(c(token), c('panel'))).toBeGreaterThanOrEqual(4.5);
   });
 
+  // Tinte delle sezioni della toolbar: icone ed etichette su pannello e rialzo, e sul fondino del pulsante attivo (16% della tinta sul pannello)
+  const tones = ['tool-transform', 'tool-combine', 'tool-modify', 'tool-arrange', 'tool-object'];
+
+  it.each(tones)('tinta %s su pannello e rialzo: almeno 4,5:1', (token) => {
+    expect(contrast(c(token), c('panel'))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(c(token), c('panel-raised'))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(tones)('tinta %s sul fondino del pulsante attivo: almeno 4,5:1', (token) => {
+    const [r, g, b] = c(token);
+    const soft = parse(`rgba(${r}, ${g}, ${b}, 0.16)`, c('panel'));
+    expect(contrast(c(token), soft)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it.each(['syn-comment', 'syn-keyword', 'syn-function', 'syn-number', 'syn-param'])('colore di sintassi %s su code-bg: almeno 4,5:1', (token) => {
     expect(contrast(c(token), c('code-bg'))).toBeGreaterThanOrEqual(4.5);
   });

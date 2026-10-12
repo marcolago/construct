@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { isLocked, useSceneStore } from './store';
+import { isHidden, isLocked, useSceneStore } from './store';
 import { composeTransform, eulerToMatrix, matrixToEuler } from './math';
 
 const st = () => useSceneStore.getState();
@@ -131,6 +131,56 @@ describe('store della scena', () => {
       st().select([a, b]);
       st().groupSelected(); // resta un solo oggetto sbloccato: nessun gruppo
       expect(st().scene.rootIds).toEqual([a, b]);
+    });
+  });
+
+  describe('oggetti nascosti', () => {
+    it('nascondere toglie dalla selezione e select ignora i nascosti', () => {
+      st().addPrimitive('box');
+      st().addPrimitive('cone');
+      const [a, b] = st().scene.rootIds;
+      st().select([a]);
+      st().hideSelected();
+      expect(st().scene.nodes[a].hidden).toBe(true);
+      expect(st().scene.nodes[b].hidden).toBeUndefined();
+      expect(st().selection).toEqual([]);
+      st().select([a, b]);
+      expect(st().selection).toEqual([b]);
+    });
+
+    it('un figlio di un gruppo nascosto risulta nascosto; un figlio da solo non si nasconde', () => {
+      st().addPrimitive('box');
+      st().addPrimitive('sphere');
+      st().select(st().scene.rootIds);
+      st().groupSelected();
+      const [gid] = st().scene.rootIds;
+      const child = (st().scene.nodes[gid] as { children: string[] }).children[0];
+      st().select([child]);
+      st().hideSelected();
+      expect(st().scene.nodes[child].hidden).toBeUndefined();
+      st().setHidden(gid, true);
+      expect(isHidden(st().scene, child)).toBe(true);
+      st().select([child]);
+      expect(st().selection).toEqual([]);
+    });
+
+    it('setHidden agisce anche su un oggetto bloccato, Mostra tutti li rimostra e ogni azione è un solo passo', () => {
+      st().addPrimitive('box');
+      st().addPrimitive('cone');
+      const [a, b] = st().scene.rootIds;
+      st().select([a]);
+      st().toggleLockSelected();
+      const steps = () => useSceneStore.temporal.getState().pastStates.length;
+      const before = steps();
+      st().setHidden(a, true);
+      st().setHidden(b, true);
+      expect(steps()).toBe(before + 2);
+      st().showAllHidden();
+      expect(steps()).toBe(before + 3);
+      expect(st().scene.nodes[a].hidden).toBeUndefined();
+      expect(st().scene.nodes[b].hidden).toBeUndefined();
+      undo();
+      expect(st().scene.nodes[a].hidden).toBe(true);
     });
   });
 

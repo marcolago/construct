@@ -22,6 +22,8 @@ interface BaseNode {
   color: string;
   /** Oggetto bloccato: non si sposta, ruota, modifica, elimina o raggruppa per errore. */
   locked?: boolean;
+  /** Oggetto nascosto: sparisce dalla vista e non si seleziona, ma resta nel calcolo e nelle esportazioni. */
+  hidden?: boolean;
   /**
    * Proporzioni bloccate: le misure indipendenti (larghezza e profondità, i tre lati del cubo, i due raggi) cambiano
    * insieme. Assente = bloccate per gli SVG e libere per le altre forme (vedi `isRatioLocked` in resize.ts).

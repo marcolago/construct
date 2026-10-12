@@ -88,7 +88,7 @@ export class Evaluator {
       const shell = node.op === 'shell' ? `,${JSON.stringify(node.shell ?? null)}` : node.op === 'array' ? `,${JSON.stringify(node.array ?? null)}` : node.op === 'pattern' ? `,${JSON.stringify(node.pattern ?? null)}` : '';
       return `G(${node.op},${node.position},${node.rotation}${node.mirror ? `,m${node.mirror.map(Number)}` : ''}${node.groupScale ? `,s${node.groupScale}` : ''}${shell})[${kids.join('|')}]`;
     }
-    const { id: _id, name: _name, color: _color, mode: _mode, locked: _locked, lockRatio: _lockRatio, ...geometry } = node;
+    const { id: _id, name: _name, color: _color, mode: _mode, locked: _locked, hidden: _hidden, lockRatio: _lockRatio, ...geometry } = node;
     // Il taglierino che chiude l'estremità su uno smusso dipende anche dai valori correnti di quello smusso
     const live = node.type === 'edge' && node.endVia ? `|${JSON.stringify(resolveEnds(scene, node))}` : '';
     // Il tipo resta nella chiave: primitive e forme 2D hanno campi diversi

@@ -15,7 +15,7 @@ export interface ToolbarHelp {
 
 export type HelpKey =
   | 'new' | 'undo' | 'redo' | 'select' | 'translate' | 'rotate' | 'resize' | 'extrude'
-  | 'group' | 'union' | 'hull' | 'minkowski' | 'ungroup' | 'hole' | 'lock' | 'unlock'
+  | 'group' | 'union' | 'hull' | 'minkowski' | 'ungroup' | 'hole' | 'lock' | 'unlock' | 'hide' | 'showAll'
   | 'fillet' | 'chamfer' | 'corner' | 'shell' | 'split' | 'align' | 'mirror' | 'measure' | 'array' | 'pattern'
   | 'layflat' | 'lay' | 'drop' | 'duplicate' | 'delete' | 'views' | 'ortho' | 'ghost' | 'bed' | 'theme' | 'code';
 
@@ -36,6 +36,8 @@ export const TOOLBAR_HELP: Record<HelpKey, ToolbarHelp> = {
   hole: { name: 'Solido o Foro', what: 'Trasforma l\'oggetto in un Foro: invece di aggiungere materiale lo toglie.', how: 'Seleziona l\'oggetto e premi il pulsante, poi uniscilo o mettilo in una Differenza con un solido: dove si sovrappongono il materiale sparisce.' },
   lock: { name: 'Blocca', what: 'Impedisce di spostare o modificare l\'oggetto per errore.', how: 'Seleziona l\'oggetto e premi il pulsante; un oggetto bloccato si riconosce nell\'elenco e si sblocca con lo stesso pulsante. Nella vista 3D il clic attraversa un oggetto bloccato se dietro ce n\'è uno libero, così si può lavorare su ciò che è coperto; se non c\'è nient\'altro, lo seleziona ancora.' },
   unlock: { name: 'Sblocca', what: 'Permette di nuovo di spostare e modificare l\'oggetto.', how: 'Seleziona l\'oggetto bloccato e premi il pulsante.' },
+  hide: { name: 'Nascondi', what: 'Toglie l\'oggetto dalla vista per ripulire l\'area di lavoro ed evitare modifiche accidentali.', how: 'Seleziona l\'oggetto e premi il pulsante. Un oggetto nascosto non si può selezionare, ma resta nel progetto e nelle esportazioni (STL, 3MF, OpenSCAD). Nell\'elenco compare con l\'occhio barrato: un clic sull\'icona lo mostra di nuovo.' },
+  showAll: { name: 'Mostra tutti', what: 'Rende di nuovo visibili tutti gli oggetti nascosti.', how: 'Premi il pulsante senza avere nulla selezionato.' },
   fillet: { name: 'Raccordo', what: 'Arrotonda lo spigolo tra due superfici con un raggio a scelta.', how: 'Premi il pulsante, clicca le due superfici che formano lo spigolo, regola il raggio nel pannello (l\'anteprima è dal vivo) e conferma con OK.', image: 'fillet' },
   chamfer: { name: 'Smusso', what: 'Taglia lo spigolo tra due superfici con un piano inclinato.', how: 'Premi il pulsante, clicca le due superfici, scegli la distanza (anche diversa sui due lati) e conferma con OK.', image: 'chamfer' },
   corner: { name: 'Smusso angolare', what: 'Taglia o arrotonda un angolo del solido, dove si incontrano tre facce.', how: 'Premi il pulsante e clicca il vertice (Maiusc+clic per sceglierne più d\'uno), scegli piano o sferico e la distanza, poi OK.', image: 'corner' },

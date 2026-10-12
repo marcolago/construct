@@ -53,6 +53,38 @@ test('un oggetto bloccato non mostra il gizmo e non si sposta con le frecce', as
   expect((await sceneState(page)).nodes[id].position[0]).toBe(1);
 });
 
+test('un oggetto nascosto non si vede né si seleziona, resta nel calcolo e si mostra dall\'elenco', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  const id = (await sceneState(page)).rootIds[0];
+  const center = await project(page, [0, 0, 10]);
+
+  // Maiusc+H nasconde la selezione: esce dalla selezione e la riga mostra l'occhio barrato
+  await page.keyboard.press('Shift+H');
+  await expect(page.locator('.outliner__row--hidden')).toHaveCount(1);
+  expect((await sceneState(page)).nodes[id].hidden).toBe(true);
+  expect(await page.evaluate(() => window.__construct!.store.getState().selection)).toEqual([]);
+  // Il calcolo resta (le esportazioni lo includono), ma nella vista non c'è nulla da cliccare
+  expect(await page.evaluate((rootId) => window.__construct!.results.getState().meshes.some((m) => m.rootId === rootId), id)).toBe(true);
+
+  // Né il clic sulla vista né quello sulla riga lo selezionano
+  await page.mouse.click(center.x, center.y);
+  await page.locator('.outliner__row').first().click({ position: { x: 60, y: 10 } });
+  expect(await page.evaluate(() => window.__construct!.store.getState().selection)).toEqual([]);
+
+  // L'icona nell'elenco lo mostra di nuovo, e il clic sulla vista lo seleziona
+  await page.getByRole('button', { name: 'Mostra', exact: true }).click();
+  await expect(page.locator('.outliner__row--hidden')).toHaveCount(0);
+  await page.mouse.click(center.x, center.y);
+  await expect.poll(() => page.evaluate(() => window.__construct!.store.getState().selection)).toEqual([id]);
+
+  // Maiusc+H senza selezione mostra tutti gli oggetti nascosti
+  await page.keyboard.press('Shift+H');
+  await expect(page.locator('.outliner__row--hidden')).toHaveCount(1);
+  await page.keyboard.press('Shift+H');
+  await expect(page.locator('.outliner__row--hidden')).toHaveCount(0);
+  expect((await sceneState(page)).nodes[id].hidden).toBeUndefined();
+});
+
 /** Un cubo grande (40 mm) con dentro uno piccolo (10 mm), entrambi centrati in (0, 0, 20). Restituisce gli id. */
 async function enclosedCubes(page: import('@playwright/test').Page): Promise<{ big: string; small: string }> {
   await addShape(page, 'Cubo');

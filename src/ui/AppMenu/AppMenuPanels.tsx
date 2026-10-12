@@ -53,6 +53,7 @@ const SHORTCUTS: { title: string; rows: [string, string][] }[] = [
       ['Ctrl+Maiusc+G', 'Separa il gruppo o l\'unione'],
       ['H', 'Solido / Foro'],
       ['L', 'Blocca / Sblocca'],
+      ['Maiusc+H', 'Nascondi la selezione alla radice; senza selezione mostra tutti gli oggetti nascosti'],
       ['B', 'Appoggia sul piatto'],
       ['V', 'Appoggia su una faccia: clic sulla faccia che deve poggiare sul piatto (Esc o V per uscire)'],
       ['Maiusc+V', 'Sdraia: ruota di 90° e riappoggia (in piedi → lungo X → lungo Y → in piedi)'],

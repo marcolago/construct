@@ -51,6 +51,12 @@ interface SceneState {
   ungroupSelected: () => void;
   toggleHoleSelected: () => void;
   toggleLockSelected: () => void;
+  /** Nasconde gli oggetti selezionati alla radice: spariscono dalla vista e dalla selezione, ma restano nel calcolo e nelle esportazioni. */
+  hideSelected: () => void;
+  /** Nasconde o mostra un oggetto alla radice (anche se bloccato): serve all'icona dell'elenco. */
+  setHidden: (id: string, hidden: boolean) => void;
+  /** Mostra tutti gli oggetti nascosti del piatto attivo. */
+  showAllHidden: () => void;
   /** Abbassa gli oggetti selezionati finché il loro punto più basso tocca il piatto (minZ per id, in mm). */
   dropToBed: (minZById: Record<string, number>) => void;
   nudgeSelected: (delta: Vec3) => void;
@@ -114,6 +120,14 @@ export function parentOf(scene: Scene, id: string): string | undefined {
 export function isLocked(scene: Scene, id: string): boolean {
   for (let cur: string | undefined = id; cur; cur = parentOf(scene, cur)) {
     if (scene.nodes[cur]?.locked) return true;
+  }
+  return false;
+}
+
+/** Un nodo è nascosto se lo è lui o uno dei gruppi che lo contengono. */
+export function isHidden(scene: Scene, id: string): boolean {
+  for (let cur: string | undefined = id; cur; cur = parentOf(scene, cur)) {
+    if (scene.nodes[cur]?.hidden) return true;
   }
   return false;
 }
@@ -327,7 +341,8 @@ export const useSceneStore = create<SceneState>()(
 
       select: (ids, additive = false) =>
         set((s) => {
-          const valid = ids.filter((id) => s.scene.nodes[id]);
+          // Gli oggetti nascosti non si selezionano da nessun percorso (vista, elenco, menu)
+          const valid = ids.filter((id) => s.scene.nodes[id] && !isHidden(s.scene, id));
           s.selection = additive ? [...new Set([...s.selection, ...valid])] : valid;
         }),
 
@@ -506,6 +521,29 @@ export const useSceneStore = create<SceneState>()(
             const n = s.scene.nodes[id];
             if (n) n.locked = lockAll;
           }
+        }),
+
+      hideSelected: () =>
+        act('Nascondi', (s) => {
+          // Solo le radici: un figlio fa parte della mesh del suo gruppo e non si può nascondere da solo
+          const ids = selectedRoots(s.scene, s.selection);
+          for (const id of ids) s.scene.nodes[id].hidden = true;
+          s.selection = s.selection.filter((id) => !isHidden(s.scene, id));
+        }),
+
+      setHidden: (id, hidden) =>
+        act(hidden ? 'Nascondi' : 'Mostra', (s) => {
+          if (!s.scene.rootIds.includes(id)) return;
+          const node = s.scene.nodes[id];
+          if (hidden) {
+            node.hidden = true;
+            s.selection = s.selection.filter((x) => !isHidden(s.scene, x));
+          } else delete node.hidden;
+        }),
+
+      showAllHidden: () =>
+        act('Mostra tutti', (s) => {
+          for (const id of s.scene.rootIds) delete s.scene.nodes[id].hidden;
         }),
 
       dropToBed: (minZById) =>

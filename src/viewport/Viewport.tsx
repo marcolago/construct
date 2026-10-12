@@ -158,7 +158,8 @@ export function Viewport() {
         <DimensionOverlay />
         <PlacementPreview />
         <SplitOverlay />
-        {[...meshesByRoot].map(([rootId, parts]) => (
+        {/* Gli oggetti nascosti non si disegnano (restano nel calcolo e nelle esportazioni) */}
+        {[...meshesByRoot].filter(([rootId]) => !scene.nodes[rootId]?.hidden).map(([rootId, parts]) => (
           <SceneObject key={rootId} rootId={rootId} meshes={parts} selection={selection} locked={isLocked(scene, rootId)} showGizmo={rootId === gizmoId} />
         ))}
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, CircleDashed, GripVertical, Lock, Package, Sigma, Smile } from 'lucide-react';
-import { isLocked, useSceneStore } from '../../scene/store';
+import { ChevronDown, ChevronRight, CircleDashed, EyeOff, GripVertical, Lock, Package, Sigma, Smile } from 'lucide-react';
+import { isHidden, isLocked, useSceneStore } from '../../scene/store';
 import { useUiStore } from '../uiStore';
 import { PRIMITIVE_ICONS, SHAPE2D_ICONS } from '../ShapeLibrary/ShapeLibrary';
 import { CORNER_ICONS, CORNER_NAMES, EDGE_ICONS, GROUP_ICONS, GROUP_NAMES } from '../groupIcons';
@@ -80,6 +80,7 @@ function Row({ id, depth, collapsed, toggle, hint, setHint }: RowProps) {
   const selected = useSceneStore((s) => s.selection.includes(id));
   const select = useSceneStore((s) => s.select);
   const locked = useSceneStore((s) => isLocked(s.scene, id));
+  const hidden = useSceneStore((s) => isHidden(s.scene, id));
   const editing = useUiStore((s) => s.renamingId === id);
   const setRenamingId = useUiStore((s) => s.setRenamingId);
   const [dragging, setDragging] = useState(false);
@@ -106,6 +107,7 @@ function Row({ id, depth, collapsed, toggle, hint, setHint }: RowProps) {
   const cls = [
     'outliner__row',
     selected && 'outliner__row--selected',
+    hidden && 'outliner__row--hidden',
     node.mode === 'hole' && 'outliner__row--hole',
     dragging && 'outliner__row--dragging',
     dropHere && `outliner__row--drop-${dropHere}`,
@@ -130,12 +132,13 @@ function Row({ id, depth, collapsed, toggle, hint, setHint }: RowProps) {
           style={{ paddingLeft: 8 + depth * 16 }}
           role="button"
           tabIndex={0}
-          draggable={!editing && !locked}
-          onClick={(e) => select([id], e.shiftKey || e.ctrlKey || e.metaKey)}
+          draggable={!editing && !locked && !hidden}
+          // Un oggetto nascosto non si seleziona (lo scarta anche lo store): si mostra con l'icona
+          onClick={(e) => !hidden && select([id], e.shiftKey || e.ctrlKey || e.metaKey)}
           onDoubleClick={() => setRenamingId(id)}
           onKeyDown={(e) => {
             if (editing) return;
-            if (e.key === 'Enter' || e.key === ' ') select([id]);
+            if ((e.key === 'Enter' || e.key === ' ') && !hidden) select([id]);
             if (e.key === 'F2') setRenamingId(id);
           }}
           onDragStart={(e) => {
@@ -189,6 +192,25 @@ function Row({ id, depth, collapsed, toggle, hint, setHint }: RowProps) {
           </span>
           {editing ? <RenameInput id={id} name={node.name} /> : <span className="outliner__name">{node.name}</span>}
           {locked && <Lock size={13} className={`outliner__lock${node.locked ? '' : ' outliner__lock--inherited'}`} aria-label="Bloccato" />}
+          {hidden &&
+            (node.hidden ? (
+              <button
+                type="button"
+                className="outliner__hidden"
+                aria-label="Mostra"
+                title="Nascosto: clic per mostrare"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  useSceneStore.getState().setHidden(id, false);
+                }}
+                onDoubleClick={(e) => e.stopPropagation()}
+              >
+                <EyeOff size={13} aria-hidden="true" />
+              </button>
+            ) : (
+              // Nascosto perché lo è il gruppo che lo contiene: si mostra dal gruppo
+              <EyeOff size={13} className="outliner__hidden outliner__hidden--inherited" aria-label="Nascosto" />
+            ))}
           {node.mode === 'hole' && <CircleDashed size={14} className="outliner__hole-badge" aria-label="Foro" />}
         </div>
       </li>

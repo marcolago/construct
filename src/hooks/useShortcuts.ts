@@ -109,6 +109,8 @@ export function useShortcuts(): void {
       else if (!mod && key === 'm') useUiStore.getState().toggleMenu();
       else if (mod && key === 'j') { e.preventDefault(); useUiStore.getState().toggleCode(); }
       else if (key === 'delete' || key === 'backspace') { e.preventDefault(); s.removeSelected(); }
+      // Maiusc+H nasconde la selezione alla radice, o mostra tutto se non c'è (va controllato prima di H, che non esclude Maiusc)
+      else if (!mod && e.shiftKey && key === 'h') (s.scene.rootIds.some((id) => s.selection.includes(id)) ? s.hideSelected() : s.showAllHidden());
       else if (!mod && key === 'h') s.toggleHoleSelected();
       else if (!mod && key === 'l') s.toggleLockSelected();
       else if (!mod && key === 'b') dropSelectionToBed();

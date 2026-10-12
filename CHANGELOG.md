@@ -18,6 +18,14 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.44.0] - 2026-10-12
+
+### Aggiunto
+- **Comando Nascondi** (pulsante nella sezione Oggetto, menu contestuale e `Maiusc+H`): toglie gli oggetti selezionati dalla vista 3D per ripulire l'area di lavoro ed evitare modifiche accidentali. Un oggetto nascosto non si seleziona né dalla vista né dall'elenco; nell'elenco Oggetti compare attenuato con l'icona dell'occhio barrato (come il lucchetto), e un clic sull'icona lo mostra di nuovo. Senza nulla di selezionato, il pulsante e `Maiusc+H` diventano **Mostra tutti**. Si nascondono gli oggetti alla radice; i figli di un gruppo nascosto lo sono per eredità. Resta nel calcolo e nelle esportazioni (STL, 3MF, OpenSCAD) e si salva con il progetto; ogni azione è un solo passo di Annulla.
+
+### Modificato
+- **Barra strumenti meno piatta**: ogni sezione (Trasforma, Combina, Modifica, Disponi, Oggetto) ha una sua tinta su icone, nome della sezione, passaggio del mouse e pulsante attivo. Le tinte sono token (`tool-*`) con contrasto verificato nei due temi.
+
 ## [0.43.0] - 2026-10-12
 
 ### Corretto

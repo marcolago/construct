@@ -73,13 +73,34 @@ describe('registro dei comandi', () => {
     expect(applicable()).toContain('drop');
   });
 
-  it('un oggetto bloccato offre solo Sblocca, Duplica e Misura', () => {
+  it('un oggetto bloccato offre solo Sblocca, Duplica, Nascondi e Misura', () => {
     const s = useSceneStore.getState();
     s.addPrimitive('box');
     s.toggleLockSelected();
     const c = getCommandContext();
     expect(helpOf(COMMANDS.lock, c)).toBe('unlock');
     expect(COMMANDS.mirror.enabled(c)).toBe(false);
-    expect(applicable().sort()).toEqual(['duplicate', 'lock', 'measure']);
+    expect(applicable().sort()).toEqual(['duplicate', 'hide', 'lock', 'measure']);
+  });
+
+  it('Nascondi: con una selezione alla radice nasconde, senza selezione (e con nascosti) mostra tutti', () => {
+    const s = useSceneStore.getState();
+    // Senza oggetti non c'è nulla da nascondere né da mostrare
+    expect(COMMANDS.hide.enabled(getCommandContext())).toBe(false);
+    s.addPrimitive('box');
+    let c = getCommandContext();
+    expect(COMMANDS.hide.enabled(c)).toBe(true);
+    expect(helpOf(COMMANDS.hide, c)).toBe('hide');
+    expect(applicable()).toContain('hide');
+    COMMANDS.hide.run(c);
+    // Nascosto: la selezione si svuota, il comando offre "Mostra tutti" sulla barra ma non nel menu
+    c = getCommandContext();
+    expect(c.hasSelection).toBe(false);
+    expect(c.someHidden).toBe(true);
+    expect(helpOf(COMMANDS.hide, c)).toBe('showAll');
+    expect(COMMANDS.hide.enabled(c)).toBe(true);
+    expect(applicable()).not.toContain('hide');
+    COMMANDS.hide.run(c);
+    expect(getCommandContext().someHidden).toBe(false);
   });
 });

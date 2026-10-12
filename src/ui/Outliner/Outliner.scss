@@ -111,6 +111,16 @@
       opacity: 0.4;
     }
 
+    // Oggetto nascosto: attenuato e non selezionabile
+    &--hidden {
+      cursor: default;
+
+      .outliner__icon-wrap,
+      .outliner__name {
+        opacity: 0.45;
+      }
+    }
+
     // Indicatori di rilascio: linea sopra, linea sotto, oppure riquadro attorno al gruppo di destinazione
     &--drop-before {
       box-shadow: inset 0 2px 0 color('accent');
@@ -189,6 +199,28 @@
     color: color('warn');
 
     &--inherited {
+      opacity: 0.5;
+    }
+  }
+
+  // Occhio barrato: sul nodo nascosto è un pulsante che lo mostra, sui figli di un gruppo nascosto solo un segnale
+  &__hidden {
+    display: inline-flex;
+    flex: none;
+    padding: 2px;
+    border: 0;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: color('text-muted');
+    cursor: pointer;
+    @include focus-ring;
+
+    &:hover {
+      color: color('accent');
+    }
+
+    &--inherited {
+      cursor: default;
       opacity: 0.5;
     }
   }
