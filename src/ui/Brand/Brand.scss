@@ -1,14 +1,26 @@
 @use '../../styles/abstracts' as *;
 
-// Intestazione della barra laterale: alta quanto la barra strumenti, così i due bordi inferiori si allineano
+// Intestazione della barra laterale: alta quanto la barra strumenti, così i due bordi inferiori si allineano.
+// È un pulsante (riapre il benvenuto): si azzera lo stile del pulsante e restano il bordo inferiore e il passaggio del mouse
 .brand {
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
   gap: $space-3;
+  width: 100%;
   height: $toolbar-height;
+  padding: 0;
+  border: 0;
   border-bottom: 1px solid color('border');
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  @include focus-ring;
+
+  &:hover {
+    background: color('panel-raised');
+  }
 
   &__mark {
     flex: none;

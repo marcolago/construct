@@ -18,6 +18,9 @@ import type { ViewportPalette } from './palette';
  * gizmo, quote o altri overlay) e la disegna con un renderer fuori schermo, con le stesse luci e lo stesso tone mapping.
  */
 
+/** Sfondo dell'immagine: quello del tema attuale, bianco (per documenti e stampa) oppure trasparente. */
+export type ImageBackground = 'theme' | 'white' | 'transparent';
+
 /** Viste nell'ordine della griglia: riga sopra Alto e Fronte, riga sotto Lato e Isometrica. */
 export const SNAPSHOT_VIEWS: ViewPreset[] = ['top', 'front', 'side', 'iso'];
 
@@ -64,14 +67,18 @@ export function viewFrame(preset: ViewPreset, bounds: Bounds, reach = 0): ViewFr
   };
 }
 
-/** Colori dell'etichetta di ogni vista per tema: sfondo semitrasparente e testo. */
-const LABEL_COLORS: Record<Theme, { fill: string; text: string }> = {
+/** Aspetto dell'immagine: i colori seguono il tema, tranne con lo sfondo bianco (tema chiaro) e trasparente (etichette scure, leggibili su qualunque fondo). */
+type Look = Theme | 'transparent';
+
+/** Colori dell'etichetta di ogni vista: sfondo semitrasparente e testo. */
+const LABEL_COLORS: Record<Look, { fill: string; text: string }> = {
   dark: { fill: 'rgba(20, 23, 28, 0.78)', text: '#e6e9ee' },
   light: { fill: 'rgba(255, 255, 255, 0.82)', text: '#1e2433' },
+  transparent: { fill: 'rgba(20, 23, 28, 0.78)', text: '#e6e9ee' },
 };
 
-/** Colore delle linee di divisione per tema (lo stesso del bordo dei pannelli dell'interfaccia). */
-const DIVIDER_COLORS: Record<Theme, string> = { dark: '#3a4452', light: '#aab6c8' };
+/** Colore delle linee di divisione. */
+const DIVIDER_COLORS: Record<Look, string> = { dark: '#3a4452', light: '#aab6c8', transparent: 'rgba(128, 128, 128, 0.55)' };
 
 /** Segmenti della griglia del piano (celle da 10 mm; le righe ogni 50 mm dall'origine sono le principali). */
 function gridPoints(bed: BedSize): { cell: number[]; section: number[] } {
@@ -111,7 +118,7 @@ function addBed(scene: THREE.Scene, bed: BedSize, palette: ViewportPalette, disp
 }
 
 /** Scritta della vista in alto a sinistra della sua cella, su un riquadro semitrasparente. */
-function drawLabel(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, theme: Theme): void {
+function drawLabel(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, look: Look): void {
   const size = Math.round(CELL * 0.04);
   ctx.font = `600 ${size}px system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`;
   ctx.textBaseline = 'middle';
@@ -120,33 +127,37 @@ function drawLabel(ctx: CanvasRenderingContext2D, text: string, x: number, y: nu
   const height = size + pad;
   const left = x + size * 0.6;
   const top = y + size * 0.6;
-  ctx.fillStyle = LABEL_COLORS[theme].fill;
+  ctx.fillStyle = LABEL_COLORS[look].fill;
   ctx.beginPath();
   if (ctx.roundRect) ctx.roundRect(left, top, width, height, height / 3);
   else ctx.rect(left, top, width, height);
   ctx.fill();
-  ctx.fillStyle = LABEL_COLORS[theme].text;
+  ctx.fillStyle = LABEL_COLORS[look].text;
   ctx.fillText(text, left + pad, top + height / 2);
 }
 
 /**
  * PNG con le 4 viste del piatto in vista, o `null` se non c'è nulla da fotografare. Gli oggetti nascosti e i fori sciolti
- * (traslucidi, non si stampano) non compaiono; il piano di stampa sì, se è visibile.
+ * (traslucidi, non si stampano) non compaiono; il piano di stampa sì, se è visibile. Lo sfondo è quello del tema, bianco
+ * o trasparente (`background`).
  */
-export async function captureViews(): Promise<Blob | null> {
+export async function captureViews(background: ImageBackground = 'theme'): Promise<Blob | null> {
   const sceneState = useSceneStore.getState().scene;
   const ui = useUiStore.getState();
   const visibleRoots = sceneState.rootIds.filter((id) => !sceneState.nodes[id]?.hidden);
   const parts = useResultStore.getState().meshes.filter((m) => !m.empty && !m.isHole && visibleRoots.includes(m.rootId));
   if (parts.length === 0) return null;
 
-  const palette = PALETTES[ui.theme];
+  // Con lo sfondo bianco i colori sono quelli del tema chiaro (piano e griglia compresi), con la base bianca
+  const look: Look = background === 'white' ? 'light' : background === 'transparent' ? 'transparent' : ui.theme;
+  const palette: ViewportPalette = background === 'white' ? { ...PALETTES.light, background: '#ffffff' } : PALETTES[ui.theme];
   const bounds = viewBounds({ selection: [], rootIds: visibleRoots, boundsByRoot: boundsByRoot(), bed: ui.bedSize }, false);
   const reach = ui.bedMode === 'full' ? Math.max(ui.bedSize.width, ui.bedSize.depth) : 0;
 
   // Scena a parte: sfondo, luci della vista, oggetti e (se visibile) piano di stampa
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(palette.background);
+  // Trasparente: nessun colore di sfondo, il canvas parte con alpha 0
+  scene.background = background === 'transparent' ? null : new THREE.Color(palette.background);
   scene.add(new THREE.HemisphereLight(palette.skyLight, palette.groundLight, LIGHTS.hemisphere));
   for (const light of [LIGHTS.key, LIGHTS.fill]) {
     const lamp = new THREE.DirectionalLight(0xffffff, light.intensity);
@@ -166,7 +177,8 @@ export async function captureViews(): Promise<Blob | null> {
   if (ui.bedMode === 'full') addBed(scene, ui.bedSize, palette, disposables);
 
   // Renderer fuori schermo con lo stesso tone mapping e spazio colore della vista (default di R3F)
-  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: background === 'transparent' });
+  if (background === 'transparent') renderer.setClearColor(0x000000, 0);
   renderer.setPixelRatio(1);
   renderer.setSize(CELL, CELL, false);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -188,12 +200,12 @@ export async function captureViews(): Promise<Blob | null> {
       ctx.drawImage(renderer.domElement, x, y);
     });
     // Le linee di divisione e poi le etichette (così nessuna vista le copre)
-    ctx.fillStyle = DIVIDER_COLORS[ui.theme];
+    ctx.fillStyle = DIVIDER_COLORS[look];
     ctx.fillRect(CELL - DIVIDER / 2, 0, DIVIDER, sheet.height);
     ctx.fillRect(0, CELL - DIVIDER / 2, sheet.width, DIVIDER);
     SNAPSHOT_VIEWS.forEach((preset, i) => {
       const { x, y } = cellOrigin(i);
-      drawLabel(ctx, PRESET_LABELS[preset], x, y, ui.theme);
+      drawLabel(ctx, PRESET_LABELS[preset], x, y, look);
     });
     return await new Promise<Blob | null>((resolve) => sheet.toBlob(resolve, 'image/png'));
   } finally {

@@ -28,7 +28,7 @@ const pickSettings = (s: Settings): Settings => ({ showDimensions: s.showDimensi
 export const bedReach = (bed: BedSize): number => Math.max(bed.width, bed.depth);
 
 /** Tendine della barra strumenti che si possono aprire anche da tastiera. */
-export type ToolbarMenu = 'align' | 'mirror' | 'views';
+export type ToolbarMenu = 'align' | 'mirror' | 'views' | 'more';
 
 /** Proiezione della vista 3D: prospettica (predefinita) o ortografica (misure e allineamenti senza deformazione). */
 export type Projection = 'perspective' | 'orthographic';

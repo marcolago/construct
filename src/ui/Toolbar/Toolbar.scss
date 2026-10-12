@@ -122,6 +122,12 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   }
 
+  /* Tendine vicine al bordo destro (Viste, Altro): il pannello cresce verso sinistra */
+  &__dropdown-panel--right {
+    left: auto;
+    right: 0;
+  }
+
   /* Riga della tendina: etichetta dell'asse e uno o più pulsanti */
   &__dropdown-row {
     display: flex;
@@ -232,6 +238,22 @@
 
     &__button--labeled {
       padding: 0 $space-2;
+    }
+  }
+}
+
+/* Finestre molto strette (portatili da 1280 px): ancora più compatta, con i pulsanti della tendina Altro al posto di quelli di vista */
+@media (max-width: 1339px) {
+  .toolbar {
+    gap: 2px;
+
+    &__button {
+      min-width: 26px;
+      padding: 0 3px;
+    }
+
+    &__group {
+      gap: 0;
     }
   }
 }

@@ -13,6 +13,8 @@ interface Props {
   help: HelpKey;
   /** Scorciatoia da tastiera, mostrata in piccolo sopra l'icona. */
   shortcut?: string;
+  /** Il pannello si allinea al bordo destro del pulsante invece che al sinistro (per le tendine vicine al bordo della finestra). */
+  alignRight?: boolean;
   /** Tasti da mostrare nel tooltip al posto della scorciatoia (per le tendine che non hanno un solo tasto, come Viste). */
   tipKeys?: string;
   /** Icona del pulsante. */
@@ -23,7 +25,7 @@ interface Props {
 }
 
 /** Pulsante della toolbar che apre una piccola tendina; si chiude con un clic fuori o con Esc. */
-export function ToolbarDropdown({ id, help, shortcut, tipKeys, icon, disabled, children }: Props) {
+export function ToolbarDropdown({ id, help, shortcut, tipKeys, alignRight, icon, disabled, children }: Props) {
   const open = useUiStore((s) => s.toolbarMenu === id);
   const setToolbarMenu = useUiStore((s) => s.setToolbarMenu);
   const setOpen = (value: boolean) => setToolbarMenu(value ? id : null);
@@ -73,7 +75,7 @@ export function ToolbarDropdown({ id, help, shortcut, tipKeys, icon, disabled, c
         )}
       </ToolTip>
       {isOpen && (
-        <div className="toolbar__dropdown-panel" role="menu">
+        <div className={`toolbar__dropdown-panel${alignRight ? ' toolbar__dropdown-panel--right' : ''}`} role="menu">
           {children(() => setOpen(false))}
         </div>
       )}

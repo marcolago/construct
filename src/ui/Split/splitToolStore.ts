@@ -7,7 +7,8 @@ import { labelled, useSceneStore } from '../../scene/store';
 import type { Scene } from '../../scene/types';
 
 /**
- * Strumento Dividi: taglia l'oggetto selezionato in due con un piano perpendicolare a un asse. Stesso schema del
+ * Strumento Dividi: taglia l'oggetto selezionato in due con un piano perpendicolare a un asse, che si può inclinare di un
+ * angolo (per esempio 45°) attorno a un altro asse. Stesso schema del
  * Guscio: mentre il pannello è aperto la cronologia è in pausa e l'anteprima (le due metà) vive nella scena; OK
  * registra un solo passo di Annulla, Esc rimette tutto com'era.
  */
@@ -22,6 +23,9 @@ interface SplitToolState {
   axis: SplitAxis;
   /** Quota del piano lungo l'asse, nel mondo (mm). */
   offset: number;
+  /** Inclinazione del piano: angolo in gradi (0 = perpendicolare all'asse) e asse attorno a cui ruota (diverso da `axis`). */
+  angle: number;
+  tiltAxis: SplitAxis;
   /** Ingombro del pezzo nel mondo, dal kernel: limiti dello slider e misura del cubo di taglio. */
   bounds: Bounds | null;
   /** Motivo per cui il taglio non si applica (piano fuori dal pezzo). */
@@ -34,10 +38,10 @@ interface SplitToolState {
   start: () => void;
   cancel: () => void;
   commit: () => void;
-  setOption: (patch: Partial<Pick<SplitToolState, 'axis' | 'offset'>>) => void;
+  setOption: (patch: Partial<Pick<SplitToolState, 'axis' | 'offset' | 'angle' | 'tiltAxis'>>) => void;
 }
 
-const INITIAL = { active: false, targetId: null, axis: 0 as SplitAxis, offset: 0, bounds: null, error: null, base: null, ids: null };
+const INITIAL = { active: false, targetId: null, axis: 0 as SplitAxis, offset: 0, angle: 0, tiltAxis: 1 as SplitAxis, bounds: null, error: null, base: null, ids: null };
 
 const sceneStore = useSceneStore;
 
@@ -50,7 +54,7 @@ const middle = (bounds: Bounds, axis: SplitAxis) => round((bounds.min[axis] + bo
 export const useSplitTool = create<SplitToolState>()((set, get) => {
   /** Ricrea l'anteprima sulla scena di partenza, con asse e quota correnti. */
   const rebuild = () => {
-    const { targetId, axis, offset, bounds } = get();
+    const { targetId, axis, offset, angle, tiltAxis, bounds } = get();
     if (!targetId || !bounds) return;
     let base = get().base;
     if (!base) {
@@ -59,7 +63,7 @@ export const useSplitTool = create<SplitToolState>()((set, get) => {
       sceneStore.temporal.getState().pause();
       set({ base });
     }
-    const result = buildSplit(base, targetId, axis, offset, bounds);
+    const result = buildSplit(base, targetId, axis, offset, bounds, { axis: tiltAxis, angle });
     if (!result.ok) {
       sceneStore.setState({ scene: base, selection: [targetId] });
       set({ error: result.error, ids: null });
@@ -112,9 +116,13 @@ export const useSplitTool = create<SplitToolState>()((set, get) => {
     },
 
     setOption: (patch) => {
-      const { bounds, axis } = get();
+      const { bounds, axis, tiltAxis } = get();
       // Cambiando asse il piano torna a metà dell'ingombro su quell'asse
-      const next = patch.axis !== undefined && patch.axis !== axis && bounds ? { ...patch, offset: middle(bounds, patch.axis) } : patch;
+      let next: typeof patch = patch.axis !== undefined && patch.axis !== axis && bounds ? { ...patch, offset: middle(bounds, patch.axis) } : patch;
+      // L'asse di inclinazione deve restare diverso da quello del piano: se coincide passa al successivo
+      const newAxis = next.axis ?? axis;
+      const newTilt = next.tiltAxis ?? tiltAxis;
+      if (newTilt === newAxis) next = { ...next, tiltAxis: ((newAxis + 1) % 3) as SplitAxis };
       set(next);
       rebuild();
     },

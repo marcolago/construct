@@ -283,6 +283,22 @@ export const COMMAND_GROUPS: { label: string; ids: CommandId[]; tone: SectionTon
   { label: 'Oggetto', ids: ['duplicate', 'lock', 'hide', 'delete', 'measure'], tone: 'object' },
 ];
 
+/** Comandi che aprono uno strumento a pannello: con uno strumento aperto sono gli unici che restano utilizzabili. */
+const TOOL_COMMANDS: CommandId[] = ['fillet', 'chamfer', 'corner', 'shell', 'pattern', 'split', 'array', 'layflat', 'measure'];
+const EDGE_COMMANDS: CommandId[] = ['fillet', 'chamfer', 'corner'];
+
+/**
+ * Il pulsante della barra si può usare adesso? Di norma conta `enabled`; con uno strumento a pannello aperto (Raccordo,
+ * Guscio, Misura...) l'oggetto è in anteprima e la barra si ferma, come le scorciatoie: restano attivi solo il pulsante
+ * dello strumento aperto (per chiuderlo) e, con Raccordo, Smusso o Smusso angolare, gli altri due (per cambiare).
+ */
+export function isUsable(cmd: Command, c: CommandContext): boolean {
+  if (!cmd.enabled(c)) return false;
+  if (!c.toolActive) return true;
+  if (!TOOL_COMMANDS.includes(cmd.id)) return false;
+  return cmd.active?.(c) === true || (c.edgeTool !== null && EDGE_COMMANDS.includes(cmd.id));
+}
+
 export const helpOf = (cmd: Command, c: CommandContext): HelpKey => (typeof cmd.help === 'function' ? cmd.help(c) : cmd.help);
 
 /** Comandi del menu contestuale: per gruppo, solo quelli che si possono applicare adesso (i gruppi vuoti spariscono). */

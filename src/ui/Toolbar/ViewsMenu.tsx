@@ -22,6 +22,8 @@ export function ViewsMenu({ close }: { close: () => void }) {
       key={label}
       type="button"
       role="menuitem"
+      aria-label={label}
+      aria-keyshortcuts={key}
       className="toolbar__dropdown-entry"
       title={title}
       onClick={() => {

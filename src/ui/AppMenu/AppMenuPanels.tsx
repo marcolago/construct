@@ -8,6 +8,7 @@ import changelogSource from '../../../CHANGELOG.md?raw';
 import { parseChangelog } from './changelog';
 import { SettingsPanel } from '../Settings/SettingsPanel';
 import { useUiStore, type AppPanel } from '../uiStore';
+import type { ImageBackground } from '../../viewport/snapshot';
 
 /**
  * Corpo delle modali del menu (Importa, Esporta, Scorciatoie, Novità, About). Sta in un modulo a parte, caricato solo
@@ -35,7 +36,7 @@ const SHORTCUTS: { title: string; rows: [string, string][] }[] = [
       ['S', 'Smusso tra due superfici (Invio conferma, Esc annulla)'],
       ['A', 'Smusso angolare: clic su un vertice, Maiusc+clic per sceglierne altri (Invio conferma, Esc annulla)'],
       ['G', 'Guscio: svuota il solido selezionato (Invio conferma, Esc annulla)'],
-      ['Maiusc+S', 'Dividi: taglia l\'oggetto in due con un piano perpendicolare a un asse (Invio conferma, Esc annulla)'],
+      ['Maiusc+S', 'Dividi: taglia l\'oggetto in due con un piano perpendicolare a un asse, anche inclinato di un angolo (Invio conferma, Esc annulla)'],
       ['Doppio clic', 'Seleziona l\'oggetto e passa a Sposta'],
       ['Ctrl+G', 'Raggruppa (gli oggetti restano separati)'],
       ['U', 'Unisci in un solo solido (unione booleana)'],
@@ -109,6 +110,16 @@ function Inline({ text }: { text: string }) {
   );
 }
 
+/** Sfondi dell'immagine delle 4 viste: valore, nome e a cosa serve. */
+const IMAGE_BACKGROUNDS: [ImageBackground, string, string][] = [
+  ['theme', 'Come il tema attuale', 'sfondo e colori come li vedi ora'],
+  ['white', 'Bianco', 'per documenti e stampa'],
+  ['transparent', 'Trasparente', 'da sovrapporre ad altri fondi'],
+];
+
+/** Ultime scelte dell'immagine, ricordate finché la pagina resta aperta. */
+let lastImageBackground: ImageBackground = 'theme';
+
 export default function AppMenuPanels({ panel, run }: { panel: Panel; run: (action: () => void | Promise<void>) => () => void }) {
   const scene = useSceneStore((s) => s.scene);
   const setPanel = useUiStore((s) => s.setAppPanel);
@@ -117,6 +128,14 @@ export default function AppMenuPanels({ panel, run }: { panel: Panel; run: (acti
   const plates = platesOf(scene);
   // Passo "Quale piatto?" dell'STL: serve solo con più di un piatto
   const [choosingPlate, setChoosingPlate] = useState(false);
+  // Passo "Immagine" (sfondo e piatto)
+  const [imageStep, setImageStep] = useState(false);
+  const [imageBackground, setImageBackground] = useState<ImageBackground>(lastImageBackground);
+  const platesWithObjects = plates.filter((p) => p.rootIds.length > 0);
+  const [imagePlate, setImagePlate] = useState<string | null>(null);
+  // Piatto da fotografare: quello scelto, altrimenti il piatto in vista se ha oggetti, altrimenti il primo che ne ha
+  const activeId = scene.activePlateId ?? plates[0]?.id;
+  const chosenPlate = platesWithObjects.find((p) => p.id === imagePlate)?.id ?? platesWithObjects.find((p) => p.id === activeId)?.id ?? platesWithObjects[0]?.id;
   return (
     <>
       {panel === 'import' && (
@@ -162,7 +181,53 @@ export default function AppMenuPanels({ panel, run }: { panel: Panel; run: (acti
           </>
         )}
 
-      {panel === 'export' && !choosingPlate && (
+      {panel === 'export' && imageStep && (
+          <>
+            <p>Un PNG quadrato con quattro viste (alto, fronte, lato, isometrica) in una griglia 2×2, tutte nella stessa scala.</p>
+            <fieldset className="app-menu__options">
+              <legend>Sfondo</legend>
+              {IMAGE_BACKGROUNDS.map(([value, label, hint]) => (
+                <label key={value}>
+                  <input type="radio" name="image-background" checked={imageBackground === value} onChange={() => setImageBackground(value)} />
+                  <span>{label}</span>
+                  <small>{hint}</small>
+                </label>
+              ))}
+            </fieldset>
+            {plates.length > 1 && (
+              <fieldset className="app-menu__options">
+                <legend>Piatto</legend>
+                {platesWithObjects.map((p) => (
+                  <label key={p.id}>
+                    <input type="radio" name="image-plate" checked={chosenPlate === p.id} onChange={() => setImagePlate(p.id)} />
+                    <span>{p.name}</span>
+                    <small>{p.rootIds.length === 1 ? '1 oggetto' : `${p.rootIds.length} oggetti`}</small>
+                  </label>
+                ))}
+              </fieldset>
+            )}
+            <div className="modal__actions">
+              <button type="button" className="modal__button" onClick={() => setImageStep(false)}>
+                <ChevronLeft size={14} />
+                Indietro
+              </button>
+              <button
+                type="button"
+                className="modal__button modal__button--primary"
+                disabled={!chosenPlate}
+                onClick={run(() => {
+                  lastImageBackground = imageBackground;
+                  return exportViewsPng({ background: imageBackground, plateId: chosenPlate });
+                })}
+              >
+                <ImageIcon size={14} />
+                Esporta
+              </button>
+            </div>
+          </>
+        )}
+
+      {panel === 'export' && !choosingPlate && !imageStep && (
           <>
             {!hasObjects && <p>La scena è vuota: aggiungi almeno un oggetto per poter esportare.</p>}
             <ul className="app-menu__formats">
@@ -188,11 +253,11 @@ export default function AppMenuPanels({ panel, run }: { panel: Panel; run: (acti
                 <span>Codice <code>.scad</code> generato dalla scena. Con il testo esce uno ZIP con i font.</span>
               </li>
               <li>
-                <button type="button" className="modal__button" disabled={scene.rootIds.length === 0} onClick={run(exportViewsPng)}>
+                <button type="button" className="modal__button" disabled={!hasObjects} onClick={() => setImageStep(true)}>
                   <ImageIcon size={14} />
                   Immagine
                 </button>
-                <span>PNG con 4 viste (alto, fronte, lato, isometrica) del piatto in vista, con lo sfondo del tema.</span>
+                <span>PNG con 4 viste (alto, fronte, lato, isometrica) in una griglia 2×2; scegli lo sfondo (tema, bianco o trasparente) e il piatto.</span>
               </li>
             </ul>
           </>

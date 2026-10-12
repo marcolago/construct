@@ -8,14 +8,33 @@ import type { PrimitiveNode, Scene, SceneNode, Vec3 } from './types';
 /**
  * Dividi con un piano: l'oggetto alla radice viene sostituito da due gruppi Intersezione, ciascuno con una copia
  * dell'oggetto e un cubo "Taglio" che copre un lato del piano (perpendicolare a un asse, alla quota `offset` nel
- * mondo). Le due metà restano parametriche: spostando il cubo si sposta il taglio, e il codice OpenSCAD è un
- * `intersection()` con un `cube`. Restituisce la nuova scena senza toccare quella ricevuta.
+ * mondo). Il piano si può anche inclinare (`tilt`): ruota di un angolo attorno a un secondo asse passando dallo stesso
+ * punto, per esempio a 45° per un taglio diagonale. Le due metà restano parametriche: spostando o ruotando il cubo si
+ * sposta il taglio, e il codice OpenSCAD è un `intersection()` con un `cube` (ruotato, se il taglio è inclinato).
+ * Restituisce la nuova scena senza toccare quella ricevuta.
  */
 
 /** Quanto il cubo di taglio sporge oltre l'ingombro del pezzo, per lato (mm). */
 const CUTTER_MARGIN = 10;
 /** Distanza minima del piano dai bordi dell'ingombro: più vicino una metà sarebbe vuota (mm). */
 const MIN_SLICE = 0.1;
+
+/** Inclinazione del piano: ruota di `angle` gradi attorno a `axis` (diverso dall'asse del piano), passando dal punto di taglio. */
+export interface SplitTilt {
+  axis: 0 | 1 | 2;
+  angle: number;
+}
+
+/** Ruota un vettore di `angle` gradi attorno a un asse (0 = X, 1 = Y, 2 = Z), con la regola della mano destra come le rotazioni dell'app. */
+function rotateAbout(v: Vec3, axis: 0 | 1 | 2, angle: number): Vec3 {
+  const b = (axis + 1) % 3;
+  const c = (axis + 2) % 3;
+  const rad = (angle * Math.PI) / 180;
+  const out: Vec3 = [...v];
+  out[b] = v[b] * Math.cos(rad) - v[c] * Math.sin(rad);
+  out[c] = v[b] * Math.sin(rad) + v[c] * Math.cos(rad);
+  return out;
+}
 
 /** Vero se la selezione è un solo oggetto alla radice che si può dividere: solido, non bloccato, né raccordo né smusso. */
 export function canSplit(scene: Scene, selection: string[]): boolean {
@@ -29,6 +48,7 @@ export function buildSplit(
   axis: 0 | 1 | 2,
   offset: number,
   bounds: Bounds,
+  tilt?: SplitTilt,
 ): { ok: true; scene: Scene; ids: [string, string] } | { ok: false; error: string } {
   const target = scene.nodes[targetId];
   if (!target) return { ok: false, error: 'L\'oggetto non esiste più.' };
@@ -38,9 +58,21 @@ export function buildSplit(
   if (isCutter(target)) return { ok: false, error: 'Un raccordo o uno smusso non si può dividere.' };
   if (!(offset > bounds.min[axis] + MIN_SLICE && offset < bounds.max[axis] - MIN_SLICE)) return { ok: false, error: 'Il piano non taglia l\'oggetto: spostalo dentro il suo ingombro.' };
 
-  // Il cubo di taglio copre tutto l'ingombro sugli altri assi e, sull'asse del piano, un lato del piano
-  const extent = [0, 1, 2].map((i) => bounds.max[i] - bounds.min[i] + 2 * CUTTER_MARGIN) as Vec3;
+  const angle = tilt && Number.isFinite(tilt.angle) ? tilt.angle : 0;
+  if (angle !== 0 && tilt!.axis === axis) return { ok: false, error: 'Il piano si inclina attorno a un asse diverso dal suo.' };
+  const tilted = angle !== 0;
+
   const center = [0, 1, 2].map((i) => (bounds.min[i] + bounds.max[i]) / 2) as Vec3;
+  // Il cubo di taglio copre tutto l'ingombro sugli altri assi e, sull'asse del piano, un lato del piano. Se il piano è
+  // inclinato non si sa quali assi copra: il cubo è così grande (il doppio della diagonale) da contenere il pezzo
+  // comunque sia ruotato attorno al punto di taglio
+  const diagonal = Math.hypot(bounds.max[0] - bounds.min[0], bounds.max[1] - bounds.min[1], bounds.max[2] - bounds.min[2]);
+  const extent = (tilted ? [0, 1, 2].map(() => 2 * diagonal + 2 * CUTTER_MARGIN) : [0, 1, 2].map((i) => bounds.max[i] - bounds.min[i] + 2 * CUTTER_MARGIN)) as Vec3;
+  // Punto del piano da cui passa il taglio (e attorno a cui ruota): il centro dell'ingombro, alla quota scelta sull'asse
+  const pivot: Vec3 = [...center];
+  pivot[axis] = offset;
+  const rotation: Vec3 = [0, 0, 0];
+  if (tilted) rotation[tilt!.axis] = angle;
   // Sistema del gruppo che prenderà il posto del pezzo (e del suo clone, che ha la stessa trasformazione)
   const { groupWorld } = treatmentFrame(scene, targetId);
   const ids: [string, string] = [newId(), newId()];
@@ -63,9 +95,12 @@ export function buildSplit(
     // Metà 1: dal lato minore del piano; metà 2: dal lato maggiore
     [targetId, cloneId].forEach((pieceId, half) => {
       const cutterId = newId();
-      const cutterCenter: Vec3 = [...center];
-      cutterCenter[axis] = half === 0 ? offset - extent[axis] / 2 : offset + extent[axis] / 2;
-      const local = toLocalTransform(groupWorld, { position: cutterCenter, rotation: [0, 0, 0] });
+      // Il centro del cubo sta mezza misura oltre il piano, dal lato della sua metà; con l'inclinazione si ruota attorno al punto di taglio
+      const toCenter: Vec3 = [0, 0, 0];
+      toCenter[axis] = (half === 0 ? -extent[axis] : extent[axis]) / 2;
+      const turned = tilted ? rotateAbout(toCenter, tilt!.axis, angle) : toCenter;
+      const cutterCenter = pivot.map((v, i) => v + turned[i]) as Vec3;
+      const local = toLocalTransform(groupWorld, { position: cutterCenter, rotation });
       const cutter: PrimitiveNode = {
         id: cutterId,
         type: 'primitive',

@@ -122,17 +122,33 @@ test('Duplica (Ctrl+D) lascia la copia nelle stesse coordinate, anche per un ogg
   expect(rel(groupCopy)).toEqual(rel(group));
 });
 
+/** Esporta → Immagine: sceglie sfondo e piatto (se indicati), conferma e scarica il PNG. */
+async function exportImagePng(page: import('@playwright/test').Page, options: { background?: string; plate?: string } = {}): Promise<{ name: string; path: string }> {
+  const downloading = page.waitForEvent('download');
+  await openMenuItem(page, 'Esporta');
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Immagine', exact: true }).click();
+  if (options.background) await dialog.getByLabel(options.background).check();
+  if (options.plate) await dialog.getByLabel(options.plate).check();
+  await dialog.getByRole('button', { name: 'Esporta', exact: true }).click();
+  const download = await downloading;
+  return { name: download.suggestedFilename(), path: (await download.path())! };
+}
+
+/** Pixel (r, g, b, a) di un PNG, per controllare i colori dell'immagine delle viste. */
+async function readPng(file: string): Promise<{ width: number; at: (x: number, y: number) => number[] }> {
+  const sharp = (await import('sharp')).default;
+  const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  return { width: info.width, at: (x, y) => [0, 1, 2, 3].map((c) => data[(y * info.width + x) * 4 + c]) };
+}
+
 test('Esporta immagine: un PNG 2×2 con le 4 viste, con la vista e la selezione che restano come prima', async ({ page }) => {
   await addShape(page, 'Cubo');
   const sharp = (await import('sharp')).default;
   const before = await page.evaluate(() => ({ selection: window.__construct!.store.getState().selection, camera: window.__r3f!.camera.position.toArray() }));
 
-  const downloading = page.waitForEvent('download');
-  await openMenuItem(page, 'Esporta');
-  await page.getByRole('dialog').getByRole('button', { name: 'Immagine', exact: true }).click();
-  const download = await downloading;
-  expect(download.suggestedFilename()).toBe('construct-viste.png');
-  const file = (await download.path())!;
+  const { name, path: file } = await exportImagePng(page);
+  expect(name).toBe('construct-viste.png');
 
   // Dimensioni: quadrata, divisa esattamente in 4 sezioni da 800 px
   const meta = await sharp(file).metadata();
@@ -157,6 +173,55 @@ test('Esporta immagine: un PNG 2×2 con le 4 viste, con la vista e la selezione 
   // La vista 3D non è stata toccata
   const after = await page.evaluate(() => ({ selection: window.__construct!.store.getState().selection, camera: window.__r3f!.camera.position.toArray() }));
   expect(after).toEqual(before);
+});
+
+test('Esporta immagine: sfondo bianco o trasparente, scelto nel passo delle opzioni', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  // Il piano di stampa nascosto: lo sfondo si vede in tutta la sezione Fronte (in alto a destra, lontano dall'etichetta)
+  await page.keyboard.press('p');
+
+  // Bianco: i pixel dello sfondo sono bianchi e opachi
+  const white = await readPng((await exportImagePng(page, { background: 'Bianco' })).path);
+  expect(white.at(1590, 10)).toEqual([255, 255, 255, 255]);
+  expect(white.at(1590, 790)).toEqual([255, 255, 255, 255]);
+
+  // Trasparente: lo sfondo ha alfa 0, il cubo al centro è opaco
+  const clear = await readPng((await exportImagePng(page, { background: 'Trasparente' })).path);
+  expect(clear.at(1590, 10)[3]).toBe(0);
+  expect(clear.at(1200, 400)[3]).toBe(255);
+
+  // Come il tema: lo sfondo è quello del tema attuale (scuro), opaco
+  const theme = await readPng((await exportImagePng(page, { background: 'Come il tema attuale' })).path);
+  expect(theme.at(1590, 10)).toEqual([20, 23, 28, 255]);
+});
+
+test('Esporta immagine: con più piatti si sceglie quale fotografare e dopo il piatto in vista resta quello di prima', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  await page.getByRole('tab', { name: /Piatti/ }).click();
+  await page.getByRole('button', { name: 'Aggiungi piatto' }).click();
+  await addShape(page, 'Cilindro');
+  const active = () => page.evaluate(() => window.__construct!.store.getState().scene.activePlateId);
+  const before = await active();
+
+  // Il piatto 1 ha il cubo: l'immagine si fa anche se il piatto in vista è il 2
+  const dialogPlates = async () => {
+    await openMenuItem(page, 'Esporta');
+    await page.getByRole('dialog').getByRole('button', { name: 'Immagine', exact: true }).click();
+    return page.getByRole('dialog').getByRole('group', { name: 'Piatto' }).locator('label');
+  };
+  await expect(await dialogPlates()).toHaveCount(2);
+  await page.keyboard.press('Escape');
+
+  const { name, path } = await exportImagePng(page, { plate: 'Piatto 1' });
+  expect(name).toBe('construct-viste-piatto-1.png');
+  // Il cubo è al centro della sezione Alto
+  const png = await readPng(path);
+  const corner = png.at(790, 790);
+  const center = png.at(400, 400);
+  expect(Math.abs(center[0] - corner[0]) + Math.abs(center[1] - corner[1]) + Math.abs(center[2] - corner[2])).toBeGreaterThan(40);
+  // Il piatto in vista è tornato quello di prima
+  await expect.poll(active).toBe(before);
+  expect((await sceneState(page)).rootIds).toHaveLength(1);
 });
 
 test('Esporta immagine: senza oggetti il pulsante è disabilitato', async ({ page }) => {
@@ -1605,8 +1670,10 @@ test('Dividi (Maiusc+S): anteprima delle due metà, piano per asse e quota, OK i
   expect((await sceneState(page)).rootIds).toHaveLength(2);
 
   // Asse Z e quota a 5 mm: 20·20·5 e 20·20·15
-  await panel.getByRole('button', { name: 'Z', exact: true }).click();
+  await panel.getByRole('group', { name: 'Asse del piano di taglio' }).getByRole('button', { name: 'Z', exact: true }).click();
   const pos = panel.locator('.slider-field', { hasText: 'Posizione' }).locator('.number-field__input');
+  // Cambiando asse il campo passa da solo a metà ingombro (10): se si scrive prima, il testo si accoda al vecchio valore
+  await expect(pos).toHaveValue('10');
   await pos.fill('5');
   await pos.press('Enter');
   await expect.poll(volumes).toEqual([2000, 6000]);
@@ -1637,6 +1704,147 @@ test('Dividi (Maiusc+S): anteprima delle due metà, piano per asse e quota, OK i
   await page.keyboard.press('Control+z');
   await settled(page);
   expect((await sceneState(page)).rootIds).toHaveLength(1);
+});
+
+test('Dividi con angolo: 45° attorno a Y con il piano Z a 5 mm dà metà di 2250 e 5750 mm³, il codice ha rotate e Esc ripristina', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  const meshes = () => page.evaluate(() => window.__construct!.results.getState().meshes.map((m) => Math.round(m.volume)).sort((a, b) => a - b));
+  await page.keyboard.press('Shift+S');
+  const panel = page.getByRole('region', { name: 'Dividi' });
+  await expect(panel).toBeVisible();
+  await panel.getByRole('group', { name: 'Asse del piano di taglio' }).getByRole('button', { name: 'Z', exact: true }).click();
+  const pos = panel.locator('.slider-field', { hasText: 'Posizione' }).locator('.number-field__input');
+  // Cambiando asse il campo passa da solo a metà ingombro (10): se si scrive prima, il testo si accoda al vecchio valore
+  await expect(pos).toHaveValue('10');
+  await pos.fill('5');
+  await pos.press('Enter');
+  // Senza angolo: due metà da 2000 e 6000
+  await expect.poll(meshes).toEqual([2000, 6000]);
+
+  // Con l'asse di inclinazione (Y, il predefinito per il piano Z) e 45°: il piano passa da (0, 0, 5) in diagonale
+  await expect(panel.getByRole('group', { name: 'Asse di inclinazione del piano' }).getByRole('button')).toHaveCount(2);
+  const angle = panel.locator('.slider-field', { hasText: 'Angolo' }).locator('.number-field__input');
+  await angle.fill('45');
+  await angle.press('Enter');
+  await expect.poll(meshes).toEqual([2250, 5750]);
+
+  // Cambiando asse del piano, l'asse di inclinazione non coincide mai con lui
+  await panel.getByRole('group', { name: 'Asse del piano di taglio' }).getByRole('button', { name: 'Y', exact: true }).click();
+  const tilt = panel.getByRole('group', { name: 'Asse di inclinazione del piano' });
+  await expect(tilt.getByRole('button', { name: 'Y', exact: true })).toHaveCount(0);
+  await panel.getByRole('group', { name: 'Asse del piano di taglio' }).getByRole('button', { name: 'Z', exact: true }).click();
+  // Tornati al piano Z l'asse di inclinazione è passato da solo a X: si rimette Y e il piano torna a metà (10 mm)
+  await tilt.getByRole('button', { name: 'Y', exact: true }).click();
+  await expect(tilt.getByRole('button', { name: 'Y', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(meshes).toEqual([4000, 4000]);
+
+  // OK: due oggetti, il cubo di taglio è ruotato e il codice lo dice
+  await page.keyboard.press('Enter');
+  await expect(panel).toBeHidden();
+  await settled(page);
+  expect((await sceneState(page)).rootIds).toHaveLength(2);
+  const code = await readCode(page);
+  expect(code).toContain('rotate([0, 45, 0])');
+  // Annulla riporta il cubo intero
+  await page.keyboard.press('Control+z');
+  await settled(page);
+  expect((await sceneState(page)).rootIds).toHaveLength(1);
+});
+
+test('Con uno strumento a pannello aperto la barra si ferma (resta il suo pulsante) e il clic destro sull\'oggetto non apre il menu', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  const toolbar = page.locator('header.toolbar');
+  const button = (name: string) => toolbar.getByRole('button', { name, exact: true });
+  await expect(button('Duplica')).toBeEnabled();
+
+  await page.keyboard.press('Shift+S');
+  await expect(page.getByRole('region', { name: 'Dividi' })).toBeVisible();
+  // Resta attivo solo il pulsante di Dividi (per chiuderlo): niente altro, nemmeno File
+  await expect(button('Dividi')).toBeEnabled();
+  for (const name of ['Duplica', 'Elimina', 'Blocca', 'Guscio', 'Raccordo', 'Misura', 'Sposta', 'Seleziona', 'Nuovo progetto']) await expect(button(name), name).toBeDisabled();
+  // Il clic destro su una metà non apre il menu dei comandi (come con gli altri strumenti)
+  const at = await project(page, [0, 0, 10]);
+  await page.mouse.click(at.x, at.y, { button: 'right' });
+  await expect(page.getByRole('menu', { name: 'Comandi per la selezione' })).toHaveCount(0);
+
+  // Esc chiude lo strumento e la barra torna normale
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('region', { name: 'Dividi' })).toBeHidden();
+  await expect(button('Duplica')).toBeEnabled();
+  await expect(button('Nuovo progetto')).toBeEnabled();
+});
+
+test('Con Raccordo aperto si può passare a Smusso dalla barra, ma non agli altri strumenti', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  const toolbar = page.locator('header.toolbar');
+  await page.keyboard.press('f');
+  await expect(toolbar.getByRole('button', { name: 'Raccordo', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(toolbar.getByRole('button', { name: 'Smusso', exact: true })).toBeEnabled();
+  await expect(toolbar.getByRole('button', { name: 'Smusso angolare', exact: true })).toBeEnabled();
+  await expect(toolbar.getByRole('button', { name: 'Dividi', exact: true })).toBeDisabled();
+  await toolbar.getByRole('button', { name: 'Smusso', exact: true }).click();
+  await expect(toolbar.getByRole('button', { name: 'Smusso', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('Un clic sul marchio in alto a sinistra riapre la schermata di benvenuto', async ({ page }) => {
+  const dialog = page.getByRole('dialog', { name: 'Benvenuto in Construct' });
+  await expect(dialog).toHaveCount(0);
+  await page.locator('button.brand').click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+});
+
+test('Barra stretta: sotto 1440 px i pulsanti di vista stanno nella tendina Altro, con le stesse funzioni e il menu resta visibile', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const toolbar = page.locator('header.toolbar');
+  await expect(toolbar.getByRole('button', { name: 'Tema', exact: true })).toHaveCount(0);
+  const more = toolbar.getByRole('button', { name: 'Altro', exact: true });
+  await expect(more).toBeVisible();
+  // Il menu hamburger sta dentro la finestra
+  const menu = (await toolbar.getByRole('button', { name: 'Menu', exact: true }).boundingBox())!;
+  expect(menu.x + menu.width).toBeLessThanOrEqual(1280);
+  // Il tooltip dell'Altro dice i tasti
+  await more.hover();
+  await expect(page.getByRole('tooltip').locator('kbd')).toHaveCount(1);
+
+  // Tema: dal tema scuro predefinito si passa al chiaro dalla tendina
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme);
+  expect(await theme()).toBe('dark');
+  await more.click();
+  // La tendina sta tutta dentro la finestra (non esce dal bordo destro)
+  const panel = (await page.locator('.toolbar__dropdown-panel').boundingBox())!;
+  expect(panel.x).toBeGreaterThanOrEqual(0);
+  expect(panel.x + panel.width).toBeLessThanOrEqual(1280);
+  await page.getByRole('menuitem', { name: 'Tema chiaro', exact: true }).click();
+  expect(await theme()).toBe('light');
+
+  // Ortografica: interruttore con il segno di spunta
+  await more.click();
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Ortografica', exact: true })).toHaveAttribute('aria-checked', 'false');
+  await page.getByRole('menuitemcheckbox', { name: 'Ortografica', exact: true }).click();
+  await more.click();
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Ortografica', exact: true })).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press('Escape');
+
+  // Piatto: la voce dice cosa farà
+  await more.click();
+  await page.getByRole('menuitem', { name: 'Nascondi piatto', exact: true }).click();
+  await more.click();
+  await expect(page.getByRole('menuitem', { name: 'Mostra piatto', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  // Codice OpenSCAD
+  await more.click();
+  await page.getByRole('menuitemcheckbox', { name: 'Codice OpenSCAD', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('c');
+  await expect(page.getByRole('dialog')).toBeHidden();
+
+  // Allargando la finestra tornano i pulsanti separati
+  await page.setViewportSize({ width: 1500, height: 800 });
+  await expect(toolbar.getByRole('button', { name: 'Tema', exact: true })).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: 'Altro', exact: true })).toHaveCount(0);
 });
 
 test('Guscio su un profilato: cavità esatta (nessun avviso di approssimazione), mesh valida e volume minore', async ({ page }) => {

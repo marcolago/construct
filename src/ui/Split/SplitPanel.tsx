@@ -12,7 +12,7 @@ const AXES: [SplitAxis, string][] = [[0, 'X'], [1, 'Y'], [2, 'Z']];
  * anteprima dal vivo; OK e Annulla. Flottante e non modale: la vista 3D resta utilizzabile.
  */
 export function SplitPanel() {
-  const { active, axis, offset, bounds, error, ids, cancel, commit, setOption } = useSplitTool();
+  const { active, axis, offset, angle, tiltAxis, bounds, error, ids, cancel, commit, setOption } = useSplitTool();
   if (!active || !bounds) return null;
   const [min, max] = [bounds.min[axis], bounds.max[axis]];
 
@@ -47,7 +47,30 @@ export function SplitPanel() {
           value={offset}
           onCommit={(v) => setOption({ offset: v })}
         />
-        <p className="edge-panel__hint">Il risultato sono due oggetti (1 e 2), ciascuno un'intersezione con un cubo di taglio: spostando il cubo si sposta il taglio.</p>
+        <div className="edge-panel__row">
+          <span className="edge-panel__label">Inclina attorno a</span>
+          <div className="edge-panel__segmented" role="group" aria-label="Asse di inclinazione del piano">
+            {AXES.filter(([value]) => value !== axis).map(([value, label]) => (
+              <button key={label} type="button" aria-pressed={tiltAxis === value} className={tiltAxis === value ? 'is-active' : undefined} title={`Il piano ruota attorno all'asse ${label}, passando dal punto di taglio`} onClick={() => setOption({ tiltAxis: value })}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <SliderField
+          label="Angolo"
+          unit="°"
+          min={-90}
+          max={90}
+          step={1}
+          hardMin={-90}
+          hardMax={90}
+          tooltip="Inclinazione del piano di taglio in gradi: 0 lo lascia perpendicolare all'asse, 45 taglia in diagonale."
+          history={false}
+          value={angle}
+          onCommit={(v) => setOption({ angle: v })}
+        />
+        <p className="edge-panel__hint">Il risultato sono due oggetti (1 e 2), ciascuno un'intersezione con un cubo di taglio, ruotato se il piano è inclinato: spostando o ruotando il cubo si cambia il taglio.</p>
         {error && (
           <p className="edge-panel__error" role="alert">
             {error}

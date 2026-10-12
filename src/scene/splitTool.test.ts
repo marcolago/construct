@@ -72,6 +72,81 @@ describe('Dividi con un piano', () => {
     expect(scene.rootIds).toEqual(['b']);
   });
 
+  describe('piano inclinato', () => {
+    const sortedVolumes = (scene: Scene) => volumes(scene).map((m) => m.volume).sort((a, b) => a - b);
+
+    it('con angolo 0 il taglio è identico a quello senza inclinazione', () => {
+      const plain = buildSplit(sceneOf(box()), 'b', 0, 5, BOUNDS);
+      const flat = buildSplit(sceneOf(box()), 'b', 0, 5, BOUNDS, { axis: 1, angle: 0 });
+      expect(plain.ok && flat.ok).toBe(true);
+      if (!plain.ok || !flat.ok) return;
+      const shape = (r: typeof plain) => r.ids.map((id) => {
+        const cutter = r.scene.nodes[(r.scene.nodes[id] as GroupNode).children[1]] as PrimitiveNode;
+        // Tutto il cubo di taglio tranne id e nome (casuali)
+        const { id: _id, name: _name, ...rest } = cutter;
+        return rest;
+      });
+      expect(shape(flat)).toEqual(shape(plain));
+    });
+
+    it('45° attorno a Y con il piano Z a 5 mm: il piano passa dal punto di taglio e le metà sono 2250 e 5750 mm³', () => {
+      // Piano z = x − 5 (passa da (10, 0, 5) con pendenza 45°): sotto il piano resta un prisma di base 15 × 15 / 2 e lunghezza 20
+      const result = buildSplit(sceneOf(box()), 'b', 2, 5, BOUNDS, { axis: 1, angle: 45 });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const v = volumes(result.scene);
+      expect(v.every((m) => m.status === 'NoError')).toBe(true);
+      const [small, big] = sortedVolumes(result.scene);
+      expect(small).toBeCloseTo(2250, 1);
+      expect(big).toBeCloseTo(5750, 1);
+      // Le due metà insieme sono il cubo intero
+      expect(small + big).toBeCloseTo(8000, 1);
+      // Il cubo di taglio è ruotato di 45° attorno a Y, e nel codice compare rotate
+      const cutter = result.scene.nodes[(result.scene.nodes[result.ids[0]] as GroupNode).children[1]] as PrimitiveNode;
+      expect(cutter.rotation[0]).toBeCloseTo(0, 6);
+      expect(cutter.rotation[1]).toBeCloseTo(45, 6);
+      expect(cutter.rotation[2]).toBeCloseTo(0, 6);
+      expect(sceneToOpenScad(result.scene)).toContain('rotate([0, 45, 0])');
+    });
+
+    it('il verso dell\'angolo non cambia le metà quando il piano è al centro: 45° e −45° dal centro danno 4000 + 4000', () => {
+      for (const angle of [45, -45, 30]) {
+        const result = buildSplit(sceneOf(box()), 'b', 2, 10, BOUNDS, { axis: 0, angle });
+        expect(result.ok).toBe(true);
+        if (!result.ok) continue;
+        const [a, b] = sortedVolumes(result.scene);
+        expect(a).toBeCloseTo(4000, 1);
+        expect(b).toBeCloseTo(4000, 1);
+      }
+    });
+
+    it('90° è come un piano perpendicolare all\'altro asse: Z inclinato di 90° attorno a Y taglia in X', () => {
+      const result = buildSplit(sceneOf(box()), 'b', 2, 10, BOUNDS, { axis: 1, angle: 90 });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      // Passa dal centro (10, 0, 10): due metà da 4000 mm³
+      const [a, b] = sortedVolumes(result.scene);
+      expect(a).toBeCloseTo(4000, 1);
+      expect(b).toBeCloseTo(4000, 1);
+    });
+
+    it('con il pezzo ruotato e il piano inclinato le metà conservano il volume', () => {
+      const r = Math.SQRT2 * 10;
+      const bounds = { min: [10 - r, -r, 0] as Vec3, max: [10 + r, r, 20] as Vec3 };
+      const result = buildSplit(sceneOf(box({ rotation: [0, 0, 45] })), 'b', 0, 8, bounds, { axis: 2, angle: 30 });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const [a, b] = sortedVolumes(result.scene);
+      expect(a + b).toBeCloseTo(8000, 0);
+      expect(a).toBeGreaterThan(100);
+    });
+
+    it('l\'asse di inclinazione uguale a quello del piano è un errore (se l\'angolo non è 0)', () => {
+      expect(buildSplit(sceneOf(box()), 'b', 0, 5, BOUNDS, { axis: 0, angle: 45 })).toMatchObject({ ok: false, error: expect.stringContaining('asse diverso') });
+      expect(buildSplit(sceneOf(box()), 'b', 0, 5, BOUNDS, { axis: 0, angle: 0 }).ok).toBe(true);
+    });
+  });
+
   it('canSplit: un solo oggetto alla radice, solido e non bloccato', () => {
     expect(canSplit(sceneOf(box()), ['b'])).toBe(true);
     expect(canSplit(sceneOf(box({ locked: true })), ['b'])).toBe(false);

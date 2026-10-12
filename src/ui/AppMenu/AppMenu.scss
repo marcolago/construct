@@ -130,6 +130,37 @@
     }
   }
 
+  // Scelte del passo "Immagine": gruppi di pulsanti radio con nome e nota
+  &__options {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+    margin: 0 0 $space-3;
+    padding: 0;
+    border: 0;
+
+    legend {
+      margin-bottom: $space-2;
+      padding: 0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: color('text-muted');
+    }
+
+    label {
+      display: flex;
+      align-items: baseline;
+      gap: $space-2;
+      cursor: pointer;
+    }
+
+    small {
+      color: color('text-muted');
+    }
+  }
+
   &__formats {
     display: flex;
     flex-direction: column;

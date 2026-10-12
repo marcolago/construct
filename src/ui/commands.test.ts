@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { applicableGroups, COMMANDS, COMMAND_GROUPS, getCommandContext, helpOf } from './commands';
+import { applicableGroups, COMMANDS, COMMAND_GROUPS, getCommandContext, helpOf, isUsable } from './commands';
+import { useEdgeTool } from './EdgeTool/edgeToolStore';
+import { useSplitTool } from './Split/splitToolStore';
 import { TOOLBAR_HELP } from './Toolbar/toolbarHelp';
 import { useResultStore } from '../kernel/useKernel';
 import type { NodeMesh } from '../kernel/evaluate';
@@ -195,5 +197,38 @@ describe('pulsanti utilizzabili solo quando servono sull\'oggetto selezionato', 
     expect(on('ungroup')).toBe(true);
     st().toggleLockSelected();
     expect(on('ungroup')).toBe(false);
+  });
+});
+
+describe('barra con uno strumento a pannello aperto', () => {
+  const st = () => useSceneStore.getState();
+  const usable = (id: keyof typeof COMMANDS) => isUsable(COMMANDS[id], getCommandContext());
+
+  it('senza strumenti aperti isUsable coincide con enabled', () => {
+    st().addPrimitive('box');
+    for (const cmd of Object.values(COMMANDS)) expect(isUsable(cmd, getCommandContext())).toBe(cmd.enabled(getCommandContext()));
+  });
+
+  it('con Dividi aperto restano utilizzabili solo il suo pulsante e nient\'altro', () => {
+    st().addPrimitive('box');
+    useSplitTool.setState({ active: true });
+    try {
+      expect(getCommandContext().toolActive).toBe(true);
+      expect(usable('split')).toBe(true);
+      for (const id of ['select', 'translate', 'duplicate', 'delete', 'lock', 'hide', 'hole', 'shell', 'fillet', 'measure', 'mirror', 'drop'] as const) expect(usable(id), id).toBe(false);
+    } finally {
+      useSplitTool.setState({ active: false });
+    }
+  });
+
+  it('con Raccordo aperto si può passare a Smusso e Smusso angolare, ma non agli altri strumenti', () => {
+    st().addPrimitive('box');
+    useEdgeTool.setState({ tool: 'fillet' });
+    try {
+      for (const id of ['fillet', 'chamfer', 'corner'] as const) expect(usable(id), id).toBe(true);
+      for (const id of ['split', 'shell', 'measure', 'layflat', 'duplicate'] as const) expect(usable(id), id).toBe(false);
+    } finally {
+      useEdgeTool.setState({ tool: null });
+    }
   });
 });

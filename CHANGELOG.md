@@ -18,6 +18,23 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.49.0] - 2026-10-12
+
+### Aggiunto
+- **Dividi con un piano inclinato.** Oltre all'asse e alla quota, il pannello ha ora l'**angolo** (da −90° a 90°) e l'asse attorno a cui il piano ruota (uno dei due diversi dall'asse del piano; passa da solo all'altro se cambi asse del piano): con 45° si taglia in diagonale. Il piano passa dal punto scelto (il centro dell'ingombro alla quota indicata) e l'anteprima 3D mostra la lastra inclinata. Il cubo di taglio è ruotato (nel codice un `cube` dentro `rotate([0, 45, 0])`), quindi le due metà restano parametriche. Con angolo 0 il risultato è identico a prima.
+- **Dividi nella documentazione dell'app e nel tooltip.** La modale Documentazione elenca Dividi (sezione Modificare, con una nota sull'angolo) e il tooltip del pulsante ha l'immagine di esempio.
+- **Opzioni dell'immagine delle 4 viste.** Esporta → Immagine apre un passo con lo **sfondo** (come il tema attuale, bianco per documenti e stampa, trasparente) e, con più piatti, il **piatto** da fotografare: un altro piatto si porta in vista solo per il tempo dell'esportazione (senza passi di Annulla) e poi si torna a quello di prima; il file porta il nome del piatto.
+- **Tendina Altro nella barra stretta.** Sotto i 1440 px Ortografica, Operandi, Piatto, Tema e Codice OpenSCAD stanno in una tendina verticale, con le stesse funzioni, il segno di spunta degli interruttori e i tasti. La barra completa e la tendina Viste restano dentro la finestra fino a 1280 px (la tendina si apre verso sinistra).
+- **Un clic sul marchio** in alto a sinistra riapre la schermata di benvenuto.
+
+### Modificato
+- **Con uno strumento a pannello aperto la barra si ferma**: Raccordo, Smusso, Smusso angolare, Guscio, Serie, Pattern, Dividi, Appoggia su una faccia e Misura lasciano attivo solo il proprio pulsante (per chiuderlo; con i tre strumenti di bordo si passa liberamente dall'uno all'altro), come già facevano le scorciatoie. Anche Nuovo, Annulla e Ripeti si fermano finché lo strumento è aperto.
+- **Il tasto destro su un oggetto con uno strumento aperto non apre più il menu** in nessun caso (con Dividi aperto prima si apriva), né dalla vista né dall'elenco Oggetti.
+- Le voci delle tendine Viste e Altro hanno un nome accessibile pulito (senza il tasto) e la scorciatoia dichiarata.
+
+### Corretto
+- **Dividi: il campo Posizione.** Cambiando asse il campo passa da solo a metà ingombro e, se si scriveva subito dopo, il nuovo testo si accodava al vecchio (per esempio "10" + "5" = "105", ridotto al massimo e piano fuori dall'oggetto). I test ora aspettano l'aggiornamento del campo.
+
 ## [0.48.1] - 2026-10-12
 
 ### Corretto

@@ -11,7 +11,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:4391',
     channel: 'chrome',
-    viewport: { width: 1400, height: 800 },
+    // Sopra i 1440 px la barra ha tutti i pulsanti (sotto, quelli di vista stanno nella tendina Altro)
+    viewport: { width: 1500, height: 800 },
     // Il service worker non serve ai test e manterrebbe in cache versioni vecchie
     serviceWorkers: 'block',
     // WebGL software anche in modalità headless

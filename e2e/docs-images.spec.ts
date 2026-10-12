@@ -61,7 +61,8 @@ const click = async (page: Page, p: Vec) => {
 
 test.describe('immagini di esempio', () => {
   test.beforeEach(async ({ page }) => {
-    await page.setViewportSize({ width: 1400, height: 800 });
+    // Larga abbastanza per la barra completa (sotto 1440 px i pulsanti di vista stanno nella tendina Altro)
+    await page.setViewportSize({ width: 1500, height: 800 });
     await openApp(page);
     // Il tema predefinito è lo scuro: le immagini della documentazione e le anteprime restano nel tema chiaro (tasto D)
     await page.keyboard.press('d');
@@ -117,6 +118,20 @@ test.describe('immagini di esempio', () => {
     await settled(page);
     await frame(page, [28, 0, 2.5], 140);
     await help(page, 'pattern');
+  });
+
+  test('dividi', async ({ page }) => {
+    await addShape(page, 'Cubo');
+    await frame(page, [0, 0, 10], 90);
+    await page.keyboard.press('Shift+S');
+    const panel = page.getByRole('region', { name: 'Dividi' });
+    await panel.getByRole('group', { name: 'Asse del piano di taglio' }).getByRole('button', { name: 'Z', exact: true }).click();
+    // Taglio diagonale a 45° per mostrare l'inclinazione del piano
+    const angle = panel.locator('.slider-field', { hasText: 'Angolo' }).locator('.number-field__input');
+    await angle.fill('45');
+    await angle.press('Enter');
+    await settled(page);
+    await help(page, 'split');
   });
 
   test('unisci, inviluppo, operandi, misura e appoggia', async ({ page }) => {

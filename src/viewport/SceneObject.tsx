@@ -320,7 +320,7 @@ export function SceneObject({ rootId, meshes, selection, locked, showGizmo }: Pr
     e.stopPropagation();
     // Con uno strumento a pannello aperto l'oggetto è in anteprima: niente menu
     const c = getCommandContext();
-    if (c.edgeTool || c.shellActive || c.measureActive || c.layFlatActive || c.arrayActive || c.patternActive) return;
+    if (c.toolActive) return;
     if (!selection.includes(rootId)) select([rootId]);
     useUiStore.getState().setContextMenu({ x: e.nativeEvent.clientX, y: e.nativeEvent.clientY });
   };

@@ -1,3 +1,4 @@
+import { useUiStore } from '../uiStore';
 import './Brand.scss';
 
 const NAME = 'Construct';
@@ -29,12 +30,13 @@ export function BrandLetters() {
   );
 }
 
-/** Marchio in cima alla barra laterale: icona e nome colorato. */
+/** Marchio in cima alla barra laterale: icona e nome colorato. Un clic riapre la schermata di benvenuto. */
 export function Brand() {
+  const openWelcome = useUiStore((s) => s.setWelcomeOpen);
   return (
-    <div className="brand">
+    <button type="button" className="brand" title="Schermata di benvenuto" aria-label="Construct, schermata di benvenuto" onClick={() => openWelcome(true)}>
       <BrandMark className="brand__mark" />
-      <span className="brand__name brand-name"><BrandLetters /></span>
-    </div>
+      <span className="brand__name brand-name" aria-hidden="true"><BrandLetters /></span>
+    </button>
   );
 }

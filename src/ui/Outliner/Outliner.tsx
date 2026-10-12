@@ -147,7 +147,7 @@ function Row({ id, depth, collapsed, toggle, hint, setHint }: RowProps) {
             if (hidden) return;
             // Con uno strumento a pannello aperto l'oggetto è in anteprima: niente menu (come nella vista 3D)
             const c = getCommandContext();
-            if (c.edgeTool || c.shellActive || c.measureActive || c.layFlatActive || c.arrayActive || c.patternActive || c.splitActive) return;
+            if (c.toolActive) return;
             if (!selected) select([id]);
             ui.setContextMenu({ x: e.clientX, y: e.clientY });
           }}

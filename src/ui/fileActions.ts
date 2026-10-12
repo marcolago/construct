@@ -4,6 +4,7 @@ import { useSceneStore } from '../scene/store';
 import type { Example } from '../examples/catalog';
 import { fitView } from '../viewport/cameraControl';
 import { captureViews } from '../viewport/snapshot';
+import type { ImageBackground } from '../viewport/snapshot';
 import { activePlateId, allRootIds, hasManyPlates, PLATE_GAP, platesOf } from '../scene/plates';
 import { useUiStore } from './uiStore';
 import { sceneFromJson, sceneToJson } from '../scene/persistence';
@@ -75,20 +76,44 @@ const kernelIdle = () =>
     });
   });
 
-/** PNG con le 4 viste (alto, fronte, lato, isometrica) del piatto in vista, in una griglia 2×2 con lo sfondo del tema. */
-export async function exportViewsPng(): Promise<void> {
+/** Aspetta che le mesh calcolate siano quelle del piatto in vista (dopo un cambio di piatto il kernel ricalcola). */
+async function meshesOfActivePlate(): Promise<void> {
+  const ready = () => {
+    const state = useResultStore.getState();
+    const roots = new Set(scene().rootIds);
+    const have = new Set(state.meshes.map((m) => m.rootId));
+    return !state.busy && roots.size === have.size && [...roots].every((id) => have.has(id));
+  };
+  for (let waited = 0; !ready() && waited < 15000; waited += 50) await new Promise((r) => setTimeout(r, 50));
+}
+
+/**
+ * PNG con le 4 viste (alto, fronte, lato, isometrica) in una griglia 2×2. Di norma è il piatto in vista; con `plateId` un
+ * altro piatto: per fotografarlo lo si porta in vista (senza passi di Annulla), si aspetta il calcolo e si torna al piatto di
+ * prima. Lo sfondo è quello del tema, bianco o trasparente.
+ */
+export async function exportViewsPng(options: { background?: ImageBackground; plateId?: string } = {}): Promise<void> {
   await kernelIdle();
+  const original = activePlateId(scene());
+  const target = options.plateId ?? original;
   try {
-    const blob = await captureViews();
+    if (target !== original) {
+      useSceneStore.getState().switchPlate(target);
+      await meshesOfActivePlate();
+    }
+    const blob = await captureViews(options.background);
     if (!blob) {
-      notify.error('Non c\'è nulla da fotografare nel piatto in vista.');
+      notify.error('Non c\'è nulla da fotografare nel piatto scelto.');
       return;
     }
-    const plate = platesOf(scene()).find((p) => p.id === activePlateId(scene()));
+    const plate = platesOf(scene()).find((p) => p.id === target);
     const suffix = plate && hasManyPlates(scene()) ? `-${plate.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}` : '';
     download(blob, `construct-viste${suffix}.png`, 'image/png');
   } catch (err) {
     notify.error(err instanceof Error ? `Impossibile creare l'immagine: ${err.message}` : 'Impossibile creare l\'immagine.');
+  } finally {
+    // Il piatto in vista torna quello di prima
+    if (target !== original) useSceneStore.getState().switchPlate(original);
   }
 }
 

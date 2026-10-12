@@ -113,7 +113,7 @@ export default function DocsPanel() {
       <div className="docs__content" ref={content}>
       <Section id="cose" title="Cos'è Construct">
         <p><strong>Construct</strong> è un editor CAD 3D che funziona nel browser, pensato per la stampa 3D. Si costruisce a partire da forme semplici (solidi 3D, forme 2D, simboli, emoji e testo), che si combinano con le operazioni booleane (unione, differenza, intersezione, fori) e si rifiniscono con raccordi, smussi, guscio, serie e pattern.</p>
-        <p>Il risultato si esporta in <strong>STL</strong> e <strong>3MF</strong>, pronti per lo slicer, oppure come <strong>codice OpenSCAD</strong> equivalente; un&apos;<strong>immagine PNG</strong> con le quattro viste (alto, fronte, lato, isometrica) è utile per documentare il pezzo. Si possono importare file STL, 3MF, SVG e OpenSCAD.</p>
+        <p>Il risultato si esporta in <strong>STL</strong> e <strong>3MF</strong>, pronti per lo slicer, oppure come <strong>codice OpenSCAD</strong> equivalente; un&apos;<strong>immagine PNG</strong> con le quattro viste (alto, fronte, lato, isometrica) in una griglia 2×2, utile per documentare il pezzo: nel passo Immagine scegli lo sfondo (tema attuale, bianco o trasparente) e, con più piatti, quale fotografare. Si possono importare file STL, 3MF, SVG e OpenSCAD.</p>
         <p>Tutto resta sul tuo dispositivo: nulla viene inviato a un server, e Construct funziona anche offline come PWA. Il progetto è open source (licenza MIT) su <a href="https://github.com/miziomon/construct" target="_blank" rel="noopener noreferrer">github.com/miziomon/construct</a>, realizzato da Maurizio Pelizzone / MAVIDA.</p>
         <h4>Per chi è</h4>
         <p>Per chi stampa in 3D e vuole modellare rapidamente i propri pezzi: supporti, scatole, adattatori, ricambi e piccoli oggetti, con misure esatte in millimetri.</p>
@@ -151,12 +151,14 @@ export default function DocsPanel() {
       </Section>
 
       <Section id="modificare" title="Modificare">
-        <p>Rifiniture pensate per la stampa: raccordi e smussi sugli spigoli, guscio per svuotare, specchiatura e allineamento, e due comandi per mettere il pezzo nel verso giusto sul piatto.</p>
+        <p>Rifiniture pensate per la stampa: raccordi e smussi sugli spigoli, guscio per svuotare, taglio in due parti, specchiatura e allineamento, e due comandi per mettere il pezzo nel verso giusto sul piatto.</p>
         <Command id="extrude" />
         <Command id="fillet" />
         <Command id="chamfer" />
         <Command id="corner" />
         <Command id="shell" />
+        <Command id="split" />
+        <p>Con <strong>Dividi</strong> il piano di taglio si sceglie per asse e quota, e si può inclinare: imposta l&apos;<strong>angolo</strong> (45° per un taglio diagonale) e l&apos;asse attorno a cui il piano ruota. Le due metà restano due oggetti parametrici (intersezioni con un cubo di taglio) che si possono ancora spostare o ruotare.</p>
         <Command id="mirror" />
         <Command id="align" />
         <Command id="measure" />
@@ -174,6 +176,7 @@ export default function DocsPanel() {
         <p>Un progetto può avere più <strong>piatti</strong>, ciascuno con i suoi oggetti: si vede un piatto alla volta e si gestiscono dalla scheda Piatti sotto la libreria. Il 3MF esporta tutti i piatti affiancati, l&apos;STL ne chiede uno.</p>
         <p>Le dimensioni del <strong>piano di stampa</strong> (256 × 256 mm all&apos;inizio) si cambiano dalla barra di stato o dal menu del clic destro nel vuoto, anche con i preset delle stampanti. Il comando Piatto (tasto P) lo mostra o lo nasconde.</p>
         <Command id="bed" />
+        <p>Con la finestra stretta (sotto i 1440 px) i pulsanti di vista meno usati (Ortografica, Operandi, Piatto, Tema e Codice) si raccolgono nella tendina <strong>Altro</strong>, con le stesse funzioni e le stesse scorciatoie. Mentre è aperto uno strumento con pannello (Raccordo, Guscio, Dividi, Misura...) la barra si ferma e resta attivo solo il pulsante dello strumento, che si chiude anche con Esc.</p>
       </Section>
 
       <Section id="codice" title="Codice OpenSCAD">
