@@ -18,6 +18,11 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.45.1] - 2026-10-12
+
+### Aggiunto
+- **Menu contestuale nell'elenco Oggetti.** Il clic destro su una riga seleziona l'oggetto (se non lo è già) e apre lo stesso menu dei comandi della vista 3D, Nascondi compreso. Su un oggetto nascosto, che non si può selezionare, il menu offre la sola voce **Mostra**. I figli di un gruppo nascosto non aprono nulla: si mostrano dal gruppo.
+
 ## [0.45.0] - 2026-10-12
 
 ### Modificato

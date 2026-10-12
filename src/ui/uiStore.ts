@@ -166,10 +166,11 @@ interface UiState extends Settings {
   setGizmoDragging: (dragging: boolean) => void;
   /**
    * Menu contestuale aperto, con la posizione del puntatore in pixel della finestra (non si salva). Con `point` (X e Y
-   * sul piano di stampa) è il menu del vuoto, che aggiunge una forma in quel punto; senza, quello dei comandi della selezione.
+   * sul piano di stampa) è il menu del vuoto, che aggiunge una forma in quel punto; con `hiddenId` (clic destro su un oggetto
+   * nascosto nell'elenco) offre solo di mostrarlo; senza, è quello dei comandi della selezione.
    */
-  contextMenu: { x: number; y: number; point?: [number, number] } | null;
-  setContextMenu: (menu: { x: number; y: number; point?: [number, number] } | null) => void;
+  contextMenu: { x: number; y: number; point?: [number, number]; hiddenId?: string } | null;
+  setContextMenu: (menu: { x: number; y: number; point?: [number, number]; hiddenId?: string } | null) => void;
   toggleGhostOps: () => void;
   /** Apre la tendina indicata (chiudendo l'altra); `null` la chiude. */
   setToolbarMenu: (menu: ToolbarMenu | null) => void;

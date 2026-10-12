@@ -85,6 +85,68 @@ test('un oggetto nascosto non si vede né si seleziona, resta nel calcolo e si m
   expect((await sceneState(page)).nodes[id].hidden).toBeUndefined();
 });
 
+test('Duplica (Ctrl+D) lascia la copia nelle stesse coordinate, anche per un oggetto spostato e per un gruppo', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  const cube = (await sceneState(page)).rootIds[0];
+  // Un oggetto spostato e ruotato: la copia deve avere esattamente posizione e rotazione dell'originale
+  await page.evaluate((id) => window.__construct!.store.getState().updateNode(id, { position: [30, -15, 10], rotation: [0, 0, 45] }), cube);
+  await page.keyboard.press('Control+d');
+  await settled(page);
+  let scene = await sceneState(page);
+  expect(scene.rootIds).toHaveLength(2);
+  const [copy] = scene.rootIds;
+  expect(copy).not.toBe(cube);
+  expect(scene.nodes[copy].position).toEqual([30, -15, 10]);
+  expect(scene.nodes[copy].rotation).toEqual([0, 0, 45]);
+  // La copia è selezionata e il kernel la calcola nello stesso punto dell'originale
+  expect(await page.evaluate(() => window.__construct!.store.getState().selection)).toEqual([copy]);
+  const bbox = (id: string) => page.evaluate((rootId) => window.__construct!.results.getState().meshes.find((m) => m.rootId === rootId)!.bbox, id);
+  expect(await bbox(copy)).toEqual(await bbox(cube));
+
+  // Un gruppo: la copia ha la stessa posizione e i figli (copiati) restano alle stesse coordinate relative
+  await addShape(page, 'Sfera');
+  await page.evaluate(() => {
+    const s = window.__construct!.store.getState();
+    s.select(s.scene.rootIds.slice(0, 2));
+    s.groupSelected();
+  });
+  await settled(page);
+  const group = (await sceneState(page)).rootIds[0];
+  await page.keyboard.press('Control+d');
+  await settled(page);
+  scene = await sceneState(page);
+  const [groupCopy] = scene.rootIds;
+  expect(groupCopy).not.toBe(group);
+  expect(scene.nodes[groupCopy].position).toEqual(scene.nodes[group].position);
+  const rel = (g: string) => scene.nodes[g].children.map((c: string) => scene.nodes[c].position);
+  expect(rel(groupCopy)).toEqual(rel(group));
+});
+
+test('Menu contestuale dell\'elenco: Nascondi sulla riga visibile, Mostra su quella nascosta', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  const id = (await sceneState(page)).rootIds[0];
+  const row = page.locator('.outliner__row').first();
+  const selection = () => page.evaluate(() => window.__construct!.store.getState().selection);
+
+  // Clic destro su una riga non selezionata: la seleziona e apre il menu dei comandi, con Nascondi
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => window.__construct!.store.getState().select([]));
+  await row.click({ button: 'right', position: { x: 60, y: 10 } });
+  expect(await selection()).toEqual([id]);
+  const menu = page.getByRole('menu', { name: 'Comandi per la selezione' });
+  await menu.getByRole('menuitem', { name: 'Nascondi', exact: true }).click();
+  await expect(page.locator('.outliner__row--hidden')).toHaveCount(1);
+
+  // Sulla riga nascosta il menu offre solo Mostra e non seleziona nulla
+  await row.click({ button: 'right', position: { x: 60, y: 10 } });
+  const hiddenMenu = page.getByRole('menu', { name: 'Oggetto nascosto' });
+  await expect(hiddenMenu.getByRole('menuitem')).toHaveCount(1);
+  expect(await selection()).toEqual([]);
+  await hiddenMenu.getByRole('menuitem', { name: 'Mostra', exact: true }).click();
+  await expect(page.locator('.outliner__row--hidden')).toHaveCount(0);
+  expect((await sceneState(page)).nodes[id].hidden).toBeUndefined();
+});
+
 /** Un cubo grande (40 mm) con dentro uno piccolo (10 mm), entrambi centrati in (0, 0, 20). Restituisce gli id. */
 async function enclosedCubes(page: import('@playwright/test').Page): Promise<{ big: string; small: string }> {
   await addShape(page, 'Cubo');

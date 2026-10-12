@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
-import { Box, Camera, ChevronRight, FileDown, Grid3x3, House, Layers, Sigma, Smile, Square, Upload } from 'lucide-react';
+import { Box, Camera, ChevronRight, Eye, FileDown, Grid3x3, House, Layers, Sigma, Smile, Square, Upload } from 'lucide-react';
 import { fitView } from '../../viewport/cameraControl';
 import { PRIMITIVE_LABELS, SHAPE2D_LABELS } from '../../scene/defaults';
 import { isProfileKind, PROFILE_KINDS } from '../../scene/profiles';
@@ -152,16 +152,17 @@ export function ContextMenu() {
   }, [menu, setMenu]);
 
   const at = menu?.point;
+  const hiddenId = menu?.hiddenId;
   // Per i caratteri dei sottomenu servono i font di anteprima, gli stessi delle tab Simboli ed Emoji
   useEffect(() => {
     if (at) void registerPreviewFonts();
   }, [at]);
 
   if (!menu) return null;
-  const groups = at ? [] : applicableGroups(ctx);
+  const groups = at || hiddenId ? [] : applicableGroups(ctx);
   // Spostare nel piatto: solo con più piatti e con oggetti selezionati che si possono spostare
-  const otherPlates = !at && hasManyPlates(ctx.scene) && ctx.unlockedRoots.length > 0 ? platesOf(ctx.scene).filter((p) => p.id !== activePlateId(ctx.scene)) : [];
-  if (!at && groups.length === 0 && otherPlates.length === 0) return null;
+  const otherPlates = !at && !hiddenId && hasManyPlates(ctx.scene) && ctx.unlockedRoots.length > 0 ? platesOf(ctx.scene).filter((p) => p.id !== activePlateId(ctx.scene)) : [];
+  if (!at && !hiddenId && groups.length === 0 && otherPlates.length === 0) return null;
 
   /** Frecce su e giù spostano il fuoco tra le voci del menu principale, con giro continuo; destra apre un sottomenu. */
   const onKeyDown = (e: ReactKeyboardEvent) => {
@@ -267,12 +268,15 @@ export function ContextMenu() {
       ref={ref}
       className="context-menu"
       role="menu"
-      aria-label={at ? 'Aggiungi una forma' : 'Comandi per la selezione'}
+      aria-label={at ? 'Aggiungi una forma' : hiddenId ? 'Oggetto nascosto' : 'Comandi per la selezione'}
       style={{ left: pos?.left ?? menu.x, top: pos?.top ?? menu.y }}
       onKeyDown={onKeyDown}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {at ? (
+      {hiddenId ? (
+        // Un oggetto nascosto non si seleziona: l'unica azione utile è mostrarlo
+        item('show', 'Mostra', <Eye size={16} />, () => st().setHidden(hiddenId, false))
+      ) : at ? (
         <>
           {submenu('3d', 'Forme 3D', <Box size={16} />, [
             ...KINDS_3D.map((kind) => {

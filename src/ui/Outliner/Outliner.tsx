@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, CircleDashed, EyeOff, GripVertical, Lock, Package, Sigma, Smile } from 'lucide-react';
 import { isHidden, isLocked, useSceneStore } from '../../scene/store';
 import { useUiStore } from '../uiStore';
+import { getCommandContext } from '../commands';
 import { PRIMITIVE_ICONS, SHAPE2D_ICONS } from '../ShapeLibrary/ShapeLibrary';
 import { CORNER_ICONS, CORNER_NAMES, EDGE_ICONS, GROUP_ICONS, GROUP_NAMES } from '../groupIcons';
 import { dropTarget, zoneAt, type DropZone } from './dnd';
@@ -136,6 +137,20 @@ function Row({ id, depth, collapsed, toggle, hint, setHint }: RowProps) {
           // Un oggetto nascosto non si seleziona (lo scarta anche lo store): si mostra con l'icona
           onClick={(e) => !hidden && select([id], e.shiftKey || e.ctrlKey || e.metaKey)}
           onDoubleClick={() => setRenamingId(id)}
+          // Tasto destro: sul nascosto offre di mostrarlo; sugli altri seleziona la riga (se non lo è già) e apre il menu dei comandi
+          onContextMenu={(e) => {
+            e.preventDefault();
+            if (editing) return;
+            const ui = useUiStore.getState();
+            if (node.hidden) return ui.setContextMenu({ x: e.clientX, y: e.clientY, hiddenId: id });
+            // Nascosto solo per eredità (dal gruppo): non si seleziona, si mostra dal gruppo
+            if (hidden) return;
+            // Con uno strumento a pannello aperto l'oggetto è in anteprima: niente menu (come nella vista 3D)
+            const c = getCommandContext();
+            if (c.edgeTool || c.shellActive || c.measureActive || c.layFlatActive || c.arrayActive || c.patternActive || c.splitActive) return;
+            if (!selected) select([id]);
+            ui.setContextMenu({ x: e.clientX, y: e.clientY });
+          }}
           onKeyDown={(e) => {
             if (editing) return;
             if ((e.key === 'Enter' || e.key === ' ') && !hidden) select([id]);
