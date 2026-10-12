@@ -53,6 +53,11 @@ describe('store della scena', () => {
     st().duplicateSelected();
     expect(st().scene.rootIds).toHaveLength(2);
     expect(st().selection).not.toContain(id);
+    // La copia resta nelle stesse coordinate dell'originale, già selezionata e in cima all'elenco
+    const copy = st().selection[0];
+    expect(st().scene.rootIds[0]).toBe(copy);
+    expect(st().scene.nodes[copy].position).toEqual(st().scene.nodes[id].position);
+    expect(st().scene.nodes[copy].rotation).toEqual(st().scene.nodes[id].rotation);
     st().removeSelected();
     expect(st().scene.rootIds).toEqual([id]);
   });

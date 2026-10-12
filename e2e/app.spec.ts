@@ -2757,8 +2757,10 @@ test('Menu contestuale: una voce esegue il comando e chiude il menu', async ({ p
   await menu.getByRole('menuitem', { name: 'Duplica', exact: true }).click();
   await settled(page);
   await expect(menu).toBeHidden();
-  expect((await sceneState(page)).rootIds).toHaveLength(2);
-
+  const scene = await sceneState(page);
+  expect(scene.rootIds).toHaveLength(2);
+  // La copia sta nelle stesse coordinate dell'originale
+  expect(scene.nodes[scene.rootIds[0]].position).toEqual(scene.nodes[scene.rootIds[1]].position);
 });
 
 test('Barra strumenti: i comandi sono in gruppi con il nome della sezione', async ({ page }) => {

@@ -373,13 +373,8 @@ export const useSceneStore = create<SceneState>()(
             s.scene.nodes[copy.id] = copy;
             return copy.id;
           };
-          for (const id of selectedRoots(s.scene, s.selection)) {
-            const cid = clone(id);
-            const c = s.scene.nodes[cid];
-            // Sfalsa la copia di 10 mm in X e Y per renderla visibile
-            c.position = [c.position[0] + 10, c.position[1] + 10, c.position[2]];
-            copies.push(cid);
-          }
+          // La copia resta nelle stesse coordinate dell'originale: si sposta poi dove serve
+          for (const id of selectedRoots(s.scene, s.selection)) copies.push(clone(id));
           // Le copie stanno in cima, nello stesso ordine degli originali
           s.scene.rootIds.unshift(...copies);
           if (copies.length) s.selection = copies;

@@ -18,6 +18,11 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.45.0] - 2026-10-12
+
+### Modificato
+- **Duplica non sposta più la copia.** Prima la copia compariva sfalsata di 10 mm in X e Y; ora nasce esattamente nelle coordinate dell'originale (sovrapposta), è già selezionata e in cima all'elenco, pronta da muovere con il gizmo o le frecce. Vale per il pulsante, il menu contestuale e `Ctrl+D`.
+
 ## [0.44.0] - 2026-10-12
 
 ### Aggiunto
