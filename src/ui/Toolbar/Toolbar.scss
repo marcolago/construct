@@ -9,13 +9,6 @@
   border-bottom: 1px solid color('border');
   background: color('panel');
 
-  &__brand {
-    margin-right: $space-1;
-    font-size: 13px;
-    letter-spacing: 0.08em;
-    color: color('accent');
-  }
-
   &__group {
     display: flex;
     align-items: center;
@@ -173,5 +166,24 @@
   &__button-label {
     font-size: 12px;
     font-weight: 600;
+  }
+}
+
+/*
+ * Finestre strette: la barra sta a destra della barra laterale (240 px), quindi i pulsanti si stringono per tenere
+ * visibile anche il gruppo Vista con il menu. Sopra questa larghezza non cambia nulla.
+ */
+@media (max-width: 1760px) {
+  .toolbar {
+    gap: 4px;
+
+    &__button {
+      min-width: 28px;
+      padding: 0 4px;
+    }
+
+    &__button--labeled {
+      padding: 0 $space-2;
+    }
   }
 }

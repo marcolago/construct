@@ -1,10 +1,17 @@
 @use './styles/abstracts' as *;
 
-// Layout a tre colonne: libreria/oggetti, viewport, proprietà/codice
+// Layout: la barra laterale sinistra (marchio, libreria, oggetti) occupa tutta l'altezza; alla sua destra stanno la barra
+// strumenti e sotto di essa viewport e proprietà/codice
 .app {
   display: flex;
-  flex-direction: column;
   height: 100%;
+
+  &__main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
 
   &__body {
     display: flex;

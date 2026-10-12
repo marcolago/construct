@@ -18,7 +18,12 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
-## [0.45.1] - 2026-10-12
+## [0.46.0] - 2026-10-12
+
+### Modificato
+- **Nuova struttura dell'interfaccia.** La barra laterale sinistra ora sale fino in cima alla finestra e ospita il marchio come prima cosa, centrato; la barra strumenti parte subito alla sua destra. Il marchio è l'icona della favicon (il cubo azzurro sul quadrato scuro) seguita dal nome Construct, con una tinta per lettera: le cinque delle sezioni della barra strumenti (blu, viola, verde acqua, ambra, ardesia) a rotazione. L'intestazione è alta quanto la barra strumenti, così i bordi inferiori restano allineati.
+- **Barra strumenti più compatta sulle finestre strette.** Avendo 240 px in meno, sotto i 1760 px i pulsanti si stringono, così il gruppo Vista con il menu resta visibile fino a circa 1440 px di larghezza (senza questa correzione la barra si sarebbe tagliata già sotto i 1670 px).
+ - 2026-10-12
 
 ### Aggiunto
 - **Menu contestuale nell'elenco Oggetti.** Il clic destro su una riga seleziona l'oggetto (se non lo è già) e apre lo stesso menu dei comandi della vista 3D, Nascondi compreso. Su un oggetto nascosto, che non si può selezionare, il menu offre la sola voce **Mostra**. I figli di un gruppo nascosto non aprono nulla: si mostrano dal gruppo.

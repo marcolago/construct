@@ -26,7 +26,7 @@ Tutto gira nel browser: il calcolo geometrico usa [manifold-3d](https://github.c
 - **Schermata di benvenuto** al primo avvio (e dal menu): progetto vuoto, partire da un cubo, importare un file o aprire un modello di esempio.
 - **Modelli di esempio** (menu e benvenuto): una galleria con anteprima (biglietto da visita, gioco a incastri, pallina di Natale) che sostituisce la scena, si annulla con Ctrl+Z e si inquadra da sola; i modelli sono progetti nativi incorporati nell'app, quindi si aprono anche offline.
 - **Timeline** a indicatori con il nome dell'operazione nel tooltip e un'icona per svuotare la cronologia.
-- **Barra strumenti a sezioni** (File, Trasforma, Combina, Modifica, Disponi, Oggetto, Vista), con il nome del gruppo sopra i pulsanti e una tinta per sezione.
+- **Barra strumenti a sezioni** (File, Trasforma, Combina, Modifica, Disponi, Oggetto, Vista), con il nome del gruppo sopra i pulsanti e una tinta per sezione; il marchio (icona e nome a colori) sta in cima alla barra laterale sinistra, che occupa tutta l'altezza.
 - **Nascondi** (`Maiusc+H`): toglie un oggetto dalla vista e dalla selezione (icona dell'occhio barrato nell'elenco, un clic lo mostra); resta nel progetto e nelle esportazioni.
 - **Cronologia** con Annulla e Ripeti (un solo passo per operazione) e linea del tempo.
 - **Tooltip dettagliati** su ogni comando della barra: cosa fa, come si applica e, per i comandi più complessi, un'immagine di esempio.

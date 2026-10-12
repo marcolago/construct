@@ -1,4 +1,5 @@
 import { Suspense, useEffect } from 'react';
+import { Brand } from './ui/Brand/Brand';
 import { Toolbar } from './ui/Toolbar/Toolbar';
 import { ContextMenu } from './ui/ContextMenu/ContextMenu';
 import { WelcomeDialog } from './ui/Welcome/WelcomeDialog';
@@ -48,18 +49,21 @@ export default function App() {
         void importFiles(Array.from(e.dataTransfer.files));
       }}
     >
-      <Toolbar />
-      <div className="app__body">
-        <aside className="app__left" aria-label="Libreria e oggetti">
-          <LibraryTabs />
-          <Outliner />
-        </aside>
-        <main className="app__center">
-          <Viewport />
-          <Timeline />
-          <StatusBar />
-        </main>
-        <Sidebar />
+      <aside className="app__left" aria-label="Libreria e oggetti">
+        <Brand />
+        <LibraryTabs />
+        <Outliner />
+      </aside>
+      <div className="app__main">
+        <Toolbar />
+        <div className="app__body">
+          <main className="app__center">
+            <Viewport />
+            <Timeline />
+            <StatusBar />
+          </main>
+          <Sidebar />
+        </div>
       </div>
       {codeOpen && (
         <Suspense fallback={null}>

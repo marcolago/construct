@@ -1,0 +1,27 @@
+@use '../../styles/abstracts' as *;
+
+// Intestazione della barra laterale: alta quanto la barra strumenti, così i due bordi inferiori si allineano
+.brand {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: $space-3;
+  height: $toolbar-height;
+  border-bottom: 1px solid color('border');
+
+  &__mark {
+    flex: none;
+  }
+
+  &__name {
+    font-size: 16px;
+  }
+
+  // Una tinta per lettera, a rotazione (stessi colori delle sezioni della barra strumenti)
+  @each $tone in (transform, combine, modify, arrange, object) {
+    &__letter--#{$tone} {
+      color: color('tool-#{$tone}');
+    }
+  }
+}

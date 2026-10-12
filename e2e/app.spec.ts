@@ -336,7 +336,7 @@ test('Esporta STL scarica un file binario valido', async ({ page }) => {
 test('la versione sta nel title e non più accanto al logo; il nome dell\'app è Construct', async ({ page }) => {
   const { version } = JSON.parse((await import('node:fs')).readFileSync('package.json', 'utf8'));
   await expect(page).toHaveTitle(`Construct v${version}`);
-  await expect(page.locator('.toolbar__brand')).toHaveText('Construct');
+  await expect(page.locator('.brand__name')).toHaveText('Construct');
   await expect(page.locator('.toolbar__version')).toHaveCount(0);
 });
 
@@ -3265,7 +3265,7 @@ test('Menu hamburger: la voce Schermata di benvenuto riapre il benvenuto, e le s
 });
 
 test('Il nome dell\'app è in maiuscolo con Orbitron e il font è tra quelli del Testo', async ({ page }) => {
-  const brand = page.locator('.toolbar__brand');
+  const brand = page.locator('.brand__name');
   expect(await brand.evaluate((el) => getComputedStyle(el).textTransform)).toBe('uppercase');
   expect(await brand.evaluate((el) => getComputedStyle(el).fontFamily)).toContain('Orbitron');
   // Il file del font è stato caricato (@font-face)
@@ -3274,6 +3274,36 @@ test('Il nome dell\'app è in maiuscolo con Orbitron e il font è tra quelli del
   const fonts = await page.evaluate(() => window.__construct!.store.getState().scene.rootIds.length);
   expect(fonts).toBe(1);
   await expect(page.getByRole('option', { name: 'Orbitron Bold' })).toHaveCount(1);
+});
+
+test('Il marchio sta in cima alla barra laterale, centrato, con una tinta per lettera; la barra strumenti parte alla sua destra', async ({ page }) => {
+  const box = async (selector: string) => (await page.locator(selector).boundingBox())!;
+  const side = await box('aside.app__left');
+  const toolbar = await box('header.toolbar');
+  const mark = await box('.brand__mark');
+  const name = await box('.brand__name');
+
+  // La barra laterale sale fino in cima e il marchio è dentro, come prima cosa
+  expect(side.y).toBe(0);
+  await expect(page.locator('aside.app__left > :first-child')).toHaveClass(/brand/);
+  await expect(page.locator('header.toolbar .brand')).toHaveCount(0);
+  // La barra strumenti parte subito a destra della barra laterale, in cima
+  expect(toolbar.y).toBe(0);
+  expect(Math.abs(toolbar.x - (side.x + side.width))).toBeLessThanOrEqual(1);
+  // Icona e scritta insieme sono centrate rispetto alla barra laterale
+  const center = (mark.x + name.x + name.width) / 2;
+  expect(Math.abs(center - (side.x + side.width / 2))).toBeLessThanOrEqual(4);
+  // I bordi inferiori di marchio e barra strumenti sono alla stessa altezza
+  expect(Math.abs(mark.y + mark.height / 2 - toolbar.height / 2)).toBeLessThanOrEqual(1);
+
+  // Nove lettere con le cinque tinte delle sezioni, a rotazione
+  const colors = await page.locator('.brand__letter').evaluateAll((els) => els.map((el) => getComputedStyle(el).color));
+  expect(colors).toHaveLength(9);
+  expect(new Set(colors).size).toBe(5);
+  for (let i = 5; i < colors.length; i++) expect(colors[i]).toBe(colors[i - 5]);
+  // Le tinte sono quelle dei pulsanti delle sezioni (Trasforma = prima lettera)
+  const transformButton = await page.locator('.toolbar__section--transform .toolbar__button').first().evaluate((el) => getComputedStyle(el).color);
+  expect(colors[0]).toBe(transformButton);
 });
 
 test('Timeline: indicatori con tooltip del tipo di operazione e icona per svuotare la cronologia', async ({ page }) => {

@@ -95,8 +95,6 @@ export function Toolbar() {
 
   return (
     <header className="toolbar">
-      <div className="toolbar__brand brand-name">Construct</div>
-
       <Section label="File">
         <ToolbarButton help="new" shortcut="N" onClick={() => void newProject()}><FilePlus size={18} /></ToolbarButton>
         <ToolbarButton help="undo" shortcut="^Z" disabled={!canUndo} onClick={() => useSceneStore.temporal.getState().undo()}><Undo2 size={18} /></ToolbarButton>
