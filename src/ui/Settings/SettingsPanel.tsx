@@ -9,7 +9,6 @@ import './SettingsPanel.scss';
 
 const BED_MODES: [BedMode, string][] = [
   ['full', 'Piano visibile'],
-  ['grid', 'Solo griglia e bordo'],
   ['none', 'Nascosto'],
 ];
 

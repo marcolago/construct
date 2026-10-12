@@ -4,16 +4,16 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#e9eff6" />
+    <meta name="theme-color" content="#14171c" />
     <script>
-      // Applica il tema salvato prima del primo disegno, per evitare il lampo di tema sbagliato
+      // Applica il tema salvato prima del primo disegno, per evitare il lampo di tema sbagliato (predefinito: scuro)
       try {
         var saved = JSON.parse(localStorage.getItem('construct:ui') || localStorage.getItem('webcad:ui') || '{}');
-        var theme = saved && saved.state && saved.state.theme === 'dark' ? 'dark' : 'light';
+        var theme = saved && saved.state && saved.state.theme === 'light' ? 'light' : 'dark';
         document.documentElement.dataset.theme = theme;
-        if (theme === 'dark') document.querySelector('meta[name="theme-color"]').setAttribute('content', '#14171c');
+        if (theme === 'light') document.querySelector('meta[name="theme-color"]').setAttribute('content', '#e9eff6');
       } catch (e) {
-        document.documentElement.dataset.theme = 'light';
+        document.documentElement.dataset.theme = 'dark';
       }
     </script>
     <title>Construct v%APP_VERSION%</title>

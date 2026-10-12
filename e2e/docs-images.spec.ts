@@ -63,6 +63,9 @@ test.describe('immagini di esempio', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 800 });
     await openApp(page);
+    // Il tema predefinito è lo scuro: le immagini della documentazione e le anteprime restano nel tema chiaro (tasto D)
+    await page.keyboard.press('d');
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('light');
   });
 
   test('raccordo, smusso e smusso angolare', async ({ page }) => {
@@ -181,8 +184,7 @@ test.describe('immagini di esempio', () => {
       'baby-toy': { dir: [0.55, -0.7, 0.5], roots: 2, near: 0.82 },
       bauble: { dir: [0.6, -0.7, 0.35], roots: 1, near: 0.82 },
     };
-    // Piatto nascosto (P cicla: visibile, senza base, nascosto): lo sfondo resta pulito
-    await page.keyboard.press('p');
+    // Piatto nascosto (P alterna visibile e nascosto): lo sfondo resta pulito
     await page.keyboard.press('p');
     for (const [id, { dir, roots, near }] of Object.entries(EXAMPLES)) {
       await openMenuItem(page, 'Modelli di esempio…');

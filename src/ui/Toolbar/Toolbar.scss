@@ -151,6 +151,54 @@
     }
   }
 
+  /* Tendina a elenco (Viste): una voce sotto l'altra, con icona, nome e tasto */
+  &__dropdown-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 210px;
+  }
+
+  &__dropdown-entry {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    width: 100%;
+    padding: 6px $space-2;
+    border: 1px solid transparent;
+    border-radius: $radius-md;
+    background: transparent;
+    font-size: 12px;
+    text-align: left;
+    @include focus-ring;
+
+    &:hover {
+      background: color('panel-raised');
+      color: color('accent');
+    }
+  }
+
+  &__dropdown-entry-name {
+    flex: 1;
+  }
+
+  &__dropdown-key {
+    min-width: 18px;
+    padding: 0 4px;
+    border: 1px solid color('border');
+    border-radius: $radius-sm;
+    font-family: $font-mono;
+    font-size: 10px;
+    text-align: center;
+    color: color('text-muted');
+  }
+
+  &__dropdown-separator {
+    height: 1px;
+    margin: 2px 0;
+    background: color('border');
+  }
+
   /* Lettera della scorciatoia: piccola, in alto a sinistra sopra l'icona */
   &__shortcut {
     position: absolute;

@@ -1,7 +1,8 @@
 import { SquareArrowDown, AlignHorizontalJustifyStart, ArrowDownToLine, Eye, EyeOff, FlipHorizontal2, Ruler, Copy, Lock, Unlock, Group, MousePointer2, Move3d, Rotate3d, RotateCw, Scissors, SquaresUnite, Scaling, ArrowUpFromLine, Trash2, Ungroup, CircleDashed } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { combineToBed, dropSelectionToBed, layDownSelection, lowestZByRoot } from '../kernel/placement';
-import { isLocked, useSceneStore } from '../scene/store';
+import { isAppGroup, isLocked, parentOf, useSceneStore } from '../scene/store';
+import { isScaled } from '../scene/groupScale';
 import type { GizmoMode } from '../scene/store';
 import { isCutter } from '../scene/treatment';
 import type { Scene, SceneNode } from '../scene/types';
@@ -47,6 +48,12 @@ export interface CommandContext {
   /** Il nodo selezionato, se la selezione è uno solo. */
   single: SceneNode | undefined;
   allLocked: boolean;
+  /** Esiste un oggetto alla radice che non è bloccato: gli strumenti che si applicano scegliendo sulla vista (Raccordo, Smusso...) hanno su cosa lavorare. */
+  hasUnlockedRoot: boolean;
+  /** Uno strumento a pannello è aperto (Raccordo, Guscio, Misura...): il gizmo non c'è e l'oggetto è in anteprima. */
+  toolActive: boolean;
+  /** Il gizmo è davvero mostrato: un solo oggetto alla radice, non bloccato, senza strumenti aperti (stessa regola di Viewport). */
+  gizmoTarget: boolean;
   /** Qualche oggetto del piatto attivo è nascosto: Nascondi, senza selezione, li mostra tutti. */
   someHidden: boolean;
   allHoles: boolean;
@@ -77,14 +84,19 @@ export function makeContext(i: ContextInput): CommandContext {
   const { scene, selection } = i;
   const hasSelection = selection.length > 0;
   const rootSelection = selection.filter((id) => scene.rootIds.includes(id));
+  const single = selection.length === 1 ? scene.nodes[selection[0]] : undefined;
+  const toolActive = !!i.edgeTool || i.shellActive || i.measureActive || i.layFlatActive || i.arrayActive || i.patternActive || i.splitActive;
   return {
     ...i,
     hasSelection,
     hasObjects: scene.rootIds.length > 0,
     rootSelection,
     unlockedRoots: rootSelection.filter((id) => !isLocked(scene, id)),
-    single: selection.length === 1 ? scene.nodes[selection[0]] : undefined,
+    single,
     allLocked: hasSelection && selection.every((id) => scene.nodes[id]?.locked),
+    hasUnlockedRoot: scene.rootIds.some((id) => !isLocked(scene, id)),
+    toolActive,
+    gizmoTarget: !toolActive && !!single && scene.rootIds.includes(single.id) && !isLocked(scene, single.id),
     someHidden: scene.rootIds.some((id) => scene.nodes[id]?.hidden),
     allHoles: hasSelection && selection.every((id) => scene.nodes[id]?.mode === 'hole'),
   };
@@ -153,6 +165,13 @@ const singleSolid = (c: CommandContext): boolean => c.selection.length === 1 && 
 /** Ha facce piane su cui lavorare (raccordi, smussi, appoggio): sfere e tori no. */
 const hasFlatFaces = (c: CommandContext): boolean => singleSolid(c) && !(c.single?.type === 'primitive' && (c.single.kind === 'sphere' || c.single.kind === 'torus'));
 
+/** Solido/Foro agisce solo sui nodi non bloccati, che non sono raccordi o smussi e non stanno direttamente in un Raggruppa. */
+const canToggleHole = (c: CommandContext): boolean =>
+  c.selection.some((id) => {
+    const node = c.scene.nodes[id];
+    return !!node && !isLocked(c.scene, id) && !isCutter(node) && !isAppGroup(c.scene.nodes[parentOf(c.scene, id) ?? '']);
+  });
+
 /** Qualche oggetto selezionato non poggia sul piatto (il suo punto più basso non è a Z = 0). */
 const someOffBed = (c: CommandContext): boolean => {
   const lowest = lowestZByRoot();
@@ -162,13 +181,17 @@ const someOffBed = (c: CommandContext): boolean => {
 /** Comandi che restano per una selezione tutta bloccata: tutto il resto la modificherebbe. */
 const ALLOWED_WHEN_LOCKED: CommandId[] = ['lock', 'duplicate', 'measure', 'hide'];
 
-const gizmo = (id: GizmoMode & CommandId, help: HelpKey, shortcut: string, Icon: typeof MousePointer2): Command => ({
+/**
+ * Modo del gizmo: il pulsante è utilizzabile (e si accende) solo se per la selezione il gizmo compare davvero (`usable`).
+ * Il modo scelto resta salvato: con un oggetto adatto il pulsante si riaccende da solo, e i tasti W, E, R, T lo impostano sempre.
+ */
+const gizmo = (id: GizmoMode & CommandId, help: HelpKey, shortcut: string, Icon: typeof MousePointer2, usable: (c: CommandContext) => boolean = (c) => c.gizmoTarget): Command => ({
   id,
   help,
   shortcut,
   icon: (_c, size) => <Icon size={size} />,
-  enabled: () => true,
-  active: (c) => c.gizmoMode === id,
+  enabled: usable,
+  active: (c) => c.gizmoMode === id && usable(c),
   run: () => useSceneStore.getState().setGizmoMode(id),
   menu: false,
 });
@@ -176,30 +199,32 @@ const gizmo = (id: GizmoMode & CommandId, help: HelpKey, shortcut: string, Icon:
 const sceneState = () => useSceneStore.getState();
 
 export const COMMANDS: Record<CommandId, Command> = {
-  select: gizmo('select', 'select', 'Q', MousePointer2),
+  select: gizmo('select', 'select', 'Q', MousePointer2, () => true),
   translate: gizmo('translate', 'translate', 'W', Move3d),
   rotate: gizmo('rotate', 'rotate', 'E', Rotate3d),
-  resize: gizmo('resize', 'resize', 'R', Scaling),
-  extrude: gizmo('extrude', 'extrude', 'T', ArrowUpFromLine),
+  // Le mesh importate non si ridimensionano con il gizmo (vedi `resizable` in SceneObject)
+  resize: gizmo('resize', 'resize', 'R', Scaling, (c) => c.gizmoTarget && c.single?.type !== 'mesh'),
+  // Estrudi agisce sull'altezza delle forme 2D: un'estrusione rotazionale non ha un'altezza da trascinare
+  extrude: gizmo('extrude', 'extrude', 'T', ArrowUpFromLine, (c) => c.gizmoTarget && c.single?.type === 'shape2d' && c.single.extrusion !== 'rotate'),
 
-  group: { id: 'group', help: 'group', shortcut: '^G', icon: (_c, size) => <Group size={size} />, enabled: (c) => c.rootSelection.length >= 2, run: () => combineToBed('group'), menu: true },
+  group: { id: 'group', help: 'group', shortcut: '^G', icon: (_c, size) => <Group size={size} />, enabled: (c) => c.unlockedRoots.length >= 2, run: () => combineToBed('group'), menu: true },
   ungroup: {
     id: 'ungroup', help: 'ungroup', shortcut: '⇧^G', icon: (_c, size) => <Ungroup size={size} />,
-    enabled: (c) => c.single?.type === 'group' && c.scene.rootIds.includes(c.single.id), run: () => sceneState().ungroupSelected(), menu: true,
+    enabled: (c) => c.single?.type === 'group' && c.scene.rootIds.includes(c.single.id) && !isLocked(c.scene, c.single.id) && !isScaled(c.single), run: () => sceneState().ungroupSelected(), menu: true,
   },
-  union: { id: 'union', help: 'union', shortcut: 'U', icon: (_c, size) => <SquaresUnite size={size} />, enabled: (c) => c.rootSelection.length >= 2, run: () => combineToBed('union'), menu: true },
-  hull: { id: 'hull', help: 'hull', shortcut: 'J', icon: (_c, size) => <GROUP_ICONS.hull size={size} />, enabled: (c) => c.rootSelection.length >= 2, run: () => combineToBed('hull'), menu: true },
-  minkowski: { id: 'minkowski', help: 'minkowski', shortcut: '⇧J', icon: (_c, size) => <GROUP_ICONS.minkowski size={size} />, enabled: (c) => c.rootSelection.length >= 2, run: () => combineToBed('minkowski'), menu: true },
+  union: { id: 'union', help: 'union', shortcut: 'U', icon: (_c, size) => <SquaresUnite size={size} />, enabled: (c) => c.unlockedRoots.length >= 2, run: () => combineToBed('union'), menu: true },
+  hull: { id: 'hull', help: 'hull', shortcut: 'J', icon: (_c, size) => <GROUP_ICONS.hull size={size} />, enabled: (c) => c.unlockedRoots.length >= 2, run: () => combineToBed('hull'), menu: true },
+  minkowski: { id: 'minkowski', help: 'minkowski', shortcut: '⇧J', icon: (_c, size) => <GROUP_ICONS.minkowski size={size} />, enabled: (c) => c.unlockedRoots.length >= 2, run: () => combineToBed('minkowski'), menu: true },
   hole: {
     id: 'hole', help: 'hole', shortcut: 'H', icon: (_c, size) => <CircleDashed size={size} />,
-    enabled: (c) => c.hasSelection, active: (c) => c.allHoles, run: () => sceneState().toggleHoleSelected(), menu: true,
+    enabled: canToggleHole, active: (c) => c.allHoles, run: () => sceneState().toggleHoleSelected(), menu: true,
     // Un raccordo o uno smusso è già un taglio: solido o foro non ha senso
     inMenu: (c) => c.selection.every((id) => !isCutter(c.scene.nodes[id])),
   },
 
-  fillet: { id: 'fillet', help: 'fillet', shortcut: 'F', icon: (_c, size) => <EDGE_ICONS.fillet size={size} />, enabled: (c) => c.hasObjects, active: (c) => c.edgeTool === 'fillet', run: (c) => toggleEdgeTool('fillet', c), menu: true, inMenu: hasFlatFaces },
-  chamfer: { id: 'chamfer', help: 'chamfer', shortcut: 'S', icon: (_c, size) => <EDGE_ICONS.chamfer size={size} />, enabled: (c) => c.hasObjects, active: (c) => c.edgeTool === 'chamfer', run: (c) => toggleEdgeTool('chamfer', c), menu: true, inMenu: hasFlatFaces },
-  corner: { id: 'corner', help: 'corner', shortcut: 'A', icon: (_c, size) => <CORNER_ICONS.chamfer size={size} />, enabled: (c) => c.hasObjects, active: (c) => c.edgeTool === 'corner', run: (c) => toggleEdgeTool('corner', c), menu: true, inMenu: hasFlatFaces },
+  fillet: { id: 'fillet', help: 'fillet', shortcut: 'F', icon: (_c, size) => <EDGE_ICONS.fillet size={size} />, enabled: (c) => c.hasUnlockedRoot || c.edgeTool === 'fillet', active: (c) => c.edgeTool === 'fillet', run: (c) => toggleEdgeTool('fillet', c), menu: true, inMenu: hasFlatFaces },
+  chamfer: { id: 'chamfer', help: 'chamfer', shortcut: 'S', icon: (_c, size) => <EDGE_ICONS.chamfer size={size} />, enabled: (c) => c.hasUnlockedRoot || c.edgeTool === 'chamfer', active: (c) => c.edgeTool === 'chamfer', run: (c) => toggleEdgeTool('chamfer', c), menu: true, inMenu: hasFlatFaces },
+  corner: { id: 'corner', help: 'corner', shortcut: 'A', icon: (_c, size) => <CORNER_ICONS.chamfer size={size} />, enabled: (c) => c.hasUnlockedRoot || c.edgeTool === 'corner', active: (c) => c.edgeTool === 'corner', run: (c) => toggleEdgeTool('corner', c), menu: true, inMenu: hasFlatFaces },
   shell: {
     id: 'shell', help: 'shell', shortcut: 'G', icon: (_c, size) => <GROUP_ICONS.shell size={size} />,
     enabled: (c) => c.shellActive || canShell(c.scene, c.selection), active: (c) => c.shellActive, run: () => toggleShell(), menu: true,
@@ -216,15 +241,16 @@ export const COMMANDS: Record<CommandId, Command> = {
 
   align: {
     id: 'align', help: 'align', shortcut: 'K', icon: (_c, size) => <AlignHorizontalJustifyStart size={size} />,
-    enabled: (c) => c.unlockedRoots.length >= 2, run: () => useUiStore.getState().setToolbarMenu('align'), dropdown: 'align', menu: true,
+    // I bloccati fanno da riferimento: serve almeno un oggetto libero da spostare
+    enabled: (c) => c.rootSelection.length >= 2 && c.unlockedRoots.length >= 1, run: () => useUiStore.getState().setToolbarMenu('align'), dropdown: 'align', menu: true,
   },
   mirror: {
     id: 'mirror', help: 'mirror', shortcut: 'Y', icon: (_c, size) => <FlipHorizontal2 size={size} />,
     enabled: (c) => c.unlockedRoots.length >= 1, run: () => useUiStore.getState().setToolbarMenu('mirror'), dropdown: 'mirror', menu: true,
   },
-  layflat: { id: 'layflat', help: 'layflat', shortcut: 'V', icon: (_c, size) => <SquareArrowDown size={size} />, enabled: (c) => c.hasObjects, active: (c) => c.layFlatActive, run: () => toggleLayFlat(), menu: true, inMenu: hasFlatFaces },
+  layflat: { id: 'layflat', help: 'layflat', shortcut: 'V', icon: (_c, size) => <SquareArrowDown size={size} />, enabled: (c) => c.hasUnlockedRoot || c.layFlatActive, active: (c) => c.layFlatActive, run: () => toggleLayFlat(), menu: true, inMenu: hasFlatFaces },
   lay: { id: 'lay', help: 'lay', shortcut: '⇧V', icon: (_c, size) => <RotateCw size={size} />, enabled: (c) => c.unlockedRoots.length >= 1, run: () => layDownSelection(), menu: true },
-  drop: { id: 'drop', help: 'drop', shortcut: 'B', icon: (_c, size) => <ArrowDownToLine size={size} />, enabled: (c) => c.rootSelection.length > 0, run: () => dropSelectionToBed(), menu: true, inMenu: someOffBed },
+  drop: { id: 'drop', help: 'drop', shortcut: 'B', icon: (_c, size) => <ArrowDownToLine size={size} />, enabled: (c) => c.unlockedRoots.length > 0, run: () => dropSelectionToBed(), menu: true, inMenu: someOffBed },
   array: {
     id: 'array', help: 'array', shortcut: 'O', icon: (_c, size) => <GROUP_ICONS.array size={size} />,
     enabled: (c) => c.arrayActive || canArray(c.scene, c.selection), active: (c) => c.arrayActive, run: () => toggleArray(), menu: true,
@@ -241,7 +267,7 @@ export const COMMANDS: Record<CommandId, Command> = {
     enabled: (c) => c.rootSelection.length > 0 || c.someHidden, run: (c) => (c.rootSelection.length > 0 ? sceneState().hideSelected() : sceneState().showAllHidden()), menu: true,
     inMenu: (c) => c.rootSelection.length > 0,
   },
-  delete: { id: 'delete', help: 'delete', shortcut: 'Del', icon: (_c, size) => <Trash2 size={size} />, enabled: (c) => c.hasSelection, run: () => sceneState().removeSelected(), menu: true },
+  delete: { id: 'delete', help: 'delete', shortcut: 'Del', icon: (_c, size) => <Trash2 size={size} />, enabled: (c) => c.selection.some((id) => !isLocked(c.scene, id)), run: () => sceneState().removeSelected(), menu: true },
   measure: { id: 'measure', help: 'measure', shortcut: 'I', icon: (_c, size) => <Ruler size={size} />, enabled: (c) => c.hasObjects, active: (c) => c.measureActive, run: () => toggleMeasure(), menu: true },
 };
 
@@ -250,9 +276,9 @@ export type SectionTone = 'transform' | 'combine' | 'modify' | 'arrange' | 'obje
 
 /** Gruppi della barra strumenti e del menu contestuale, nell'ordine in cui compaiono. */
 export const COMMAND_GROUPS: { label: string; ids: CommandId[]; tone: SectionTone }[] = [
-  { label: 'Trasforma', ids: ['select', 'translate', 'rotate', 'resize', 'extrude'], tone: 'transform' },
+  { label: 'Trasforma', ids: ['select', 'translate', 'rotate', 'resize'], tone: 'transform' },
   { label: 'Combina', ids: ['group', 'ungroup', 'union', 'hull', 'minkowski', 'hole'], tone: 'combine' },
-  { label: 'Modifica', ids: ['fillet', 'chamfer', 'corner', 'shell', 'pattern', 'split'], tone: 'modify' },
+  { label: 'Modifica', ids: ['extrude', 'fillet', 'chamfer', 'corner', 'shell', 'pattern', 'split'], tone: 'modify' },
   { label: 'Disponi', ids: ['align', 'mirror', 'layflat', 'lay', 'drop', 'array'], tone: 'arrange' },
   { label: 'Oggetto', ids: ['duplicate', 'lock', 'hide', 'delete', 'measure'], tone: 'object' },
 ];

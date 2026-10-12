@@ -87,7 +87,7 @@ const SHORTCUTS: { title: string; rows: [string, string][] }[] = [
       ['C o Ctrl+J', 'Apre o chiude il codice OpenSCAD'],
       ['D', 'Tema chiaro o scuro'],
       ['M', 'Apre il menu'],
-      ['P', 'Piatto: visibile, senza base, nascosto'],
+      ['P', 'Piatto: visibile / nascosto'],
       ['Maiusc', 'Durante il trascinamento nella vista 3D: disattiva lo snap'],
     ],
   },

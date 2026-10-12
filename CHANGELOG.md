@@ -18,6 +18,19 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.47.0] - 2026-10-12
+
+### Aggiunto
+- **Icona dei tre piani e tendina verticale per Viste.** Il pulsante Viste ha una nuova icona (il piano orizzontale con le due pareti verticali, i tre piani cartesiani) al posto della macchina fotografica. La tendina elenca le voci una sotto l'altra, ciascuna con icona e tasto: Alto (7), Fronte (1), Lato (3), Isometrica (0), Inquadra selezione (.) e Inquadra tutto (Home).
+
+### Modificato
+- **Tema scuro come predefinito** per chi non ha ancora preferenze e dopo "Ripristina le impostazioni". Chi ha già salvato il tema chiaro lo mantiene. Anche la schermata di caricamento (colore della barra del browser e del manifest PWA) parte scura.
+- **Il piano di stampa si distingue dallo sfondo** nel tema scuro: la base è più chiara e la griglia è tarata di conseguenza.
+- **Il tasto P alterna il piano tra visibile e nascosto.** Lo stato intermedio "solo griglia e bordo" non esiste più (anche dalle Impostazioni); chi lo aveva salvato vede il piano visibile.
+- **Estrudi (T) passa dalla sezione Trasforma alla sezione Modifica**, primo della fila: agisce solo sulle forme 2D e cambia la geometria, a differenza di Sposta, Ruota e Ridimensiona che valgono per qualsiasi oggetto.
+- **I pulsanti si accendono solo quando sono utilizzabili sull'oggetto selezionato.** I modi del gizmo (Sposta, Ruota, Ridimensiona, Estrudi) sono disabilitati e spenti quando il gizmo non compare (nessuna selezione, più oggetti, oggetto bloccato o dentro un gruppo, strumento aperto) e, per Ridimensiona ed Estrudi, quando il tipo di oggetto non lo permette (mesh importate, primitive per Estrudi, estrusioni rotazionali); il modo scelto resta salvato e il pulsante si riaccende con un oggetto adatto. Raggruppa, Unisci, Inviluppo e Minkowski chiedono almeno due oggetti non bloccati; Separa non agisce su un gruppo bloccato o ridimensionato; Solido/Foro e Elimina ignorano i bloccati; Appoggia sul piatto vuole un oggetto non bloccato; Allinea vuole almeno un oggetto libero da spostare (i bloccati fanno da riferimento); Raccordo, Smusso, Smusso angolare e Appoggia su una faccia hanno bisogno di un oggetto non bloccato nella scena.
+- **Il marchio della schermata di benvenuto** è lo stesso della barra laterale: icona della favicon e nome Construct con una tinta per lettera.
+
 ## [0.46.0] - 2026-10-12
 
 ### Modificato

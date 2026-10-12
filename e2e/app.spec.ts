@@ -536,18 +536,18 @@ test('il pulsante Codice ha solo l\'icona e apre una modale all\'80% con il codi
   await expect(dialog).toBeHidden();
 });
 
-test('tema chiaro di default, interruttore per lo scuro che resta dopo il ricaricamento', async ({ page }) => {
+test('tema scuro di default, interruttore per il chiaro che resta dopo il ricaricamento', async ({ page }) => {
   const theme = () => page.evaluate(() => document.documentElement.dataset.theme);
-  expect(await theme()).toBe('light');
-  await page.getByRole('button', { name: 'Tema', exact: true }).click();
   expect(await theme()).toBe('dark');
+  await page.getByRole('button', { name: 'Tema', exact: true }).click();
+  expect(await theme()).toBe('light');
   await page.reload();
-  expect(await theme()).toBe('dark');
-  await page.getByRole('button', { name: 'Tema', exact: true }).click();
   expect(await theme()).toBe('light');
+  await page.getByRole('button', { name: 'Tema', exact: true }).click();
+  expect(await theme()).toBe('dark');
 });
 
-test('il tasto P cicla il piatto e ogni stato cambia davvero quello che è disegnato', async ({ page }) => {
+test('il tasto P alterna il piatto tra visibile e nascosto e ogni stato cambia davvero quello che è disegnato', async ({ page }) => {
   // Visibile = l'oggetto e tutti i suoi antenati hanno visible = true
   const parts = () =>
     page.evaluate(() =>
@@ -567,20 +567,37 @@ test('il tasto P cicla il piatto e ogni stato cambia davvero quello che è diseg
   expect(await parts()).toEqual([true, true, true]);
   const full = await frame();
   await page.keyboard.press('p');
-  await expect.poll(parts).toEqual([false, true, true]);
-  const noPlate = await frame();
-  await page.keyboard.press('p');
   await expect.poll(parts).toEqual([false, false, false]);
   const hidden = await frame();
-  expect(noPlate.equals(full)).toBe(false);
-  expect(hidden.equals(noPlate)).toBe(false);
   expect(hidden.equals(full)).toBe(false);
 
+  // Un secondo P lo rimostra (non esiste più lo stato intermedio "solo griglia")
   await page.keyboard.press('p');
   await expect.poll(parts).toEqual([true, true, true]);
-  // Anche il pulsante in toolbar fa avanzare lo stato
+  // Anche il pulsante in toolbar alterna i due stati
   await page.getByRole('button', { name: 'Piatto', exact: true }).click();
-  await expect.poll(parts).toEqual([false, true, true]);
+  await expect.poll(parts).toEqual([false, false, false]);
+  await page.getByRole('button', { name: 'Piatto', exact: true }).click();
+  await expect.poll(parts).toEqual([true, true, true]);
+});
+
+test('il piano si distingue dallo sfondo in entrambi i temi', async ({ page }) => {
+  // Colore del piano e dello sfondo come li disegna la vista (palette del tema)
+  const colors = () =>
+    page.evaluate(() => {
+      const r3f = window.__r3f!;
+      const plate = r3f.scene.getObjectByName('bed-plate') as unknown as { material: { color: { r: number; g: number; b: number } } };
+      const bg = r3f.scene.background as unknown as { r: number; g: number; b: number };
+      const lum = (c: { r: number; g: number; b: number }) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+      return { plate: lum(plate.material.color), bg: lum(bg) };
+    });
+  for (const theme of ['dark', 'light']) {
+    expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe(theme);
+    const { plate, bg } = await colors();
+    // Differenza di luminanza (0-1, in spazio lineare) chiaramente visibile
+    expect(Math.abs(plate - bg), `piano e sfondo nel tema ${theme}`).toBeGreaterThan(theme === 'dark' ? 0.015 : 0.05);
+    await page.getByRole('button', { name: 'Tema', exact: true }).click();
+  }
 });
 
 test('ogni pulsante della toolbar ha il tooltip dettagliato con la scorciatoia', async ({ page }) => {
@@ -609,9 +626,9 @@ test('i tasti C, D e M aprono il codice, cambiano tema e aprono il menu', async 
   await expect(page.getByRole('dialog')).toBeHidden();
 
   await page.keyboard.press('d');
-  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
-  await page.keyboard.press('d');
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('light');
+  await page.keyboard.press('d');
+  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
 
   await page.keyboard.press('m');
   await expect(page.getByRole('menuitem', { name: 'Importa' })).toBeVisible();
@@ -2549,9 +2566,9 @@ test('Tooltip dettagliati: il pulsante Pattern mostra cosa fa, come si applica, 
   await page.locator('header.toolbar button[aria-label^="Unisci"]').hover({ force: true });
   await expect(page.getByRole('tooltip')).toContainText('unione booleana');
 
-  // Il pulsante a stato cambia testo: il piatto dice come è ora e qual è il prossimo
+  // Il pulsante a stato cambia testo: il piatto dice come è ora
   await page.locator('header.toolbar button[aria-label^="Piatto"]').hover();
-  await expect(page.getByRole('tooltip')).toContainText('Prossimo:');
+  await expect(page.getByRole('tooltip')).toContainText('Ora: visibile');
 });
 
 test('Pattern: Scegli facce aggiunge e toglie facce con il clic e mostra il pezzo intero durante la scelta', async ({ page }) => {
@@ -2829,9 +2846,9 @@ test('Barra strumenti: i comandi sono in gruppi con il nome della sezione', asyn
   const toolbar = page.locator('header.toolbar');
   for (const [name, buttons] of [
     ['File', ['Nuovo progetto', 'Annulla', 'Ripeti']],
-    ['Trasforma', ['Seleziona', 'Sposta', 'Ruota', 'Ridimensiona', 'Estrudi']],
+    ['Trasforma', ['Seleziona', 'Sposta', 'Ruota', 'Ridimensiona']],
     ['Combina', ['Raggruppa', 'Separa', 'Unisci', 'Inviluppo convesso']],
-    ['Modifica', ['Raccordo', 'Smusso', 'Smusso angolare', 'Guscio', 'Pattern', 'Dividi']],
+    ['Modifica', ['Estrudi', 'Raccordo', 'Smusso', 'Smusso angolare', 'Guscio', 'Pattern', 'Dividi']],
     ['Disponi', ['Allinea', 'Specchia', 'Sdraia', 'Serie']],
     ['Oggetto', ['Duplica', 'Elimina', 'Misura']],
     ['Vista', ['Viste', 'Ortografica', 'Codice OpenSCAD', 'Tema']],
@@ -3042,6 +3059,26 @@ test('Migrazione: le preferenze salvate con il vecchio nome (webcad:ui) passano 
   await expect(page.locator('.status-bar__bed')).toHaveText('Piano 300 × 200 mm');
   expect(await page.evaluate(() => localStorage.getItem('construct:ui'))).toContain('"width":300');
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
+});
+
+test('Preferenze salvate: il tema chiaro resta chiaro e il vecchio piano "solo griglia" diventa il piano visibile', async ({ browser }) => {
+  const page = await (await browser.newContext()).newPage();
+  await openApp(page, { welcome: true });
+  await page.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem('construct:ui', JSON.stringify({ state: { theme: 'light', bedMode: 'grid', welcomeAlways: false }, version: 0 }));
+  });
+  await page.reload();
+  await page.waitForFunction(() => !!window.__construct && !!window.__r3f);
+  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('light');
+  expect(await page.evaluate(() => window.__construct && document.querySelector('meta[name="theme-color"]')?.getAttribute('content'))).toBe('#e9eff6');
+  const plate = await page.evaluate(() => {
+    const bed = window.__r3f!.scene.getObjectByName('bed-plate') as unknown as { visible: boolean; parent: { visible: boolean } };
+    return bed.visible && bed.parent.visible;
+  });
+  expect(plate).toBe(true);
+  // Con il piano visibile il pulsante non è acceso (si accende quando il piano è nascosto)
+  await expect(page.getByRole('button', { name: 'Piatto', exact: true })).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('Piatti: la scheda elenca i piatti, ognuno ha i suoi oggetti e se ne vede uno alla volta', async ({ page }) => {
@@ -3439,10 +3476,11 @@ test('Impostazioni: la voce del menu apre la modale con le sezioni e le opzioni 
   await expect(dialog).toBeVisible();
   for (const section of ['Aspetto', 'Piano di stampa', 'Modifica', 'Salvataggio e dati']) await expect(dialog.getByRole('heading', { name: section })).toBeVisible();
 
-  // Tema
-  await dialog.getByRole('button', { name: 'Scuro' }).click();
-  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
-  // Visualizzazione del piano
+  // Tema (il predefinito è lo scuro)
+  await dialog.getByRole('button', { name: 'Chiaro' }).click();
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('light');
+  // Visualizzazione del piano: solo visibile o nascosto
+  await expect(dialog.getByLabel('Visualizzazione').locator('option')).toHaveCount(2);
   await dialog.getByLabel('Visualizzazione').selectOption('none');
   expect(await page.evaluate(() => window.__construct!.store.getState().scene.rootIds.length)).toBe(1);
   // Quote: spente, spariscono dalla vista
@@ -3461,21 +3499,22 @@ test('Impostazioni: la voce del menu apre la modale con le sezioni e le opzioni 
   // Le impostazioni restano dopo il ricaricamento
   await page.reload();
   await page.waitForFunction(() => !!window.__construct && !!window.__r3f);
-  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('light');
   const saved = JSON.parse((await page.evaluate(() => localStorage.getItem('construct:ui'))) ?? '{}').state;
-  expect(saved).toMatchObject({ showDimensions: false, nudgeStep: 5, bedMode: 'none', theme: 'dark' });
+  expect(saved).toMatchObject({ showDimensions: false, nudgeStep: 5, bedMode: 'none', theme: 'light' });
 });
 
 test('Impostazioni: il ripristino riporta le opzioni ai valori predefiniti senza toccare la scena', async ({ page }) => {
   await addShape(page, 'Cubo');
   await openMenuItem(page, 'Impostazioni');
   const dialog = page.getByRole('dialog', { name: 'Impostazioni' });
-  await dialog.getByRole('button', { name: 'Scuro' }).click();
+  await dialog.getByRole('button', { name: 'Chiaro' }).click();
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('light');
   await dialog.getByLabel("Quote sull'oggetto selezionato").uncheck();
   await dialog.getByRole('button', { name: 'Ripristina le impostazioni' }).click();
   await page.locator('.dialog__button--primary', { hasText: 'Ripristina' }).click();
   await expect(dialog.getByLabel("Quote sull'oggetto selezionato")).toBeChecked();
-  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('light');
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
   expect((await sceneState(page)).rootIds).toHaveLength(1);
 });
 

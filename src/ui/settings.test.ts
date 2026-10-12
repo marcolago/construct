@@ -39,10 +39,19 @@ describe('impostazioni', () => {
   it('resetSettings riporta impostazioni, tema e piano ai valori iniziali', () => {
     const ui = useUiStore.getState();
     ui.setSettings({ nudgeStep: 5, showDimensions: false, welcomeAlways: false });
-    useUiStore.setState({ theme: 'dark', bedMode: 'none', bedSize: { width: 400, depth: 300 } });
+    useUiStore.setState({ theme: 'light', bedMode: 'none', bedSize: { width: 400, depth: 300 } });
     useUiStore.getState().resetSettings();
     const s = useUiStore.getState();
-    expect(s).toMatchObject({ ...DEFAULT_SETTINGS, theme: 'light', bedMode: 'full', bedSize: DEFAULT_BED });
+    // Il tema predefinito è lo scuro
+    expect(s).toMatchObject({ ...DEFAULT_SETTINGS, theme: 'dark', bedMode: 'full', bedSize: DEFAULT_BED });
+  });
+
+  it('il piano ha due stati e il tasto P li alterna', () => {
+    expect(useUiStore.getState().bedMode).toBe('full');
+    useUiStore.getState().toggleBed();
+    expect(useUiStore.getState().bedMode).toBe('none');
+    useUiStore.getState().toggleBed();
+    expect(useUiStore.getState().bedMode).toBe('full');
   });
 });
 

@@ -1,4 +1,4 @@
-import { Box, Camera, Code, Moon, Sun, Redo2, Undo2, FilePlus, Grid3x3, Hash } from 'lucide-react';
+import { Box, Code, Moon, Sun, Redo2, Undo2, FilePlus, Grid3x3, Hash } from 'lucide-react';
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
 import { useStore } from 'zustand';
@@ -11,6 +11,7 @@ import { TOOLBAR_HELP } from './toolbarHelp';
 import type { HelpKey } from './toolbarHelp';
 import { PlacementMenu } from './PlacementMenu';
 import { ViewsMenu } from './ViewsMenu';
+import { Planes } from '../icons/Planes';
 import { AppMenu } from '../AppMenu/AppMenu';
 import { newProject } from '../fileActions';
 import { COMMANDS, COMMAND_GROUPS, helpOf, useCommandContext } from '../commands';
@@ -54,9 +55,8 @@ function ToolbarButton({ help, onClick, children, active, disabled, label, short
   );
 }
 
-/** Nomi degli stati del piatto, per il tooltip del pulsante (stesso ciclo di cycleBed). */
-const BED_LABELS: Record<BedMode, string> = { full: 'visibile', grid: 'senza base, griglia e bordo visibili', none: 'nascosto' };
-const NEXT_BED: Record<BedMode, BedMode> = { full: 'grid', grid: 'none', none: 'full' };
+/** Nomi degli stati del piatto, per il tooltip del pulsante. */
+const BED_LABELS: Record<BedMode, string> = { full: 'visibile', none: 'nascosto' };
 
 const Divider = () => <span className="toolbar__divider" role="separator" />;
 
@@ -90,7 +90,7 @@ function Section({ label, tone, children }: { label: string; tone?: SectionTone;
 export function Toolbar() {
   const canUndo = useStore(useSceneStore.temporal, (t) => t.pastStates.length > 0);
   const canRedo = useStore(useSceneStore.temporal, (t) => t.futureStates.length > 0);
-  const { codeOpen, toggleCode, theme, toggleTheme, bedMode, cycleBed, ghostOps, toggleGhostOps, projection, toggleProjection } = useUiStore();
+  const { codeOpen, toggleCode, theme, toggleTheme, bedMode, toggleBed, ghostOps, toggleGhostOps, projection, toggleProjection } = useUiStore();
   const ctx = useCommandContext();
 
   return (
@@ -115,12 +115,12 @@ export function Toolbar() {
       <div className="toolbar__spacer" />
 
       <Section label="Vista">
-        <ToolbarDropdown id="views" help="views" icon={<Camera size={18} />}>
+        <ToolbarDropdown id="views" help="views" icon={<Planes size={18} />}>
           {(close) => <ViewsMenu close={close} />}
         </ToolbarDropdown>
         <ToolbarButton help="ortho" extra={projection === 'orthographic' ? 'Ora: ortografica.' : 'Ora: prospettica.'} shortcut="5" active={projection === 'orthographic'} onClick={toggleProjection}><Box size={18} /></ToolbarButton>
         <ToolbarButton help="ghost" shortcut="X" active={ghostOps} onClick={toggleGhostOps}><Hash size={18} /></ToolbarButton>
-        <ToolbarButton help="bed" extra={`Ora: ${BED_LABELS[bedMode]}. Prossimo: ${BED_LABELS[NEXT_BED[bedMode]]}.`} shortcut="P" active={bedMode !== 'full'} onClick={cycleBed}><Grid3x3 size={18} /></ToolbarButton>
+        <ToolbarButton help="bed" extra={`Ora: ${BED_LABELS[bedMode]}.`} shortcut="P" active={bedMode !== 'full'} onClick={toggleBed}><Grid3x3 size={18} /></ToolbarButton>
         <ToolbarButton help="theme" extra={theme === 'light' ? 'Ora: tema chiaro.' : 'Ora: tema scuro.'} shortcut="D" onClick={toggleTheme}>{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</ToolbarButton>
         <ToolbarButton help="code" shortcut="C" active={codeOpen} onClick={toggleCode}><Code size={18} /></ToolbarButton>
         <AppMenu />

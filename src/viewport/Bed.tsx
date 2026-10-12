@@ -6,7 +6,7 @@ import { useViewportPalette } from './palette';
 
 /**
  * Piatto di stampa (256 × 256 mm di default, modificabile dalla barra di stato) sul piano XY, con griglia da 10 mm e linee principali ogni 50 mm.
- * Tre stati (tasto P): completo, senza la superficie piena (restano griglia e bordo), nascosto.
+ * Due stati (tasto P): visibile oppure nascosto del tutto.
  */
 export function Bed() {
   const mode = useUiStore((s) => s.bedMode);
@@ -25,7 +25,7 @@ export function Bed() {
   return (
     <group name="bed" visible={mode !== 'none'}>
       {/* Superficie del piatto, leggermente sotto lo zero per non sovrapporsi alla griglia */}
-      <mesh name="bed-plate" visible={mode === 'full'} position={[0, 0, -0.05]} receiveShadow>
+      <mesh name="bed-plate" position={[0, 0, -0.05]} receiveShadow>
         <planeGeometry args={[width, depth]} />
         <meshStandardMaterial color={palette.bedPlate} roughness={1} />
       </mesh>

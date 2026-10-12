@@ -116,7 +116,7 @@ export function useShortcuts(): void {
       else if (!mod && key === 'b') dropSelectionToBed();
       else if (!mod && key === 'x') useUiStore.getState().toggleGhostOps();
       else if (!mod && key === 'n') void newProject();
-      else if (!mod && key === 'p') useUiStore.getState().cycleBed();
+      else if (!mod && key === 'p') useUiStore.getState().toggleBed();
       else if (!mod && key === 'u') combineToBed('union');
       else if (!mod && key === 'j') combineToBed(e.shiftKey ? 'minkowski' : 'hull');
       // Maiusc+V sdraia (va controllato prima di V, che non esclude Maiusc)

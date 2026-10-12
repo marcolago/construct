@@ -4,8 +4,8 @@ import { migrateLocalKey, STORAGE } from '../storageMigration';
 
 export type Theme = 'light' | 'dark';
 
-/** Piatto di stampa: tutto visibile, senza la base piena (restano griglia e bordo), oppure nascosto del tutto. */
-export type BedMode = 'full' | 'grid' | 'none';
+/** Piatto di stampa: visibile (base, griglia e bordo) oppure nascosto del tutto. */
+export type BedMode = 'full' | 'none';
 
 /** Dimensioni del piano di stampa in mm (larghezza su X, profondità su Y). */
 export interface BedSize {
@@ -26,8 +26,6 @@ const pickSettings = (s: Settings): Settings => ({ showDimensions: s.showDimensi
 
 /** Lato maggiore del piano (mm): limite morbido dei cursori delle misure. Il piano non ha altezza, quindi vale anche per lo Z. */
 export const bedReach = (bed: BedSize): number => Math.max(bed.width, bed.depth);
-
-const NEXT_BED: Record<BedMode, BedMode> = { full: 'grid', grid: 'none', none: 'full' };
 
 /** Tendine della barra strumenti che si possono aprire anche da tastiera. */
 export type ToolbarMenu = 'align' | 'mirror' | 'views';
@@ -180,7 +178,7 @@ interface UiState extends Settings {
   setRenamingId: (id: string | null) => void;
   setCodeOpen: (open: boolean) => void;
   toggleTheme: () => void;
-  cycleBed: () => void;
+  toggleBed: () => void;
 }
 
 // Le preferenze salvate con il vecchio nome dell'app passano alla chiave nuova prima che lo store le legga
@@ -195,7 +193,7 @@ export const useUiStore = create<UiState>()(
       renamingId: null,
       toolbarMenu: null,
       ghostOps: false,
-      theme: 'light',
+      theme: 'dark',
       bedMode: 'full',
       projection: 'perspective',
       toggleProjection: () => set({ projection: get().projection === 'perspective' ? 'orthographic' : 'perspective' }),
@@ -203,7 +201,7 @@ export const useUiStore = create<UiState>()(
       setBedSize: (size) => set({ bedSize: { width: cleanBedSide(size.width, get().bedSize.width), depth: cleanBedSide(size.depth, get().bedSize.depth) } }),
       ...DEFAULT_SETTINGS,
       setSettings: (patch) => set(cleanSettings({ ...pickSettings(get()), ...patch })),
-      resetSettings: () => set({ ...DEFAULT_SETTINGS, theme: 'light', bedMode: 'full', projection: 'perspective', bedSize: DEFAULT_BED }),
+      resetSettings: () => set({ ...DEFAULT_SETTINGS, theme: 'dark', bedMode: 'full', projection: 'perspective', bedSize: DEFAULT_BED }),
       outlinerTab: 'objects',
       setOutlinerTab: (outlinerTab) => set({ outlinerTab }),
       appPanel: null,
@@ -239,7 +237,7 @@ export const useUiStore = create<UiState>()(
       setRenamingId: (renamingId) => set({ renamingId }),
       setCodeOpen: (codeOpen) => set({ codeOpen }),
       toggleTheme: () => set({ theme: get().theme === 'light' ? 'dark' : 'light' }),
-      cycleBed: () => set({ bedMode: NEXT_BED[get().bedMode] }),
+      toggleBed: () => set({ bedMode: get().bedMode === 'full' ? 'none' : 'full' }),
     }),
     {
       name: STORAGE.ui.now,
@@ -251,8 +249,10 @@ export const useUiStore = create<UiState>()(
         return {
           ...current,
           ...cleanSettings(s),
-          theme: s.theme === 'dark' ? 'dark' : current.theme,
-          bedMode: s.bedMode && s.bedMode in NEXT_BED ? s.bedMode : current.bedMode,
+          // Il tema salvato si rispetta, chiaro o scuro; senza nulla di salvato vale il predefinito (scuro)
+          theme: s.theme === 'light' || s.theme === 'dark' ? s.theme : current.theme,
+          // Il vecchio stato "solo griglia e bordo" (grid) non esiste più: diventa il piano visibile
+          bedMode: s.bedMode === 'none' ? 'none' : 'full',
           projection: s.projection === 'orthographic' ? 'orthographic' : current.projection,
           bedSize: { width: cleanBedSide(s.bedSize?.width, DEFAULT_BED.width), depth: cleanBedSide(s.bedSize?.depth, DEFAULT_BED.depth) },
           libraryTab: s.libraryTab && LIBRARY_TABS.includes(s.libraryTab) ? s.libraryTab : current.libraryTab,

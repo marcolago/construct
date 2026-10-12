@@ -25,8 +25,8 @@ export default defineConfig({
         short_name: 'Construct',
         description: 'Modellazione 3D rapida per la stampa 3D',
         lang: 'it',
-        theme_color: '#e9eff6',
-        background_color: '#e9eff6',
+        theme_color: '#14171c',
+        background_color: '#14171c',
         display: 'standalone',
         icons: [
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },

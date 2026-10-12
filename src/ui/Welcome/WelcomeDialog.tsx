@@ -2,6 +2,7 @@ import { BookOpen, Box, FilePlus, FolderOpen, Info, Upload } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react';
 import { pickAndImport } from '../../import/importFile';
 import { useSceneStore } from '../../scene/store';
+import { BrandLetters, BrandMark } from '../Brand/Brand';
 import { newProject } from '../fileActions';
 import { Modal } from '../Modal/Modal';
 import { useUiStore } from '../uiStore';
@@ -14,17 +15,6 @@ interface Choice {
   title: string;
   text: string;
   run: () => void | Promise<void>;
-}
-
-/** Marchio dell'app: lo stesso cubo del favicon, sul fondo scuro del logo. */
-function Mark() {
-  return (
-    <svg className="welcome__mark" viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
-      <rect width="64" height="64" rx="14" fill="#14171c" />
-      <path d="M32 10 52 21v22L32 54 12 43V21z" fill="none" stroke="#4da3ff" strokeWidth="4" strokeLinejoin="round" />
-      <path d="M12 21l20 11 20-11M32 32v22" fill="none" stroke="#4da3ff" strokeWidth="4" strokeLinejoin="round" />
-    </svg>
-  );
 }
 
 /**
@@ -89,8 +79,9 @@ export function WelcomeDialog() {
     <Modal open={open} title="Benvenuto in Construct" onClose={close} variant="welcome">
       <div className="welcome">
         <header className="welcome__hero">
-          <Mark />
-          <h1 className="welcome__title brand-name">Construct</h1>
+          {/* Stesso marchio della barra laterale: icona della favicon e nome con una tinta per lettera */}
+          <BrandMark size={56} className="welcome__mark" />
+          <h1 className="welcome__title brand-name"><BrandLetters /></h1>
           <p className="welcome__tagline">Modellazione 3D per la stampa 3D, direttamente nel tuo browser.</p>
         </header>
 

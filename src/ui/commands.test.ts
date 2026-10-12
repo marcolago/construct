@@ -104,3 +104,96 @@ describe('registro dei comandi', () => {
     expect(getCommandContext().someHidden).toBe(false);
   });
 });
+
+describe('pulsanti utilizzabili solo quando servono sull\'oggetto selezionato', () => {
+  const st = () => useSceneStore.getState();
+  const on = (id: keyof typeof COMMANDS) => COMMANDS[id].enabled(getCommandContext());
+  const lit = (id: keyof typeof COMMANDS) => COMMANDS[id].active?.(getCommandContext()) ?? false;
+
+  it('Estrudi sta in Modifica, non in Trasforma', () => {
+    const group = (label: string) => COMMAND_GROUPS.find((g) => g.label === label)!.ids;
+    expect(group('Modifica')[0]).toBe('extrude');
+    expect(group('Trasforma')).not.toContain('extrude');
+  });
+
+  it('senza selezione i modi del gizmo sono spenti e disabilitati, Seleziona resta sempre acceso', () => {
+    st().addPrimitive('box');
+    st().select([]);
+    st().setGizmoMode('translate');
+    for (const id of ['translate', 'rotate', 'resize', 'extrude'] as const) expect(on(id)).toBe(false);
+    expect(lit('translate')).toBe(false);
+    expect(on('select')).toBe(true);
+    // Con un oggetto adatto Sposta torna utilizzabile e si riaccende (il modo era rimasto salvato)
+    st().select(st().scene.rootIds);
+    expect(on('translate')).toBe(true);
+    expect(lit('translate')).toBe(true);
+  });
+
+  it('un oggetto bloccato, più oggetti o uno strumento aperto spengono il gizmo', () => {
+    st().addPrimitive('box');
+    st().addPrimitive('cone');
+    st().setGizmoMode('translate');
+    st().select(st().scene.rootIds);
+    expect(on('translate')).toBe(false);
+    st().select([st().scene.rootIds[0]]);
+    expect(lit('translate')).toBe(true);
+    st().toggleLockSelected();
+    expect(on('translate')).toBe(false);
+    expect(lit('translate')).toBe(false);
+    // Anche Seleziona e Blocca restano utilizzabili su un bloccato
+    expect(on('select')).toBe(true);
+    expect(on('lock')).toBe(true);
+  });
+
+  it('Estrudi serve solo alle forme 2D lineari, Ridimensiona non alle mesh', () => {
+    st().addPrimitive('box');
+    expect(on('resize')).toBe(true);
+    expect(on('extrude')).toBe(false);
+    st().loadScene({ nodes: {}, rootIds: [] });
+    st().addShape2D('circle');
+    expect(on('extrude')).toBe(true);
+    const id = st().scene.rootIds[0];
+    st().updateNode(id, { extrusion: 'rotate' } as never);
+    expect(on('extrude')).toBe(false);
+    st().loadScene({ nodes: {}, rootIds: [] });
+    st().addMesh({ assetId: 'a', name: 'Mesh', fileName: 'm.stl', origin: [0, 0, 0], size: [10, 10, 10], triangles: 12 });
+    expect(on('translate')).toBe(true);
+    expect(on('resize')).toBe(false);
+  });
+
+  it('Unisci e Allinea, Appoggia, Elimina e Solido/Foro rispettano i bloccati', () => {
+    st().addPrimitive('box');
+    st().addPrimitive('cone');
+    const [a, b] = st().scene.rootIds;
+    // Uno dei due bloccato: Unisci non ha due oggetti liberi, Allinea sì (il bloccato fa da riferimento)
+    st().select([a]);
+    st().toggleLockSelected();
+    st().select([a, b]);
+    expect(on('union')).toBe(false);
+    expect(on('align')).toBe(true);
+    expect(on('delete')).toBe(true);
+    expect(on('hole')).toBe(true);
+    // Solo bloccati: niente Elimina, Solido/Foro, Appoggia sul piatto, Allinea
+    st().select([a]);
+    for (const id of ['delete', 'hole', 'drop', 'mirror', 'lay'] as const) expect(on(id)).toBe(false);
+    expect(on('duplicate')).toBe(true);
+  });
+
+  it('Raccordo, Smusso e Appoggia su una faccia hanno bisogno di un oggetto libero nella scena', () => {
+    expect(on('fillet')).toBe(false);
+    st().addPrimitive('box');
+    for (const id of ['fillet', 'chamfer', 'corner', 'layflat'] as const) expect(on(id)).toBe(true);
+    st().toggleLockSelected();
+    for (const id of ['fillet', 'chamfer', 'corner', 'layflat'] as const) expect(on(id)).toBe(false);
+  });
+
+  it('Separa non funziona su un gruppo bloccato', () => {
+    st().addPrimitive('box');
+    st().addPrimitive('cone');
+    st().select(st().scene.rootIds);
+    st().groupSelected();
+    expect(on('ungroup')).toBe(true);
+    st().toggleLockSelected();
+    expect(on('ungroup')).toBe(false);
+  });
+});

@@ -39,9 +39,10 @@ export const PALETTES: Record<Theme, ViewportPalette> = {
   },
   dark: {
     background: '#14171c',
-    bedPlate: '#1d232b',
-    gridCell: '#2f3945',
-    gridSection: '#44546a',
+    // Più chiaro dello sfondo, così il piano si distingue a colpo d'occhio; la griglia segue per restare leggibile
+    bedPlate: '#2b3544',
+    gridCell: '#3c4859',
+    gridSection: '#5d6f88',
     bedBorder: '#4da3ff',
     skyLight: '#ffffff',
     groundLight: '#3a4350',

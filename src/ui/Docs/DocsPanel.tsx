@@ -136,7 +136,6 @@ export default function DocsPanel() {
         <Command id="translate" />
         <Command id="rotate" />
         <Command id="resize" />
-        <Command id="extrude" />
       </Section>
 
       <Section id="combinare" title="Combinare e forare">
@@ -153,6 +152,7 @@ export default function DocsPanel() {
 
       <Section id="modificare" title="Modificare">
         <p>Rifiniture pensate per la stampa: raccordi e smussi sugli spigoli, guscio per svuotare, specchiatura e allineamento, e due comandi per mettere il pezzo nel verso giusto sul piatto.</p>
+        <Command id="extrude" />
         <Command id="fillet" />
         <Command id="chamfer" />
         <Command id="corner" />
@@ -172,7 +172,7 @@ export default function DocsPanel() {
 
       <Section id="piatti" title="Piatti e piano di stampa">
         <p>Un progetto può avere più <strong>piatti</strong>, ciascuno con i suoi oggetti: si vede un piatto alla volta e si gestiscono dalla scheda Piatti sotto la libreria. Il 3MF esporta tutti i piatti affiancati, l&apos;STL ne chiede uno.</p>
-        <p>Le dimensioni del <strong>piano di stampa</strong> (256 × 256 mm all&apos;inizio) si cambiano dalla barra di stato o dal menu del clic destro nel vuoto, anche con i preset delle stampanti. Il comando Piatto cambia come si vede: completo, solo griglia e bordo, nascosto.</p>
+        <p>Le dimensioni del <strong>piano di stampa</strong> (256 × 256 mm all&apos;inizio) si cambiano dalla barra di stato o dal menu del clic destro nel vuoto, anche con i preset delle stampanti. Il comando Piatto (tasto P) lo mostra o lo nasconde.</p>
         <Command id="bed" />
       </Section>
 
