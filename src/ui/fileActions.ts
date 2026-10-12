@@ -3,7 +3,8 @@ import { useResultStore } from '../kernel/useKernel';
 import { useSceneStore } from '../scene/store';
 import type { Example } from '../examples/catalog';
 import { fitView } from '../viewport/cameraControl';
-import { allRootIds, hasManyPlates, PLATE_GAP, platesOf } from '../scene/plates';
+import { captureViews } from '../viewport/snapshot';
+import { activePlateId, allRootIds, hasManyPlates, PLATE_GAP, platesOf } from '../scene/plates';
 import { useUiStore } from './uiStore';
 import { sceneFromJson, sceneToJson } from '../scene/persistence';
 import { addAsset } from '../import/assets';
@@ -60,6 +61,34 @@ export async function exportScad(): Promise<void> {
     download(zipSync(files), 'construct.zip', 'application/zip');
   } catch (err) {
     notify.error(err instanceof Error ? `Impossibile scaricare i font per lo ZIP: ${err.message}` : 'Impossibile creare lo ZIP con i font.');
+  }
+}
+
+/** Aspetta che il kernel abbia finito di calcolare (le mesh da fotografare devono essere quelle della scena). */
+const kernelIdle = () =>
+  new Promise<void>((resolve) => {
+    if (!useResultStore.getState().busy) return resolve();
+    const unsubscribe = useResultStore.subscribe((state) => {
+      if (state.busy) return;
+      unsubscribe();
+      resolve();
+    });
+  });
+
+/** PNG con le 4 viste (alto, fronte, lato, isometrica) del piatto in vista, in una griglia 2×2 con lo sfondo del tema. */
+export async function exportViewsPng(): Promise<void> {
+  await kernelIdle();
+  try {
+    const blob = await captureViews();
+    if (!blob) {
+      notify.error('Non c\'è nulla da fotografare nel piatto in vista.');
+      return;
+    }
+    const plate = platesOf(scene()).find((p) => p.id === activePlateId(scene()));
+    const suffix = plate && hasManyPlates(scene()) ? `-${plate.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}` : '';
+    download(blob, `construct-viste${suffix}.png`, 'image/png');
+  } catch (err) {
+    notify.error(err instanceof Error ? `Impossibile creare l'immagine: ${err.message}` : 'Impossibile creare l\'immagine.');
   }
 }
 

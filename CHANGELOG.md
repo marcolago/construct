@@ -18,6 +18,11 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.48.0] - 2026-10-12
+
+### Aggiunto
+- **Esportazione dell'immagine con le 4 viste.** Nel menu Esporta la nuova voce **Immagine** scarica un PNG quadrato (1608 px) con quattro viste in una griglia 2×2: Alto e Fronte sopra, Lato e Isometrica sotto, ciascuna con la sua etichetta. Le viste sono ortografiche, con la stessa scala, e mostrano l'intero piatto in vista (gli altri piatti non compaiono) con lo sfondo e i colori del tema attuale e, se è visibile, il piano di stampa con la griglia. Non compaiono selezione, quote, gizmo né overlay degli strumenti, e nemmeno gli oggetti nascosti o i fori sciolti (traslucidi, non si stampano). La vista 3D non viene toccata: l'immagine si disegna con un renderer fuori schermo, con le stesse luci e lo stesso tone mapping. Con più piatti il file porta il nome del piatto (`construct-viste-piatto-2.png`).
+
 ## [0.47.0] - 2026-10-12
 
 ### Aggiunto

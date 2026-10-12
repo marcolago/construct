@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { ChevronLeft, FileBox, FileCode, FileDown, Shapes, Upload } from 'lucide-react';
+import { ChevronLeft, FileBox, FileCode, FileDown, Image as ImageIcon, Shapes, Upload } from 'lucide-react';
 import { useSceneStore } from '../../scene/store';
 import { allRootIds, platesOf } from '../../scene/plates';
-import { export3mf, exportScad, exportStl } from '../fileActions';
+import { export3mf, exportScad, exportStl, exportViewsPng } from '../fileActions';
 import { pickAndImport } from '../../import/importFile';
 import changelogSource from '../../../CHANGELOG.md?raw';
 import { parseChangelog } from './changelog';
@@ -187,6 +187,13 @@ export default function AppMenuPanels({ panel, run }: { panel: Panel; run: (acti
                 </button>
                 <span>Codice <code>.scad</code> generato dalla scena. Con il testo esce uno ZIP con i font.</span>
               </li>
+              <li>
+                <button type="button" className="modal__button" disabled={scene.rootIds.length === 0} onClick={run(exportViewsPng)}>
+                  <ImageIcon size={14} />
+                  Immagine
+                </button>
+                <span>PNG con 4 viste (alto, fronte, lato, isometrica) del piatto in vista, con lo sfondo del tema.</span>
+              </li>
             </ul>
           </>
         )}
@@ -253,7 +260,7 @@ export default function AppMenuPanels({ panel, run }: { panel: Panel; run: (acti
               <li>Ripetere un oggetto con serie e pattern (Voronoi, esagoni, cerchi, rombi, triangoli).</li>
               <li>Organizzare più piatti di stampa nello stesso progetto, sul piano della tua stampante.</li>
               <li>Generare il codice OpenSCAD dalla scena e importare file <code>.scad</code>, STL, 3MF e SVG.</li>
-              <li>Esportare in STL e 3MF, con i colori e tutti i piatti.</li>
+              <li>Esportare in STL e 3MF, con i colori e tutti i piatti, e in un\'immagine PNG con le 4 viste.</li>
             </ul>
               </div>
               <div>

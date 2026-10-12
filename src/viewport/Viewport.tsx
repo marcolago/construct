@@ -8,6 +8,7 @@ import { useResultStore } from '../kernel/useKernel';
 import { Bed } from './Bed';
 import { BusyOverlay } from './BusyOverlay';
 import { wasPressedOnGizmo } from './pick';
+import { LIGHTS } from './lights';
 import { useViewportPalette } from './palette';
 import { SceneObject } from './SceneObject';
 import { SelectionActions } from '../ui/SelectionActions/SelectionActions';
@@ -144,9 +145,9 @@ export function Viewport() {
       >
         <color attach="background" args={[palette.background]} />
         {/* Luci semplici, senza mappe ambiente da scaricare: l'app resta utilizzabile offline */}
-        <hemisphereLight args={[palette.skyLight, palette.groundLight, 0.9]} />
-        <directionalLight position={[150, -200, 300]} intensity={1.6} />
-        <directionalLight position={[-200, 150, 120]} intensity={0.5} />
+        <hemisphereLight args={[palette.skyLight, palette.groundLight, LIGHTS.hemisphere]} />
+        <directionalLight position={LIGHTS.key.position} intensity={LIGHTS.key.intensity} />
+        <directionalLight position={LIGHTS.fill.position} intensity={LIGHTS.fill.intensity} />
 
         <StateProbe target={three} />
         {import.meta.env.MODE === 'e2e' && <E2EBridge />}

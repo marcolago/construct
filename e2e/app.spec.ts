@@ -122,6 +122,43 @@ test('Duplica (Ctrl+D) lascia la copia nelle stesse coordinate, anche per un ogg
   expect(rel(groupCopy)).toEqual(rel(group));
 });
 
+test('Esporta immagine: un PNG 2×2 con le 4 viste, con la vista e la selezione che restano come prima', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  const sharp = (await import('sharp')).default;
+  const before = await page.evaluate(() => ({ selection: window.__construct!.store.getState().selection, camera: window.__r3f!.camera.position.toArray() }));
+
+  const downloading = page.waitForEvent('download');
+  await openMenuItem(page, 'Esporta');
+  await page.getByRole('dialog').getByRole('button', { name: 'Immagine', exact: true }).click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe('construct-viste.png');
+  const file = (await download.path())!;
+
+  // Dimensioni: due viste da 800 px più 8 px di distanza, quadrata
+  const meta = await sharp(file).metadata();
+  expect(meta.format).toBe('png');
+  expect(meta.width).toBe(1608);
+  expect(meta.height).toBe(1608);
+  const { data, info } = await sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const pixel = (x: number, y: number) => [0, 1, 2].map((c) => data[(y * info.width + x) * info.channels + c]);
+  const distance = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  // In ogni vista il centro è il cubo e l'angolo è il piano di stampa o lo sfondo: colori diversi
+  for (const [cx, cy] of [[400, 400], [1208, 400], [400, 1208], [1208, 1208]]) {
+    const center = pixel(cx, cy);
+    const corner = pixel(cx - 380, cy - 380);
+    expect(distance(center, corner), `centro e angolo della vista in (${cx}, ${cy})`).toBeGreaterThan(40);
+  }
+
+  // La vista 3D non è stata toccata
+  const after = await page.evaluate(() => ({ selection: window.__construct!.store.getState().selection, camera: window.__r3f!.camera.position.toArray() }));
+  expect(after).toEqual(before);
+});
+
+test('Esporta immagine: senza oggetti il pulsante è disabilitato', async ({ page }) => {
+  await openMenuItem(page, 'Esporta');
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Immagine', exact: true })).toBeDisabled();
+});
+
 test('Menu contestuale dell\'elenco: Nascondi sulla riga visibile, Mostra su quella nascosta', async ({ page }) => {
   await addShape(page, 'Cubo');
   const id = (await sceneState(page)).rootIds[0];
