@@ -13,6 +13,8 @@ interface Props {
   help: HelpKey;
   /** Scorciatoia da tastiera, mostrata in piccolo sopra l'icona. */
   shortcut?: string;
+  /** Tasti da mostrare nel tooltip al posto della scorciatoia (per le tendine che non hanno un solo tasto, come Viste). */
+  tipKeys?: string;
   /** Icona del pulsante. */
   icon: ReactNode;
   disabled?: boolean;
@@ -21,7 +23,7 @@ interface Props {
 }
 
 /** Pulsante della toolbar che apre una piccola tendina; si chiude con un clic fuori o con Esc. */
-export function ToolbarDropdown({ id, help, shortcut, icon, disabled, children }: Props) {
+export function ToolbarDropdown({ id, help, shortcut, tipKeys, icon, disabled, children }: Props) {
   const open = useUiStore((s) => s.toolbarMenu === id);
   const setToolbarMenu = useUiStore((s) => s.setToolbarMenu);
   const setOpen = (value: boolean) => setToolbarMenu(value ? id : null);
@@ -53,7 +55,7 @@ export function ToolbarDropdown({ id, help, shortcut, icon, disabled, children }
 
   return (
     <div className="toolbar__dropdown" ref={ref}>
-      <ToolTip help={help} keys={shortcut}>
+      <ToolTip help={help} keys={tipKeys ?? shortcut}>
         {(describedBy) => (
           <button
             type="button"

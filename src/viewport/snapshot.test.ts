@@ -1,20 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { CELL, cellOrigin, GAP, SNAPSHOT_VIEWS, sheetSize, viewFrame } from './snapshot';
+import { CELL, cellOrigin, SNAPSHOT_VIEWS, sheetSize, viewFrame } from './snapshot';
 import { PRESET_DIRECTIONS } from './cameraControl';
 import type { Bounds } from '../scene/placement';
 
 const box: Bounds = { min: [-10, -10, 0], max: [10, 10, 20] };
 
 describe('immagine con le 4 viste', () => {
-  it('le viste sono Alto, Fronte, Lato, Isometrica e stanno in una griglia 2×2', () => {
+  it('le viste sono Alto, Fronte, Lato, Isometrica e stanno in una griglia 2×2 senza spazi in mezzo', () => {
     expect(SNAPSHOT_VIEWS).toEqual(['top', 'front', 'side', 'iso']);
     expect([0, 1, 2, 3].map((i) => cellOrigin(i))).toEqual([
       { x: 0, y: 0 },
-      { x: CELL + GAP, y: 0 },
-      { x: 0, y: CELL + GAP },
-      { x: CELL + GAP, y: CELL + GAP },
+      { x: CELL, y: 0 },
+      { x: 0, y: CELL },
+      { x: CELL, y: CELL },
     ]);
-    // L'ultima cella finisce esattamente sul bordo dell'immagine
+    // L'immagine è divisa esattamente in 4 quadrati uguali: l'ultimo finisce sul bordo
+    expect(sheetSize()).toBe(CELL * 2);
     expect(cellOrigin(3).x + CELL).toBe(sheetSize());
     expect(cellOrigin(3).y + CELL).toBe(sheetSize());
   });

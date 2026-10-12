@@ -18,6 +18,15 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.48.1] - 2026-10-12
+
+### Corretto
+- **L'immagine delle 4 viste è divisa esattamente in 4 sezioni uguali.** Prima tra le viste c'erano 8 px di sfondo (immagine di 1608 px) e le sezioni non erano quattro quadrati identici. Ora il PNG è di 1600 × 1600 px, con quattro viste da 800 px a contatto, una sottile linea di divisione al centro e le etichette sopra le linee. Le viste restano allineate come in un disegno tecnico: Alto e Fronte hanno lo stesso centro in orizzontale, Fronte e Lato la stessa quota del piano.
+- **Il tooltip del pulsante Viste mostra i tasti dei preset** (7 · 1 · 3 · 0), come gli altri pulsanti mostrano la loro scorciatoia.
+
+### Test
+- Resi stabili i test che fallivano a intermittenza: Dividi aspettava il ricalcolo del kernel con un controllo che passava subito, e i test di importazione OpenSCAD controllavano la scena prima che l'importazione asincrona avesse creato gli oggetti. Ora aspettano la condizione vera (volumi delle metà, numero di oggetti o di piatti). Anche il test dei tooltip della toolbar, che falliva dalla 0.39, ora passa.
+
 ## [0.48.0] - 2026-10-12
 
 ### Aggiunto

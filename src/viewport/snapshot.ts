@@ -21,17 +21,19 @@ import type { ViewportPalette } from './palette';
 /** Viste nell'ordine della griglia: riga sopra Alto e Fronte, riga sotto Lato e Isometrica. */
 export const SNAPSHOT_VIEWS: ViewPreset[] = ['top', 'front', 'side', 'iso'];
 
-/** Lato di ogni vista e distanza tra le viste, in pixel. */
+/** Lato di ogni vista, in pixel: l'immagine è un quadrato diviso esattamente in 4 sezioni uguali, senza spazi in mezzo. */
 export const CELL = 800;
-export const GAP = 8;
 
 /** Angolo in alto a sinistra della vista `index` (0-3) nell'immagine 2×2. */
-export function cellOrigin(index: number, cell = CELL, gap = GAP): { x: number; y: number } {
-  return { x: (index % 2) * (cell + gap), y: Math.floor(index / 2) * (cell + gap) };
+export function cellOrigin(index: number, cell = CELL): { x: number; y: number } {
+  return { x: (index % 2) * cell, y: Math.floor(index / 2) * cell };
 }
 
-/** Lato dell'immagine intera (due viste più la distanza). */
-export const sheetSize = (cell = CELL, gap = GAP): number => cell * 2 + gap;
+/** Lato dell'immagine intera (due viste). */
+export const sheetSize = (cell = CELL): number => cell * 2;
+
+/** Spessore (px) delle linee che segnano la divisione in 4 sezioni: stanno a cavallo del confine, senza toglierle spazio. */
+export const DIVIDER = 2;
 
 /** Dove sta la camera ortografica di una vista e quanto vede. Tutte le viste hanno la stessa scala. */
 export interface ViewFrame {
@@ -67,6 +69,9 @@ const LABEL_COLORS: Record<Theme, { fill: string; text: string }> = {
   dark: { fill: 'rgba(20, 23, 28, 0.78)', text: '#e6e9ee' },
   light: { fill: 'rgba(255, 255, 255, 0.82)', text: '#1e2433' },
 };
+
+/** Colore delle linee di divisione per tema (lo stesso del bordo dei pannelli dell'interfaccia). */
+const DIVIDER_COLORS: Record<Theme, string> = { dark: '#3a4452', light: '#aab6c8' };
 
 /** Segmenti della griglia del piano (celle da 10 mm; le righe ogni 50 mm dall'origine sono le principali). */
 function gridPoints(bed: BedSize): { cell: number[]; section: number[] } {
@@ -172,9 +177,6 @@ export async function captureViews(): Promise<Blob | null> {
   const ctx = sheet.getContext('2d');
   try {
     if (!ctx) throw new Error('Canvas 2D non disponibile.');
-    // Lo sfondo tra le viste ha il colore della scena
-    ctx.fillStyle = palette.background;
-    ctx.fillRect(0, 0, sheet.width, sheet.height);
     SNAPSHOT_VIEWS.forEach((preset, i) => {
       const frame = viewFrame(preset, bounds, reach);
       const camera = new THREE.OrthographicCamera(-frame.halfSize, frame.halfSize, frame.halfSize, -frame.halfSize, frame.near, frame.far);
@@ -184,6 +186,13 @@ export async function captureViews(): Promise<Blob | null> {
       renderer.render(scene, camera);
       const { x, y } = cellOrigin(i);
       ctx.drawImage(renderer.domElement, x, y);
+    });
+    // Le linee di divisione e poi le etichette (così nessuna vista le copre)
+    ctx.fillStyle = DIVIDER_COLORS[ui.theme];
+    ctx.fillRect(CELL - DIVIDER / 2, 0, DIVIDER, sheet.height);
+    ctx.fillRect(0, CELL - DIVIDER / 2, sheet.width, DIVIDER);
+    SNAPSHOT_VIEWS.forEach((preset, i) => {
+      const { x, y } = cellOrigin(i);
       drawLabel(ctx, PRESET_LABELS[preset], x, y, ui.theme);
     });
     return await new Promise<Blob | null>((resolve) => sheet.toBlob(resolve, 'image/png'));

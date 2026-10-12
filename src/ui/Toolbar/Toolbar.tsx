@@ -115,7 +115,7 @@ export function Toolbar() {
       <div className="toolbar__spacer" />
 
       <Section label="Vista">
-        <ToolbarDropdown id="views" help="views" icon={<Planes size={18} />}>
+        <ToolbarDropdown id="views" help="views" tipKeys="7 · 1 · 3 · 0" icon={<Planes size={18} />}>
           {(close) => <ViewsMenu close={close} />}
         </ToolbarDropdown>
         <ToolbarButton help="ortho" extra={projection === 'orthographic' ? 'Ora: ortografica.' : 'Ora: prospettica.'} shortcut="5" active={projection === 'orthographic'} onClick={toggleProjection}><Box size={18} /></ToolbarButton>

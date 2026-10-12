@@ -134,19 +134,24 @@ test('Esporta immagine: un PNG 2×2 con le 4 viste, con la vista e la selezione 
   expect(download.suggestedFilename()).toBe('construct-viste.png');
   const file = (await download.path())!;
 
-  // Dimensioni: due viste da 800 px più 8 px di distanza, quadrata
+  // Dimensioni: quadrata, divisa esattamente in 4 sezioni da 800 px
   const meta = await sharp(file).metadata();
   expect(meta.format).toBe('png');
-  expect(meta.width).toBe(1608);
-  expect(meta.height).toBe(1608);
+  expect(meta.width).toBe(1600);
+  expect(meta.height).toBe(1600);
   const { data, info } = await sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const pixel = (x: number, y: number) => [0, 1, 2].map((c) => data[(y * info.width + x) * info.channels + c]);
   const distance = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
   // In ogni vista il centro è il cubo e l'angolo è il piano di stampa o lo sfondo: colori diversi
-  for (const [cx, cy] of [[400, 400], [1208, 400], [400, 1208], [1208, 1208]]) {
+  for (const [cx, cy] of [[400, 400], [1200, 400], [400, 1200], [1200, 1200]]) {
     const center = pixel(cx, cy);
     const corner = pixel(cx - 380, cy - 380);
     expect(distance(center, corner), `centro e angolo della vista in (${cx}, ${cy})`).toBeGreaterThan(40);
+  }
+  // Le viste sono allineate: il cubo è centrato nello stesso punto di ogni sezione (il centro non è sfondo in nessuna)
+  const background = pixel(5, 795);
+  for (const [cx, cy] of [[400, 400], [1200, 400], [400, 1200], [1200, 1200]]) {
+    expect(distance(pixel(cx, cy), background), `il cubo è al centro della sezione (${cx}, ${cy})`).toBeGreaterThan(20);
   }
 
   // La vista 3D non è stata toccata
@@ -1591,11 +1596,12 @@ test('Dividi (Maiusc+S): anteprima delle due metà, piano per asse e quota, OK i
   await page.keyboard.press('Shift+S');
   const panel = page.getByRole('region', { name: 'Dividi' });
   await expect(panel).toBeVisible();
-  await settled(page);
   // Piano a metà lungo X: due metà da 4000 mm³, già in anteprima nella scena
-  let parts = await meshes();
+  const volumes = async () => (await meshes()).map((m) => Math.round(m.volume)).sort((a, b) => a - b);
+  await expect.poll(volumes).toEqual([4000, 4000]);
+  await settled(page);
+  const parts = await meshes();
   expect(parts).toHaveLength(2);
-  for (const m of parts) expect(m.volume).toBeCloseTo(4000, 1);
   expect((await sceneState(page)).rootIds).toHaveLength(2);
 
   // Asse Z e quota a 5 mm: 20·20·5 e 20·20·15
@@ -1603,9 +1609,8 @@ test('Dividi (Maiusc+S): anteprima delle due metà, piano per asse e quota, OK i
   const pos = panel.locator('.slider-field', { hasText: 'Posizione' }).locator('.number-field__input');
   await pos.fill('5');
   await pos.press('Enter');
+  await expect.poll(volumes).toEqual([2000, 6000]);
   await settled(page);
-  parts = await meshes();
-  expect(parts.map((m) => Math.round(m.volume)).sort((a, b) => a - b)).toEqual([2000, 6000]);
 
   // Esc: scena di partenza, nessun passo in cronologia
   await page.keyboard.press('Escape');
@@ -3602,6 +3607,8 @@ test('Importa OpenSCAD: un file .scad diventa oggetti veri, con un solo passo di
       projection() cube(2);
     `),
   });
+  // L'importazione è asincrona: prima si aspetta che gli oggetti ci siano, poi il kernel
+  await expect.poll(async () => (await sceneState(page)).rootIds.length).toBe(2);
   await settled(page);
   const scene = await sceneState(page);
   expect(scene.rootIds).toHaveLength(2);
@@ -3639,6 +3646,8 @@ test('Importa OpenSCAD: rotate_extrude, offset, multmatrix e resize diventano fo
       translate([30, 0, 0]) multmatrix([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]) resize([10, 0, 0], auto = true) cube(5);
     `),
   });
+  // L'importazione è asincrona: prima si aspetta che gli oggetti ci siano, poi il kernel
+  await expect.poll(async () => (await sceneState(page)).rootIds.length).toBe(2);
   await settled(page);
   const scene = await sceneState(page);
   expect(scene.rootIds).toHaveLength(2);
@@ -3680,6 +3689,8 @@ test('OpenSCAD con più piatti: il codice li contiene tutti e, riletto, ricrea i
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('dialog', { name: 'Importa' }).getByRole('button', { name: 'OpenSCAD', exact: true }).click();
   await (await chooser).setFiles({ name: 'piatti.scad', mimeType: 'text/plain', buffer: Buffer.from(exported) });
+  // L'importazione è asincrona: prima si aspetta che i piatti ci siano, poi il kernel
+  await expect.poll(async () => (await sceneState(page)).plates?.length).toBe(2);
   await settled(page);
   const scene = await sceneState(page);
   expect(scene.plates.map((p: { name: string }) => p.name)).toEqual(['Piatto 1', 'Coperchio']);
