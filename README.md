@@ -2,7 +2,7 @@
 
 Editor CAD 3D nel browser pensato per la stampa 3D. Si costruisce il modello con forme, booleane e strumenti di dettaglio, si vede il risultato dal vivo e si esporta sia la mesh (STL, 3MF) sia il **codice OpenSCAD** equivalente, che si può aprire e modificare altrove.
 
-Tutto gira nel browser: il calcolo geometrico usa [manifold-3d](https://github.com/elalish/manifold) (WebAssembly) in un Web Worker, il progetto si salva in locale e l'app funziona anche offline come PWA.
+Tutto gira nel browser: il calcolo geometrico usa [manifold-3d](https://github.com/elalish/manifold) (WebAssembly) in un Web Worker, un indicatore sulla vista 3D segnala i calcoli lunghi, il progetto si salva in locale e l'app funziona anche offline come PWA.
 
 ![Pattern Voronoi con anteprima dal vivo](docs/images/pattern.png)
 

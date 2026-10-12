@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { isLocked, useSceneStore } from '../scene/store';
 import { useResultStore } from '../kernel/useKernel';
 import { Bed } from './Bed';
+import { BusyOverlay } from './BusyOverlay';
 import { useViewportPalette } from './palette';
 import { SceneObject } from './SceneObject';
 import { SelectionActions } from '../ui/SelectionActions/SelectionActions';
@@ -114,6 +115,7 @@ export function Viewport() {
   return (
     <div className="viewport" onContextMenu={(e) => e.preventDefault()}>
       <SelectionActions />
+      <BusyOverlay />
       {/* Un pannello per volta e solo da attivo: il suo codice si scarica alla prima attivazione dello strumento */}
       <Suspense fallback={null}>
         {edgeTool === 'corner' ? <CornerPanel /> : edgeTool ? <EdgeToolPanel /> : null}

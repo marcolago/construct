@@ -12,6 +12,7 @@ npm run typecheck    # tsc --noEmit
 npm test             # Vitest (solo src/**/*.test.ts, ambiente node)
 npx vitest run src/scene/pattern.test.ts            # un singolo file di test
 npx vitest run -t "nome del test"                   # un singolo test per nome
+BENCH=1 BENCH_OUT=bench.txt npx vitest run src/kernel/bench.test.ts   # benchmark del kernel (saltato da npm test); tempi mediani in ms
 npm run test:e2e     # Playwright: costruisce da solo la build "e2e" e la serve su :4391 con il Chrome installato
 npx playwright test e2e/app.spec.ts -g "nome"       # un singolo test e2e
 npm run build        # tsc --noEmit + vite build (con service worker PWA)

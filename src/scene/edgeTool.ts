@@ -65,19 +65,26 @@ export function faceMap(mesh: MeshData): FaceMap {
   const cached = maps.get(mesh);
   if (cached) return cached;
 
-  const triangleCount = mesh.indices.length / 3;
-  const vertexCount = mesh.positions.length / 3;
+  const { positions, indices } = mesh;
+  const triangleCount = indices.length / 3;
   const normals = new Float32Array(triangleCount * 3);
   const offsets = new Float32Array(triangleCount);
   const valid = new Uint8Array(triangleCount);
+  // Normale e offset di ogni triangolo con aritmetica scalare: su mesh da centinaia di migliaia di triangoli evita
+  // di allocare vettori temporanei per ognuno (è il ciclo più caldo)
   for (let t = 0; t < triangleCount; t++) {
-    const [a, b, c] = [vertex(mesh, mesh.indices[t * 3]), vertex(mesh, mesh.indices[t * 3 + 1]), vertex(mesh, mesh.indices[t * 3 + 2])];
-    const n = cross(sub(b, a), sub(c, a));
-    const l = len(n);
+    const ia = indices[t * 3] * 3, ib = indices[t * 3 + 1] * 3, ic = indices[t * 3 + 2] * 3;
+    const ax = positions[ia], ay = positions[ia + 1], az = positions[ia + 2];
+    const ux = positions[ib] - ax, uy = positions[ib + 1] - ay, uz = positions[ib + 2] - az;
+    const vx = positions[ic] - ax, vy = positions[ic + 1] - ay, vz = positions[ic + 2] - az;
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const l = Math.hypot(nx, ny, nz);
     if (l < 1e-12) continue;
     valid[t] = 1;
-    normals.set([n[0] / l, n[1] / l, n[2] / l], t * 3);
-    offsets[t] = (n[0] * a[0] + n[1] * a[1] + n[2] * a[2]) / l;
+    normals[t * 3] = nx / l;
+    normals[t * 3 + 1] = ny / l;
+    normals[t * 3 + 2] = nz / l;
+    offsets[t] = (nx * ax + ny * ay + nz * az) / l;
   }
 
   // Unione di triangoli complanari che condividono uno spigolo
@@ -94,28 +101,41 @@ export function faceMap(mesh: MeshData): FaceMap {
     valid[t] === 1 &&
     normals[s * 3] * normals[t * 3] + normals[s * 3 + 1] * normals[t * 3 + 1] + normals[s * 3 + 2] * normals[t * 3 + 2] > COPLANAR_COS &&
     Math.abs(offsets[s] - offsets[t]) < COPLANAR_OFFSET;
-  const firstOnEdge = new Map<number, number>();
+  // Primo triangolo che si affaccia su ogni spigolo: tabella hash a indirizzamento aperto su typed array (le chiavi
+  // sono le coppie di vertici ordinate; una Map con chiavi numeriche oltre 2^31 è molto più lenta)
+  let capacity = 1024;
+  // Almeno 4 posti per triangolo: un solido chiuso ha 1,5 spigoli per triangolo, e anche una mesh tutta aperta (3) resta sotto il 75% di carico
+  while (capacity < triangleCount * 4) capacity *= 2;
+  const mask = capacity - 1;
+  const keyLo = new Int32Array(capacity).fill(-1);
+  const keyHi = new Int32Array(capacity);
+  const firstOnEdge = new Int32Array(capacity);
   for (let t = 0; t < triangleCount; t++) {
     for (let k = 0; k < 3; k++) {
-      const i = mesh.indices[t * 3 + k];
-      const j = mesh.indices[t * 3 + ((k + 1) % 3)];
-      const key = Math.min(i, j) * vertexCount + Math.max(i, j);
-      const other = firstOnEdge.get(key);
-      if (other === undefined) firstOnEdge.set(key, t);
-      else if (coplanar(other, t)) parent[find(t)] = find(other);
+      const i = indices[t * 3 + k];
+      const j = indices[t * 3 + ((k + 1) % 3)];
+      const lo = i < j ? i : j;
+      const hi = i < j ? j : i;
+      let slot = (Math.imul(lo, 73856093) ^ Math.imul(hi, 19349663)) & mask;
+      while (keyLo[slot] !== -1 && (keyLo[slot] !== lo || keyHi[slot] !== hi)) slot = (slot + 1) & mask;
+      if (keyLo[slot] === -1) {
+        keyLo[slot] = lo;
+        keyHi[slot] = hi;
+        firstOnEdge[slot] = t;
+      } else if (coplanar(firstOnEdge[slot], t)) parent[find(t)] = find(firstOnEdge[slot]);
     }
   }
 
   const triFace = new Int32Array(triangleCount).fill(-1);
-  const faceOfRoot = new Map<number, number>();
+  const faceOfRoot = new Int32Array(triangleCount).fill(-1);
   const faces: Face[] = [];
   for (let t = 0; t < triangleCount; t++) {
     if (!valid[t]) continue;
     const root = find(t);
-    let id = faceOfRoot.get(root);
-    if (id === undefined) {
+    let id = faceOfRoot[root];
+    if (id < 0) {
       id = faces.length;
-      faceOfRoot.set(root, id);
+      faceOfRoot[root] = id;
       faces.push({ triangles: [], normal: [normals[t * 3], normals[t * 3 + 1], normals[t * 3 + 2]], offset: offsets[t], planar: true });
     }
     faces[id].triangles.push(t);
@@ -123,9 +143,11 @@ export function faceMap(mesh: MeshData): FaceMap {
   }
   // Un riempimento a catena potrebbe accumulare piccole deviazioni: se i vertici si allontanano dal piano non è piana
   for (const face of faces) {
+    const [fx, fy, fz] = face.normal;
     for (const t of face.triangles) {
       for (let k = 0; k < 3; k++) {
-        if (Math.abs(dot(face.normal, vertex(mesh, mesh.indices[t * 3 + k])) - face.offset) > PLANAR_TOLERANCE) face.planar = false;
+        const v = indices[t * 3 + k] * 3;
+        if (Math.abs(fx * positions[v] + fy * positions[v + 1] + fz * positions[v + 2] - face.offset) > PLANAR_TOLERANCE) face.planar = false;
       }
     }
   }

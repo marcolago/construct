@@ -144,6 +144,21 @@ test('la versione sta nel title e non più accanto al logo; il nome dell\'app è
   await expect(page.locator('.toolbar__version')).toHaveCount(0);
 });
 
+test('un calcolo lungo mostra l\'indicatore sopra la vista 3D, uno breve no', async ({ page }) => {
+  const busy = (value: boolean) => page.evaluate((v) => window.__construct!.results.setState({ busy: v }), value);
+  const overlay = page.getByRole('status').filter({ hasText: 'Calcolo in corso' });
+  // Calcolo breve: finisce prima dell'attesa, l'indicatore non compare
+  await busy(true);
+  await busy(false);
+  await page.waitForTimeout(500);
+  await expect(overlay).toHaveCount(0);
+  // Calcolo lungo: dopo l'attesa compare, e sparisce appena il kernel ha finito
+  await busy(true);
+  await expect(overlay).toBeVisible();
+  await busy(false);
+  await expect(overlay).toHaveCount(0);
+});
+
 test('di default la modalità è Seleziona: nessun gizmo finché non si preme W', async ({ page }) => {
   await addShape(page, 'Cubo');
   const gizmos = () => page.evaluate(() => {

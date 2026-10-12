@@ -18,6 +18,15 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.42.0] - 2026-10-12
+
+### Modificato
+- **Raggruppamento in facce più rapido (`faceMap`).** Il calcolo che serve a Raccordo, Smusso, Pattern, Appoggia su una faccia e agli agganci passa da vettori temporanei a aritmetica scalare, da una `Map` a una tabella hash su typed array per gli spigoli e da una `Map` a un array per le facce: circa il 30% in meno su una mesh da 74 000 triangoli (da 69 a 47 ms; 15 ms circa a 18 000 triangoli). Il risultato è identico a quello di prima, verificato su sfera, piastra con foro, toro, cubo e un triangolo degenere.
+
+### Aggiunto
+- **Indicatore di calcolo sopra la vista 3D.** Finora il calcolo del kernel si vedeva solo come "Calcolo…" nella barra di stato. Ora, se dura più di 300 ms, al centro dell'area di rendering compare una scheda con uno spinner e "Calcolo in corso…" (con un velo leggero sulla vista), che sparisce appena il kernel ha finito. Non blocca i clic e non compare per i calcoli brevi: durante il trascinamento di uno slider ogni passo avvia un calcolo, e un modale che blocca l'interfaccia renderebbe lo slider inutilizzabile. Con la riduzione del movimento attiva lo spinner resta fermo.
+- **Benchmark del kernel** (`src/kernel/bench.test.ts`, solo con `BENCH=1`): cache calda su scene ad albero, estrazione delle mesh, `faceMap`, Minkowski, forme curve ad alta risoluzione ed export. È servito a decidere dove ottimizzare: a cache calda una scena da 400 foglie si rivaluta in meno di 1 ms, `volume()` e `boundingBox()` costano meno di 0,4 ms su 74 000 triangoli e il Minkowski è per il 94% dentro il WASM, quindi la chiave di cache, `toMesh` e il codice JavaScript del Minkowski non sono stati toccati.
+
 ## [0.41.1] - 2026-10-09
 
 ### Corretto

@@ -12,6 +12,50 @@
   }
 }
 
+// Indicatore di calcolo sopra l'area 3D: un velo leggero e una scheda centrata, senza catturare i clic
+.busy-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+
+  &__card {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    padding: $space-3 $space-5;
+    border: 1px solid color('accent');
+    border-radius: $radius-lg;
+    background: color('panel-raised');
+    color: color('text');
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  &__spinner {
+    width: 18px;
+    height: 18px;
+    border: 3px solid color('accent-soft');
+    border-top-color: color('accent');
+    border-radius: 50%;
+    animation: busy-spin 0.8s linear infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+}
+
+@keyframes busy-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 // Etichetta della distanza sulla linea della Misura (testo HTML sovrapposto alla vista 3D)
 // Quote dell'oggetto selezionato: il wrapper di drei non cattura i clic, solo l'etichetta
 .dimension-label,
