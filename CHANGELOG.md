@@ -18,6 +18,11 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.49.1] - 2026-10-13
+
+### Modificato
+- **`docs/da-fare.md` aggiornato alla 0.49.0.** L'elenco di ciò che c'è già comprende profilati, Dividi (anche inclinato), piatti, viste, Nascondi, Sdraia, modelli di esempio e immagine delle 4 viste; il punto 4 (Dividi) non cita più il piano inclinato tra le cose mancanti; nelle idee minori compaiono i connettori di Dividi, le opzioni dell'immagine, Nascondi nei gruppi e altri modelli di esempio.
+
 ## [0.49.0] - 2026-10-12
 
 ### Aggiunto

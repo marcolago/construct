@@ -1,6 +1,6 @@
 # Cose da fare
 
-Data: 8 ottobre 2026. Obiettivo: tenere in un solo posto le funzioni ancora da aggiungere a Construct, in ordine di priorità
+Data: 8 ottobre 2026, aggiornato il 13 ottobre 2026 alla versione 0.49.0. Obiettivo: tenere in un solo posto le funzioni ancora da aggiungere a Construct, in ordine di priorità
 per un uso orientato alla stampa 3D, dal confronto con OpenSCAD, Fusion 360, Blender e Tinkercad.
 Si aggiorna a ogni funzione completata (colonna Stato) e a ogni nuova idea.
 
@@ -10,10 +10,12 @@ Fonti consultate: manuale di OpenSCAD (`rotate_extrude`, `offset`, `hull`), guid
 (strumento Screw, modificatore Simple Deform), guide alle funzioni di Tinkercad (Duplica e Ripeti, Piano di lavoro, Righello,
 Allinea, Capovolgi).
 
-Cosa c'è già: Serie di copie (lineare, griglia, circolare) come gruppo Ripetizione, booleane (Unione, Differenza, Intersezione) e Foro, Raccordo, Smusso e Smusso angolare su spigoli scelti, Guscio,
-Allinea, Specchia (con anteprima), Misura con aggancio, quote cliccabili X, Y e Z sull'oggetto selezionato, menu contestuale con il tasto destro, estrusione lineare e rotazionale delle forme 2D, Contorno (offset 2D),
-testo, SVG, simboli ed emoji, Inviluppo convesso e Minkowski, Appoggia sul piatto e su una faccia, import STL, 3MF e SVG, export STL, 3MF e
-OpenSCAD, timeline con Annulla.
+Cosa c'è già: Serie di copie (lineare, griglia, circolare) come gruppo Ripetizione, booleane (Unione, Differenza, Intersezione) e Foro, Raccordo, Smusso e Smusso angolare su spigoli scelti, Guscio (con cavità esatta sui profilati),
+Pattern (Voronoi, esagoni, cerchi, rombi, triangoli), Dividi con un piano (per asse e quota, anche inclinato),
+Allinea, Specchia (con anteprima), Misura con aggancio, quote cliccabili X, Y e Z sull'oggetto selezionato, menu contestuale con il tasto destro (sulla vista, sul vuoto e nell'elenco Oggetti), estrusione lineare e rotazionale delle forme 2D, Contorno (offset 2D),
+testo (32 font), SVG, simboli ed emoji, profilati strutturali (L, T, H, U, tubolari), Inviluppo convesso e Minkowski, Appoggia sul piatto e su una faccia, Sdraia, Nascondi e Mostra,
+viste (alto, fronte, lato, isometrica, ortografica, Inquadra), più piatti di stampa, preset delle stampanti, modelli di esempio,
+import STL, 3MF, SVG e OpenSCAD, export STL, 3MF, OpenSCAD e immagine PNG con le 4 viste, timeline con Annulla, impostazioni, documentazione nell'app e PWA.
 
 ## Funzioni prioritarie
 
@@ -22,7 +24,7 @@ OpenSCAD, timeline con Annulla.
 | 1 | Serie di copie, lineare e circolare | Tinkercad (Duplica e Ripeti), Fusion (Pattern rettangolare e circolare), Blender (Array), OpenSCAD (`for`) | Ripetere un pezzo è la richiesta più frequente | **Fatta** in 0.19.0: strumento Serie (tasto O) con gruppo Ripetizione parametrico. Resta "Rendi indipendenti" (vedi sotto) |
 | 2 | Appoggia su una faccia (piano di lavoro) | Tinkercad (Workplane), Blender, Fusion | Orientare il pezzo per stamparlo | **Fatta** in 0.18.0: strumento a clic sulla faccia (tasto V). Resta il piano di lavoro vero e proprio |
 | 3 | Viste: ortografica, preset (alto, fronte, iso), zoom sulla selezione | Tutti e tre | Misurare e allineare con precisione | **Fatta** in 0.39.0: tendina Viste (7, 1, 3, 0), Inquadra selezione (.) e tutto (Home), ortografica (5) |
-| 4 | Dividi con un piano, con eventuali connettori | Fusion (Split Body), Blender (Bisect) | Pezzi più grandi del piatto | **Fatta** in 0.40.0: strumento Dividi (Maiusc+S) con piano per asse e quota, due gruppi Intersezione parametrici. Restano i connettori (spine e sedi) e il piano inclinato |
+| 4 | Dividi con un piano, con eventuali connettori | Fusion (Split Body), Blender (Bisect) | Pezzi più grandi del piatto | **Fatta** in 0.40.0 (piano per asse e quota, due gruppi Intersezione parametrici) e 0.49.0 (piano inclinato con angolo e asse di rotazione). Restano i connettori (spine e sedi) |
 | 5 | Offset 2D e inviluppo convesso | OpenSCAD (`offset`, `hull`), Fusion (Offset) | Spessori, giochi, forme che uniscono due oggetti | **Fatta** in 0.18.0: campo Contorno nel Profilo 2D e Inviluppo convesso (tasto J) |
 | 6 | Disegno di profili con linee e curve | Fusion (Sketch), Tinkercad (Scribble) | Oggi i profili vengono solo da forme o SVG: è la funzione strategica più grande | Da fare. In 0.33.0 e 0.34.0 sono arrivati i profilati strutturali a L, T, H e U e i tubolari rettangolari e tondi, con spessori e raccordi; mancano la Z, i preset commerciali e il disegno libero |
 | 7 | Deformazioni Twist, Bend e Taper su qualunque solido; elica (passo) per la rotazione | Blender (Simple Deform, Screw) | Molle, viti, forme organiche | Da fare |
@@ -91,9 +93,13 @@ Primo passo economico alla Tinkercad: **Duplica e ripeti** (Ctrl+D ripete l'ulti
 - Pulsante per ripristinare i valori ricordati (ultimi valori usati).
 - Lucchetto delle proporzioni e Scala per le altre primitive (cilindro, cono, sfera, toro).
 - Controllo automatico del peso dei chunk in build (`size-limit`).
+- Dividi: connettori (spine e sedi, o incastri a coda di rondine) generati sul taglio, con gioco regolabile per la stampa.
+- Immagine delle 4 viste: scelta delle viste e della risoluzione, e immagine singola della vista corrente (oggi solo PNG 1600 × 1600 con le quattro viste).
+- Nascondi: nascondere anche gli oggetti dentro un gruppo (oggi solo quelli alla radice) e isolare l'oggetto selezionato.
+- Modelli di esempio: altri progetti nel catalogo (`src/examples/catalog.ts`), per esempio una scatola con coperchio e un supporto parametrico.
 - Nomi in italiano e ricerca per le emoji (scartati per ora).
 
-## Importa OpenSCAD: cosa non si legge ancora (aggiornato alla 0.29.0)
+## Importa OpenSCAD: cosa non si legge ancora (aggiornato alla 0.49.0, nessun comando nuovo dalla 0.32.0)
 
 ### Esempi della cartella `import/` (0.29.0)
 
