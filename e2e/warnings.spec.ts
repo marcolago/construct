@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addShape, openApp, sceneState, settled } from './helpers';
+import { addShape, openApp, openWarnings, sceneState, settled } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await openApp(page);
@@ -13,6 +13,10 @@ test('Avvisi: un cubo appoggiato non ne ha, sospeso o fuori dal piano compaiono 
   await addShape(page, 'Cubo');
   const id = (await sceneState(page)).rootIds[0];
   const section = page.getByRole('region', { name: 'Avvisi di stampabilità' });
+  // La sezione parte chiusa: la apre l'utente
+  await expect(section.getByRole('button', { name: /^Avvisi/ })).toHaveAttribute('aria-expanded', 'false');
+  await expect(section.locator('.warnings__body')).toHaveCount(0);
+  await openWarnings(page);
   await expect(section).toContainText('Nessun problema rilevato');
   await expect(page.locator('.status-bar__warnings')).toHaveCount(0);
 
@@ -39,6 +43,7 @@ test('Avvisi: un cubo appoggiato non ne ha, sospeso o fuori dal piano compaiono 
 
 test('Avvisi: il clic su uno sbalzo lo mette in evidenza e le impostazioni spengono i controlli', async ({ page }) => {
   await addShape(page, 'Cubo');
+  await openWarnings(page);
   const id = (await sceneState(page)).rootIds[0];
   await moveTo(page, id, [0, 0, 60]);
   await settled(page);
@@ -58,12 +63,14 @@ test('Avvisi: il clic su uno sbalzo lo mette in evidenza e le impostazioni speng
 
 test('Avvisi: una formula che non si calcola è un errore con il nome del parametro', async ({ page }) => {
   await addShape(page, 'Cubo');
+  await openWarnings(page);
   await page.evaluate(() => window.__construct!.store.getState().addParam('spessore', '1 / 0'));
   await expect(page.locator('.warnings__item[data-kind="formula"]')).toContainText('Il parametro «spessore» non si calcola');
 });
 
 test('Avvisi: una parete più sottile del minimo e il suo evidenziamento nella vista', async ({ page }) => {
   await addShape(page, 'Cubo');
+  await openWarnings(page);
   const id = (await sceneState(page)).rootIds[0];
   // Lastra di 0,4 mm: più sottile di due passate di un ugello da 0,4 mm
   await page.evaluate((nodeId) => window.__construct!.store.getState().updateNode(nodeId, { size: [0.4, 20, 20], position: [0, 0, 10] } as never), id);
@@ -81,7 +88,9 @@ test('Avvisi: una parete più sottile del minimo e il suo evidenziamento nella v
 
 test('Avvisi: una parte staccata e sospesa dentro un Raggruppa appoggiato sul piano', async ({ page }) => {
   await addShape(page, 'Cubo');
+  await openWarnings(page);
   await addShape(page, 'Cubo');
+  await openWarnings(page);
   const ids: string[] = (await sceneState(page)).rootIds;
   await page.evaluate(([a, b]) => {
     const store = window.__construct!.store.getState();

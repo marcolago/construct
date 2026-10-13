@@ -104,11 +104,8 @@ export function cleanSettings(value: unknown): Settings {
   };
 }
 
-/** Scheda della sezione sotto la libreria: oggetti del piatto attivo oppure elenco dei piatti. */
-export type OutlinerTab = 'objects' | 'plates';
-
-/** Scheda della barra destra: proprietà dell'oggetto selezionato oppure elenco (di sola lettura) dei parametri. */
-export type SidebarTab = 'properties' | 'params';
+/** Scheda della sezione sotto la libreria: oggetti del piatto attivo, elenco dei piatti o dei parametri (di sola lettura). */
+export type OutlinerTab = 'objects' | 'plates' | 'params';
 
 /** Tab della libreria nella barra laterale sinistra. */
 export type LibraryTab = 'shapes3d' | 'shapes2d' | 'symbols' | 'emoji';
@@ -155,8 +152,6 @@ interface UiState extends Settings {
   resetSettings: () => void;
   /** Scheda aperta sotto la libreria (non si salva: si parte sempre dagli oggetti). */
   outlinerTab: OutlinerTab;
-  sidebarTab: SidebarTab;
-  setSidebarTab: (tab: SidebarTab) => void;
   setOutlinerTab: (tab: OutlinerTab) => void;
   /** Pannello del menu hamburger aperto in una modale (non si salva). */
   appPanel: AppPanel | null;
@@ -232,8 +227,6 @@ export const useUiStore = create<UiState>()(
       setSettings: (patch) => set(cleanSettings({ ...pickSettings(get()), ...patch })),
       resetSettings: () => set({ ...DEFAULT_SETTINGS, theme: 'dark', bedMode: 'full', projection: 'perspective', bedSize: DEFAULT_BED }),
       outlinerTab: 'objects',
-      sidebarTab: 'properties',
-      setSidebarTab: (sidebarTab) => set({ sidebarTab }),
       setOutlinerTab: (outlinerTab) => set({ outlinerTab }),
       appPanel: null,
       setAppPanel: (appPanel) => set({ appPanel }),

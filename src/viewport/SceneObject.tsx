@@ -11,7 +11,7 @@ import { isRepeatClick, pickTarget, rememberClick, setPressedOnGizmo, wasPressed
 import type { PickHit } from './pick';
 import { round } from '../scene/math';
 import { halfHeight } from '../scene/defaults';
-import { applyScale } from '../scene/resize';
+import { applyScale, previewScale } from '../scene/resize';
 import { holdBound } from '../scene/params';
 import { resizeGroup } from '../scene/groupScale';
 import { localBounds } from '../scene/shell';
@@ -360,8 +360,9 @@ export function SceneObject({ rootId, meshes, selection, locked, showGizmo }: Pr
       return;
     }
     if (scaling && (node.type === 'primitive' || node.type === 'shape2d')) {
-      // Scala attorno al centro della base (punto più basso, a -hz in locale): la base resta ferma
-      const [sx, sy, sz] = currentScale(p);
+      // Scala attorno al centro della base (punto più basso, a -hz in locale): la base resta ferma. Con campi legati a un
+      // parametro l'anteprima è già quella del rilascio: gli assi legati non si allargano
+      const [sx, sy, sz] = previewScale(node, currentScale(p));
       const base = new THREE.Matrix4().makeTranslation(0, 0, -halfHeight(node));
       const local = base.clone().multiply(new THREE.Matrix4().makeScale(sx, sy, sz)).multiply(base.clone().invert());
       const world = nodeMatrix(node.position, node.rotation);

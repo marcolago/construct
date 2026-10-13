@@ -1,5 +1,6 @@
 import type { PrimitiveNode, Shape2DNode, Vec3 } from './types';
 import { round } from './math';
+import { holdBound } from './params';
 import { primitiveDefaults, shape2dDefaults } from './defaults';
 import { svgNaturalSize } from './shapes2d';
 import { clampProfile, isBarShape, thicknessAxes } from './profiles';
@@ -207,4 +208,47 @@ export function scalePatch(node: Resizable, percent: number): ResizePatch {
   const target = (scaleReference(node) * percent) / 100;
   const f = current > 0 ? target / current : 1;
   return applyScale(node, [f, f, node.type === 'primitive' ? f : 1], 0.01);
+}
+
+/** Ingombro nominale (X, Y, Z locali) di una forma dalle sue misure, o undefined per le forme senza una misura per asse. */
+function nominalSize(node: Resizable): Vec3 | undefined {
+  if (node.type === 'primitive') {
+    switch (node.kind) {
+      case 'box': return [...node.size];
+      case 'cylinder': return [2 * node.radius, 2 * (node.radiusY ?? node.radius), node.height];
+      case 'cone': {
+        const m = Math.max(node.radiusBottom, node.radiusTop);
+        return [2 * m, 2 * (node.radiusY ?? m), node.height];
+      }
+      case 'sphere': return [2 * node.radius, 2 * (node.radiusY ?? node.radius), 2 * (node.radiusZ ?? node.radius)];
+      case 'torus': return [2 * (node.majorRadius + node.minorRadius), 2 * (node.majorRadius + node.minorRadius), 2 * node.minorRadius];
+      default: return [node.size, node.size, node.size];
+    }
+  }
+  // Forme 2D estruse linearmente con larghezza e profondità (o raggio): l'estrusione rotazionale non ha una misura per asse
+  if (node.extrusion === 'rotate') return undefined;
+  if (node.kind === 'circle') return [2 * node.radius, 2 * (node.radiusY ?? node.radius), node.height];
+  if (node.kind === 'tubeRound') return [2 * node.radius, 2 * node.radius, node.height];
+  if ('width' in node && 'depth' in node) return [node.width, node.depth, node.height];
+  return undefined;
+}
+
+/**
+ * Scala da mostrare nell'anteprima del trascinamento di un oggetto con campi legati a un parametro: quella che
+ * produrrà davvero il rilascio, cioè con i campi legati fermi (gli assi che dipendono solo da campi legati restano a 1).
+ * Per le forme senza una misura per asse si prova un asse alla volta: l'asse i resta fermo se scalarlo cambia solo campi legati.
+ */
+export function previewScale(node: Resizable, scale: Vec3): Vec3 {
+  if (!node.exprs) return scale;
+  const kept = holdBound(node, applyScale(node, scale, 0.001)).patch;
+  const before = nominalSize(node);
+  const after = nominalSize({ ...node, ...kept } as Resizable);
+  if (before && after) return before.map((v, i) => (v > 0 ? after[i] / v : scale[i])) as Vec3;
+  const changes = (patch: ResizePatch) => Object.entries(patch).some(([k, v]) => JSON.stringify(v) !== JSON.stringify((node as unknown as Record<string, unknown>)[k]));
+  return scale.map((f, i) => {
+    const only = [1, 1, 1] as Vec3;
+    only[i] = f;
+    const patch = applyScale(node, only, 0.001);
+    return changes(patch) && !changes(holdBound(node, patch).patch) ? 1 : f;
+  }) as Vec3;
 }

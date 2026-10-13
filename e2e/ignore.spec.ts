@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { addShape, openApp, sceneState, settled } from './helpers';
+import { addShape, openApp, openWarnings, sceneState, settled } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await openApp(page);
@@ -11,6 +11,7 @@ const moveTo = (page: Page, id: string, position: [number, number, number]) =>
 
 test('Avvisi: si può ignorare un avviso, ritrovarlo tra gli ignorati e ripristinarlo', async ({ page }) => {
   await addShape(page, 'Cubo');
+  await openWarnings(page);
   const id = (await sceneState(page)).rootIds[0];
   await moveTo(page, id, [0, 0, 60]);
   await settled(page);

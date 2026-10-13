@@ -134,3 +134,9 @@ export async function readCode(page: Page): Promise<string> {
   await expect(page.getByRole('dialog')).toBeHidden();
   return code;
 }
+
+/** Apre la sezione Avvisi della colonna destra (parte chiusa), se non lo è già. */
+export async function openWarnings(page: Page): Promise<void> {
+  const head = page.getByRole('region', { name: 'Avvisi di stampabilità' }).getByRole('button', { name: /^Avvisi/ });
+  if ((await head.getAttribute('aria-expanded')) === 'false') await head.click();
+}

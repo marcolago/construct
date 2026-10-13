@@ -7,6 +7,7 @@ import { PRIMITIVE_ICONS, SHAPE2D_ICONS } from '../ShapeLibrary/ShapeLibrary';
 import { CORNER_ICONS, CORNER_NAMES, EDGE_ICONS, GROUP_ICONS, GROUP_NAMES } from '../groupIcons';
 import { dropTarget, zoneAt, type DropZone } from './dnd';
 import { PlatesPanel } from '../Plates/PlatesPanel';
+import { ParamsView } from '../Params/ParamsView';
 import { activePlateOf, hasManyPlates } from '../../scene/plates';
 import { paramsUsedBy } from '../../scene/params';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
@@ -243,6 +244,7 @@ function Row({ id, depth, collapsed, toggle, hint, setHint }: RowProps) {
 const TABS: { id: OutlinerTab; label: string }[] = [
   { id: 'objects', label: 'Oggetti' },
   { id: 'plates', label: 'Piatti' },
+  { id: 'params', label: 'Parametri' },
 ];
 
 export function Outliner() {
@@ -252,6 +254,7 @@ export function Outliner() {
   // Con più piatti l'elenco dice di quale piatto sono gli oggetti
   const plateLabel = useSceneStore((s) => (hasManyPlates(s.scene) ? activePlateOf(s.scene).name : null));
   const plateCount = useSceneStore((s) => (hasManyPlates(s.scene) ? s.scene.plates!.length : 0));
+  const paramCount = useSceneStore((s) => s.scene.params?.length ?? 0);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [hint, setHint] = useState<Hint | null>(null);
   const toggle = (id: string) =>
@@ -280,7 +283,7 @@ export function Outliner() {
   };
 
   return (
-    <section className="outliner" aria-label="Oggetti e piatti">
+    <section className="outliner" aria-label="Oggetti, piatti e parametri">
       <div className="outliner__tabs" role="tablist" aria-label="Oggetti, piatti e parametri" onKeyDown={onTabKeys}>
         {TABS.map((t) => (
           <button
@@ -296,6 +299,7 @@ export function Outliner() {
           >
             {t.label}
             {t.id === 'plates' && plateCount > 1 && <span className="outliner__badge">{plateCount}</span>}
+            {t.id === 'params' && paramCount > 0 && <span className="outliner__badge">{paramCount}</span>}
           </button>
         ))}
         {tab === 'objects' && plateLabel && <span className="outliner__plate" title="Piatto attivo">{plateLabel}</span>}
@@ -303,6 +307,8 @@ export function Outliner() {
       <div id="outliner-panel" className="outliner__panel" role="tabpanel" aria-labelledby={`outliner-tab-${tab}`}>
       {tab === 'plates' ? (
         <PlatesPanel />
+      ) : tab === 'params' ? (
+        <ParamsView />
       ) : rootIds.length === 0 ? (
         <p className="outliner__empty">La scena è vuota. Aggiungi una forma dalla libreria.</p>
       ) : (

@@ -53,7 +53,7 @@ const SHORTCUTS: { title: string; rows: [string, string][] }[] = [
       ['Sezione Avvisi', 'In fondo alla colonna destra: sbalzi, pareti sottili, parti staccate, oggetti sospesi o fuori dal piano, mesh non valide e formule errate; un clic sull\'avviso seleziona l\'oggetto (sugli sbalzi mostra le zone nella vista); l\'icona a destra lo ignora. Si regola dalle Impostazioni'],
       ['Maniglia tra libreria e oggetti', 'Trascinala per cambiare l\'altezza delle due sezioni della barra sinistra (doppio clic: misura iniziale; frecce su e giù con il fuoco)'],
       ['Doppio clic sul nome di un campo', 'Nel pannello Proprietà apre il selettore del parametro: il campo diventa fx con il valore e si ricalcola al cambio del parametro; per tornare alla modifica manuale, doppio clic e Togli parametro'],
-      ['Menu Parametri…', 'Finestra per aggiungere, modificare ed eliminare i parametri del progetto (spessore = 2, altezza = 2 * spessore); la scheda Parametri a destra li elenca in sola lettura'],
+      ['Menu Parametri…', 'Finestra per aggiungere, modificare ed eliminare i parametri del progetto (spessore = 2, altezza = 2 * spessore); la scheda Parametri della barra sinistra li elenca in sola lettura'],
       ['Scheda Piatti', 'Un progetto può avere più piatti, ciascuno con i suoi oggetti: si vede un piatto alla volta; 3MF esporta tutti i piatti, STL chiede quale'],
       ['Clic su una quota', 'Le quote X, Y e Z dell\'oggetto selezionato: si digita la misura in mm (Invio applica, Esc annulla); il lucchetto accanto fa scalare tutti gli assi insieme'],
       ['Ctrl+Maiusc+G', 'Separa il gruppo o l\'unione'],

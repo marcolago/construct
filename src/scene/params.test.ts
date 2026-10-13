@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { evalFormula, formulaDeps, holdBound, nameProblem, paramsUsedBy, usersOf, renameInExpr, resolveParams, validName } from './params';
 import { useSceneStore } from './store';
-import { applyScale } from './resize';
+import { applyScale, previewScale } from './resize';
 import { primitiveDefaults } from './defaults';
 import type { PrimitiveNode } from './types';
 import type { Param } from './types';
@@ -193,5 +193,28 @@ describe('chi usa un parametro', () => {
     const scene = { nodes: { a, b }, rootIds: ['a', 'b'], params: [{ id: '1', name: 'x', expr: '1' }, { id: '2', name: 'z', expr: 'x * 3' }] };
     expect(usersOf(scene, 'x')).toEqual({ nodes: ['a'], params: ['z'] });
     expect(usersOf(scene, 'z')).toEqual({ nodes: [], params: [] });
+  });
+});
+
+describe('anteprima del ridimensionamento con campi legati', () => {
+  const bound = (kind: Parameters<typeof primitiveDefaults>[0], patch: object) => ({ ...primitiveDefaults(kind), id: 'n', name: 'n', position: [0, 0, 0], ...patch }) as PrimitiveNode;
+
+  it('senza campi legati la scala resta quella del gizmo', () => {
+    expect(previewScale(bound('box', {}), [2, 3, 4])).toEqual([2, 3, 4]);
+  });
+
+  it('un lato legato resta a 1 e gli altri scalano, anche con le proporzioni bloccate', () => {
+    const box = bound('box', { size: [20, 20, 20], exprs: { 'size.2': { expr: 'a' } } });
+    expect(previewScale(box, [2, 2, 2])).toEqual([2, 2, 1]);
+    const locked = bound('box', { size: [20, 20, 20], lockRatio: true, exprs: { 'size.2': { expr: 'a' } } });
+    expect(previewScale(locked, [2, 2, 2])).toEqual([2, 2, 1]);
+  });
+
+  it('cilindro: raggio legato ferma X e Y, altezza legata ferma Z', () => {
+    const r = bound('cylinder', { radius: 5, height: 10, exprs: { radius: { expr: 'a' } } });
+    const [sx, , sz] = previewScale(r, [2, 2, 2]);
+    expect([sx, sz]).toEqual([1, 2]);
+    const h = bound('cylinder', { radius: 5, height: 10, exprs: { height: { expr: 'a' } } });
+    expect(previewScale(h, [2, 2, 2])).toEqual([2, 2, 1]);
   });
 });

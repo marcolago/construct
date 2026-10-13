@@ -15,7 +15,7 @@ interface WarningsState {
   deep: PrintIssue[];
   /** Avviso messo in evidenza nella vista 3D (clic sull'elenco). */
   focusId: string | null;
-  /** Sezione Avvisi aperta. */
+  /** Sezione Avvisi aperta: parte chiusa, la apre l'utente (anche dal contatore nella barra di stato). */
   open: boolean;
   setFocus: (id: string | null) => void;
   setOpen: (open: boolean) => void;
@@ -27,7 +27,7 @@ export const useWarnings = create<WarningsState>((set) => ({
   fast: [],
   deep: [],
   focusId: null,
-  open: true,
+  open: false,
   setFocus: (focusId) => set({ focusId }),
   setOpen: (open) => set({ open }),
 }));

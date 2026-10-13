@@ -18,6 +18,16 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.56.0] - 2026-10-13
+
+### Modificato
+- **Avvisi chiusi all'avvio.** La sezione Avvisi della colonna destra parte chiusa e si apre solo quando lo decide l'utente (intestazione o contatore nella barra di stato).
+- **Parametri a sinistra.** La scheda Parametri (elenco in sola lettura, con il pulsante per la finestra di gestione) torna sulla barra sinistra, accanto a Oggetti e Piatti; la colonna destra ha di nuovo solo le Proprietà e gli Avvisi.
+- **Anteprima del ridimensionamento con campi legati.** Trascinando il gizmo di ridimensionamento (anche quello proporzionale su tutti gli assi) di un oggetto con campi legati a un parametro, l'anteprima mostra già il risultato del rilascio: gli assi che dipendono da campi legati restano fermi e gli altri scalano (prima l'oggetto si allargava su tutti gli assi durante il trascinamento e tornava corretto solo al rilascio). Vale per forme 3D e profili 2D con una misura per asse; per le altre forme si ferma l'asse che cambierebbe solo campi legati.
+
+### Test
+- `previewScale`: senza campi legati, lato legato (anche con proporzioni bloccate), cilindro con raggio o altezza legati; e2e aggiornati alla scheda a sinistra e alla sezione Avvisi chiusa.
+
 ## [0.55.0] - 2026-10-13
 
 ### Aggiunto

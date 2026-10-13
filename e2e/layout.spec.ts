@@ -36,12 +36,11 @@ test('barra sinistra: il separatore ridimensiona libreria e oggetti, con mouse e
   await expect(page.getByRole('separator', { name: 'Altezza di libreria e oggetti' })).toHaveAttribute('aria-valuenow', '54');
 });
 
-test('barra destra: schede Proprietà e Parametri, con il pulsante che apre la finestra di gestione', async ({ page }) => {
+test('barra sinistra: scheda Parametri accanto a Oggetti e Piatti, con il pulsante che apre la finestra di gestione', async ({ page }) => {
   await page.getByRole('tab', { name: /Parametri/ }).click();
   await expect(page.locator('.params-view__empty')).toBeVisible();
   await page.getByRole('button', { name: 'Gestisci parametri…' }).click();
   await expect(page.getByRole('dialog', { name: 'Parametri' })).toBeVisible();
   await page.keyboard.press('Escape');
-  await page.getByRole('tab', { name: 'Proprietà' }).click();
-  await expect(page.locator('.properties__empty')).toBeVisible();
+  await expect(page.locator('.sidebar__title')).toHaveText('Proprietà');
 });

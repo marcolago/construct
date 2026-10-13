@@ -45,7 +45,6 @@ test('parametri: finestra di gestione, elenco a destra, formula dal selettore, r
   const row = page.locator('.params-view__row[data-param="spessore"]');
   await expect(row).toContainText('2');
   await expect(row.locator('input')).toHaveCount(0);
-  await page.getByRole('tab', { name: 'Proprietà' }).click();
 
   // Doppio clic sul nome del campo Altezza: il campo diventa fx con il valore, senza slider né campo
   const height = page.locator('.slider-field', { hasText: 'Altezza' });
