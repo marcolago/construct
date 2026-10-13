@@ -18,6 +18,20 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.51.0] - 2026-10-13
+
+### Aggiunto
+- **Parametri e formule.** Nuova scheda **Parametri** accanto a Oggetti e Piatti: variabili del progetto con nome, formula, nota e valore calcolato (`spessore = 2`, `altezza = 2 * spessore`), valide per tutti i piatti. I nomi sono variabili OpenSCAD valide (niente accenti né parole riservate); il pannello segnala nomi doppi, riferimenti mancanti e circolari. Eliminare un parametro usato chiede conferma e lascia i campi con il loro valore.
+- **Formule nei campi numerici.** Posizione, rotazione, dimensioni di forme 3D e profili 2D, altezza di estrusione, Guscio, Ripetizione, Raccordo e Smusso accettano un numero, un calcolo (`10 / 2`) o una formula con i parametri (`2 * spessore + 1`), con gli operatori, `PI`, `min`, `max`, `abs`, `sqrt`, `round`, `floor`, `ceil`, le funzioni trigonometriche in gradi e il condizionale `?:`, con la stessa sintassi delle espressioni OpenSCAD. Il campo legato mostra il riquadro **fx** e la formula al fuoco; cambiando il parametro si ricalcola e l'oggetto si ridimensiona, con la base che resta sul piatto. Scrivere un numero a mano o usare gizmo, slider e quote scioglie la formula del campo (con un avviso).
+- **Codice OpenSCAD con variabili.** I parametri escono in testa come variabili, in ordine di dipendenza e nel blocco `/* [Parametri] */` del Customizer, con la nota come commento; i campi legati usano i nomi (`cube([20, 20, (2 * spessore)])`, `for (i = [0 : copie - 1])`). Dove il valore è derivato (posizione dentro un Raggruppa, Raccordi e Smussi, cavità del Guscio) esce il numero. Una formula con un parametro rotto esce come numero, così il file resta valido. Il codice esportato si rilegge con gli stessi valori.
+
+### Modificato
+- Il formato del file di progetto passa alla **versione 5** (`params` nella scena, `exprs` nei nodi); i progetti precedenti si aprono senza cambiamenti.
+- `NumberField` e `SliderField` hanno le proprietà opzionali `path` e `integer`; fuori dal pannello Proprietà (Impostazioni, strumenti) i campi restano numerici, ma accettano anche un calcolo senza parametri.
+
+### Test
+- Formule (precedenza, funzioni, errori, istruzioni estranee), nomi, ordine di dipendenza, cicli, rinomina, ricalcolo con limiti, un solo passo di Annulla, scioglimento della formula, codice generato e rilettura, versione 5 del file; e2e con parametro, formula nel campo, ricalcolo, codice e Annulla.
+
 ## [0.50.0] - 2026-10-13
 
 ### Aggiunto

@@ -517,3 +517,14 @@ export function parse(tokens: Token[]): Stmt[] {
   }
   return program;
 }
+
+/**
+ * Espressione isolata (una formula di un campo): si legge come il lato destro di un'assegnazione, e un testo che
+ * produce altro (più istruzioni, una chiamata di modulo) è rifiutato con un ScadError.
+ */
+export function parseExpression(src: string): Expr {
+  const program = parse(tokenize(`__f = ${src};`).tokens);
+  const first = program[0];
+  if (program.length !== 1 || first.t !== 'assign' || first.name !== '__f') throw new ScadError('Formula non valida', 1);
+  return first.e;
+}

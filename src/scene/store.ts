@@ -3,7 +3,9 @@ import { immer } from 'zustand/middleware/immer';
 import { current } from 'immer';
 import { temporal } from 'zundo';
 import type { ScadImport } from '../import/scad/toScene';
-import type { CornerNode, EdgeNode, GroupNode, GroupOp, MeshNode, PrimitiveKind, PrimitiveNode, Scene, SceneNode, Shape2DKind, Shape2DNode, Vec3 } from './types';
+import type { Binding, CornerNode, EdgeNode, GroupNode, GroupOp, MeshNode, Param, PrimitiveKind, PrimitiveNode, Scene, SceneNode, Shape2DKind, Shape2DNode, Vec3 } from './types';
+import { notify } from '../ui/notify/notifyStore';
+import { applyBindings, boundValue, formulaDeps, getPath, nameProblem, renameInExpr, resolveParams, setPath } from './params';
 import { randomColor } from './color';
 import { lastShape, rememberShape } from './lastValues';
 import { layFlatPatch } from './layFlat';
@@ -83,6 +85,15 @@ interface SceneState {
   removePlate: (id: string) => void;
   /** Sposta gli oggetti selezionati (alla radice, non bloccati) in un altro piatto. */
   moveSelectionToPlate: (plateId: string) => void;
+
+  /** Aggiunge un parametro di progetto (un passo di Annulla). Restituisce l'id. */
+  addParam: (name: string, expr: string) => string;
+  /** Cambia nome, formula o nota di un parametro e ricalcola i campi legati. Un nome non valido o già usato si rifiuta (false). */
+  updateParam: (id: string, patch: Partial<Pick<Param, 'name' | 'expr' | 'note'>>) => boolean;
+  /** Elimina un parametro: i campi che lo usavano restano con il valore che avevano, senza formula. */
+  removeParam: (id: string) => void;
+  /** Lega un campo numerico di un nodo a una formula (o la scioglie con null). Un solo passo di Annulla. */
+  bindField: (id: string, path: string, binding: Binding | null) => void;
 }
 
 /** Nome base del gruppo creato da ogni operazione. */
@@ -328,13 +339,23 @@ export const useSceneStore = create<SceneState>()(
 
       updateNode: (id, patch) => {
         const before = get().scene.nodes[id];
+        let dissolved = 0;
         act(updateLabel(before?.name, patch), (s) => {
           const node = s.scene.nodes[id];
           if (!node) return;
           // Su un oggetto bloccato passano solo nome, colore e il blocco stesso
           if (isLocked(s.scene, id) && Object.keys(patch).some((k) => !ALWAYS_EDITABLE.has(k))) return;
+          // Valori dei campi legati prima della modifica: chi cambia a mano un campo legato ne scioglie la formula
+          const bound = Object.keys(node.exprs ?? {}).map((path) => [path, getPath(node, path)] as const);
           Object.assign(node, patch);
+          for (const [path, old] of bound) {
+            if (getPath(node, path) === old) continue;
+            delete node.exprs![path];
+            dissolved++;
+          }
+          if (node.exprs && Object.keys(node.exprs).length === 0) delete node.exprs;
         });
+        if (dissolved) notify.info(`Formula rimossa da «${before?.name}»: il campo è stato modificato a mano`);
         // Le misure inserite diventano il punto di partenza delle prossime forme dello stesso tipo
         if (before && (before.type === 'primitive' || before.type === 'shape2d') && !isLocked(get().scene, id)) rememberShape(before.kind, patch);
       },
@@ -682,6 +703,68 @@ export const useSceneStore = create<SceneState>()(
           if (!ids.length) return;
           s.scene = moveRootsToPlate(current(s.scene), ids, plateId);
           s.selection = [];
+        });
+      },
+
+      addParam: (name, expr) => {
+        const id = newId();
+        act('Aggiungi parametro', (s) => {
+          s.scene.params = [...(s.scene.params ?? []), { id, name, expr }];
+        });
+        return id;
+      },
+
+      updateParam: (id, patch) => {
+        const param = get().scene.params?.find((p) => p.id === id);
+        if (!param) return false;
+        const rename = patch.name !== undefined && patch.name !== param.name;
+        // Il nome deve essere una variabile OpenSCAD valida e non già usata da un altro parametro
+        if (rename && (nameProblem(patch.name!) || get().scene.params!.some((p) => p.name === patch.name))) return false;
+        act(`Modifica parametro ${param.name}`, (s) => {
+          const target = s.scene.params!.find((p) => p.id === id)!;
+          // Rinominare aggiorna tutte le formule che usavano il vecchio nome
+          if (rename) {
+            for (const p of s.scene.params!) p.expr = renameInExpr(p.expr, param.name, patch.name!);
+            for (const node of Object.values(s.scene.nodes)) for (const b of Object.values(node.exprs ?? {})) b.expr = renameInExpr(b.expr, param.name, patch.name!);
+          }
+          Object.assign(target, patch);
+          if (target.note === '') delete target.note;
+          applyBindings(s.scene);
+        });
+        return true;
+      },
+
+      removeParam: (id) =>
+        act('Elimina parametro', (s) => {
+          const target = s.scene.params?.find((p) => p.id === id);
+          if (!target) return;
+          // I valori si calcolano prima di togliere il parametro: i suoi dipendenti li conservano come numeri
+          const { values } = resolveParams(current(s.scene).params);
+          const uses = (text: string) => formulaDeps(text).includes(target.name);
+          for (const node of Object.values(s.scene.nodes)) {
+            for (const [path, b] of Object.entries(node.exprs ?? {})) if (uses(b.expr)) delete node.exprs![path];
+            if (node.exprs && Object.keys(node.exprs).length === 0) delete node.exprs;
+          }
+          for (const p of s.scene.params!) if (p !== target && uses(p.expr) && p.name in values) p.expr = String(round(values[p.name], 4));
+          s.scene.params = s.scene.params!.filter((p) => p.id !== id);
+          if (s.scene.params.length === 0) delete s.scene.params;
+          applyBindings(s.scene);
+        }),
+
+      bindField: (id, path, binding) => {
+        const before = get().scene.nodes[id];
+        if (!before || isLocked(get().scene, id)) return;
+        act(`Modifica ${before.name}`, (s) => {
+          const node = s.scene.nodes[id];
+          if (!binding) {
+            if (node.exprs) delete node.exprs[path];
+            if (node.exprs && Object.keys(node.exprs).length === 0) delete node.exprs;
+            return;
+          }
+          const result = boundValue(binding, resolveParams(current(s.scene).params).values);
+          // Il campo deve esistere e la formula essere valida: chi chiama l'ha già controllata, qui si ricontrolla
+          if (!result.ok || !setPath(node, path, result.value)) return;
+          node.exprs = { ...node.exprs, [path]: binding };
         });
       },
     })),

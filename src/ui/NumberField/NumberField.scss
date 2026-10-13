@@ -14,6 +14,24 @@
     color: color('text-muted');
   }
 
+  // Chip "fx" dei campi legati a una formula
+  &__fx {
+    flex: none;
+    padding: 0 3px;
+    border-radius: $radius-sm;
+    background: color('accent');
+    color: color('bg');
+    font-family: $font-mono;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 14px;
+  }
+
+  &--bound &__input {
+    border-color: color('accent');
+    text-align: left;
+  }
+
   &__input {
     flex: 1;
     min-width: 0;

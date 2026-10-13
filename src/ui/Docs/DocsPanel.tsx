@@ -18,6 +18,7 @@ const SECTIONS = [
   { id: 'modificare', title: 'Modificare' },
   { id: 'ripetizioni', title: 'Ripetizioni' },
   { id: 'piatti', title: 'Piatti e piano di stampa' },
+  { id: 'parametri', title: 'Parametri e formule' },
   { id: 'codice', title: 'Codice OpenSCAD' },
   { id: 'openscad', title: 'OpenSCAD' },
   { id: 'font', title: 'Font' },
@@ -171,6 +172,12 @@ export default function DocsPanel() {
         <p>Serie e Pattern creano gruppi modificabili: si cambiano i parametri, non le singole copie.</p>
         <Command id="array" />
         <Command id="pattern" />
+      </Section>
+
+      <Section id="parametri" title="Parametri e formule">
+        <p>Un <strong>parametro</strong> è una misura con un nome, come una variabile di OpenSCAD: <code>spessore = 2</code>. Si creano dalla scheda <strong>Parametri</strong> sotto la libreria (nome, formula, nota) e valgono per tutti i piatti del progetto. Un parametro può usare altri parametri (<code>altezza = 2 * spessore</code>); i nomi hanno solo lettere senza accenti, cifre e trattino basso.</p>
+        <p>Nei campi numerici del pannello Proprietà (posizione, rotazione, dimensioni, altezza, Guscio, Ripetizione, Raccordo e Smusso) puoi scrivere un numero, un calcolo (<code>10 / 2</code>) o una <strong>formula con i parametri</strong> (<code>2 * spessore + 1</code>). La formula resta legata al campo, segnalato dal riquadro <strong>fx</strong>: cambiando il parametro il campo si ricalcola e l&apos;oggetto si ridimensiona, con la base che resta sul piatto. Nelle formule valgono gli operatori, <code>PI</code>, le funzioni <code>min</code>, <code>max</code>, <code>abs</code>, <code>sqrt</code>, <code>round</code>, <code>floor</code>, <code>ceil</code>, <code>sin</code>, <code>cos</code> (angoli in gradi) e il condizionale <code>a ? b : c</code>; i decimali si scrivono col punto, perché la virgola separa gli argomenti.</p>
+        <p>Scrivere un numero a mano in un campo legato, o muovere l&apos;oggetto con il gizmo, scioglie la formula di quel campo. Il codice OpenSCAD esportato ha i parametri come variabili in testa, in un blocco <code>/* [Parametri] */</code> che il Customizer di OpenSCAD mostra con i suoi cursori, e i campi legati usano i nomi. Dove il valore è derivato (posizioni dentro un Raggruppa, Raccordi e Smussi, Guscio) il codice ha il numero.</p>
       </Section>
 
       <Section id="piatti" title="Piatti e piano di stampa">

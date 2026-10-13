@@ -20,13 +20,16 @@ interface Props {
   disabled?: boolean;
   /** Falso quando la cronologia di Annulla è già gestita da chi usa lo slider (anteprime di Raccordo e Smusso): niente pausa né ripresa. */
   history?: boolean;
+  /** Percorso del campo nel nodo per le formule (vedi NumberField). Trascinare lo slider di un campo legato ne scioglie la formula. */
+  path?: string;
+  integer?: boolean;
 }
 
 /**
  * Slider con campo numerico accanto. Trascinando lo slider la scena si aggiorna dal vivo,
  * ma tutto il trascinamento vale un solo passo di Annulla (Ctrl+Z).
  */
-export function SliderField({ label, value, onCommit, tooltip, min, max, step = 1, hardMin, hardMax, unit, disabled, history: trackHistory = true }: Props) {
+export function SliderField({ label, value, onCommit, tooltip, min, max, step = 1, hardMin, hardMax, unit, disabled, history: trackHistory = true, path, integer }: Props) {
   // Valore prima del trascinamento e ultimo valore raggiunto (null = nessun trascinamento in corso)
   const drag = useRef<{ start: number; last: number } | null>(null);
 
@@ -78,7 +81,7 @@ export function SliderField({ label, value, onCommit, tooltip, min, max, step = 
           onCommit(v);
         }}
       />
-      <NumberField label="" unit={unit} step={step} min={hardMin} max={hardMax} disabled={disabled} value={value} onCommit={onCommit} />
+      <NumberField label="" unit={unit} step={step} min={hardMin} max={hardMax} disabled={disabled} value={value} onCommit={onCommit} path={path} integer={integer} />
     </div>
   );
 }

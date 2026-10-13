@@ -189,6 +189,19 @@ describe('import di file OpenSCAD: il codice di Construct si rilegge', () => {
     near(node.position, [10, 20, 5]);
   });
 
+  it('i parametri esportati come variabili si rileggono con i valori calcolati', () => {
+    const scene: Scene = {
+      nodes: { a: { ...box('a', [10, 0, 2]), size: [20, 20, 4], exprs: { 'size.2': { expr: '2 * spessore' }, 'position.0': { expr: '5 * spessore' } } } as PrimitiveNode },
+      rootIds: ['a'],
+      params: [{ id: 'p', name: 'spessore', expr: '2' }],
+    };
+    const code = sceneToOpenScad(scene);
+    expect(code).toContain('spessore = 2;');
+    const { node } = first(code);
+    expect(node).toMatchObject({ kind: 'box', size: [20, 20, 4] });
+    near(node.position, [10, 0, 2]);
+  });
+
   it('una scena con due piatti torna con i due piatti e i loro nomi', () => {
     let scene: Scene = addPlateScene({ nodes: { a: box('a', [0, 0, 10]), b: { ...primitiveDefaults('cylinder'), id: 'b', name: 'b', position: [3, 4, 10] } as PrimitiveNode }, rootIds: ['a', 'b'] }, 'p2');
     scene = moveRootsToPlate(scene, ['b'], 'p2');

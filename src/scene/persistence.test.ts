@@ -70,6 +70,19 @@ describe('file di progetto JSON', () => {
     expect(scene.rootIds).toEqual(['t', 'u']);
   });
 
+  it('parametri e formule si salvano e si rileggono; parametri malformati rifiutano il file', () => {
+    const scene = fullScene();
+    scene.params = [{ id: 'p', name: 'spessore', expr: '2', note: 'Pareti' }];
+    scene.nodes.t = { ...scene.nodes.t, exprs: { 'size.2': { expr: '2 * spessore', min: 0.1 } } } as typeof scene.nodes.t;
+    const { scene: loaded } = sceneFromJson(sceneToJson(scene));
+    expect(loaded.params).toEqual(scene.params);
+    expect(loaded.nodes.t.exprs).toEqual({ 'size.2': { expr: '2 * spessore', min: 0.1 } });
+    expect(JSON.parse(sceneToJson(scene)).version).toBe(5);
+    const broken = JSON.parse(sceneToJson(scene));
+    broken.scene.params = [{ id: 1 }];
+    expect(() => sceneFromJson(JSON.stringify(broken))).toThrow('progetto Construct');
+  });
+
   it('un file che non è un progetto è rifiutato con un messaggio', () => {
     expect(() => sceneFromJson('{"a":1}')).toThrow('progetto Construct');
     expect(() => sceneFromJson('non json')).toThrow('progetto Construct');

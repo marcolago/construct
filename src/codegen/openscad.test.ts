@@ -240,3 +240,68 @@ describe('nuove forme 2D e testo in OpenSCAD', () => {
     expect(codeOf(node('square'))).not.toContain('use <');
   });
 });
+
+describe('parametri e formule nel codice', () => {
+  /** Un cubo 20 x 20 x 4 con l'altezza legata a `2 * spessore` e la posizione X a `spessore`. */
+  const parametric = (): Scene => {
+    const box = {
+      ...primitiveDefaults('box'), id: 'b', name: 'Cubo', position: [2, 0, 2], size: [20, 20, 4],
+      exprs: { 'size.2': { expr: '2 * spessore' }, 'position.0': { expr: 'spessore' } },
+    } as PrimitiveNode;
+    return {
+      nodes: { b: box },
+      rootIds: ['b'],
+      params: [
+        { id: 'p2', name: 'altezza', expr: '2 * spessore' },
+        { id: 'p1', name: 'spessore', expr: '2', note: 'Spessore delle pareti' },
+      ],
+    };
+  };
+
+  it('scrive i parametri in ordine di dipendenza nel blocco del Customizer, con la nota come commento', () => {
+    const code = sceneToOpenScad(parametric());
+    expect(code).toContain(['/* [Parametri] */', '// Spessore delle pareti', 'spessore = 2;', 'altezza = 2 * spessore;'].join('\n'));
+  });
+
+  it('usa i nomi dei parametri nei campi legati e i numeri negli altri', () => {
+    const code = sceneToOpenScad(parametric());
+    expect(code).toContain('translate([spessore, 0, 2])');
+    expect(code).toContain('cube([20, 20, (2 * spessore)], center = true);');
+  });
+
+  it('senza parametri il codice non cambia', () => {
+    expect(sceneToOpenScad(scene())).not.toContain('[Parametri]');
+  });
+
+  it('una formula con un parametro rotto esce come numero e il parametro rotto non si scrive', () => {
+    const s = parametric();
+    s.params![1].expr = '1 / 0';
+    const code = sceneToOpenScad(s);
+    expect(code).not.toContain('spessore =');
+    expect(code).not.toContain('altezza =');
+    expect(code).toContain('cube([20, 20, 4], center = true);');
+    expect(code).toContain('translate([2, 0, 2])');
+  });
+
+  it('dentro un Raggruppa la posizione composta esce in numeri, non come formula', () => {
+    const s = parametric();
+    const inner = s.nodes.b;
+    const group: GroupNode = { id: 'g', name: 'Gruppo', type: 'group', op: 'group', children: ['b'], position: [10, 0, 0], rotation: [0, 0, 0], mode: 'solid', color: '#4da3ff' };
+    const code = sceneToOpenScad({ ...s, nodes: { b: inner, g: group }, rootIds: ['g'] });
+    expect(code).toContain('translate([12, 0, 2])');
+    // La misura del cubo non dipende dal gruppo: la formula resta
+    expect(code).toContain('(2 * spessore)');
+  });
+
+  it('una Ripetizione usa la formula del numero di copie e del passo', () => {
+    const box = { ...primitiveDefaults('box'), id: 'b', name: 'Cubo', position: [0, 0, 10] } as PrimitiveNode;
+    const array: GroupNode = {
+      id: 'g', name: 'Ripetizione', type: 'group', op: 'array', children: ['b'], position: [0, 0, 0], rotation: [0, 0, 0], mode: 'solid', color: '#4da3ff',
+      array: { kind: 'linear', count: 4, step: [30, 0, 0], spacing: 'step', counts: [1, 1, 1], gridStep: [0, 0, 0], angle: 360, axis: 2, center: [0, 0, 0], rotateCopies: true, includeOriginal: true },
+      exprs: { 'array.count': { expr: 'copie', int: true }, 'array.step.0': { expr: 'passo + 10' } },
+    };
+    const code = sceneToOpenScad({ nodes: { b: box, g: array }, rootIds: ['g'], params: [{ id: '1', name: 'copie', expr: '4' }, { id: '2', name: 'passo', expr: '20' }] });
+    expect(code).toContain('for (i = [0 : copie - 1])');
+    expect(code).toContain('translate([i * (passo + 10), i * 0, i * 0])');
+  });
+});

@@ -1,4 +1,4 @@
-import type { ArrayParams, CornerNode, EdgeNode, GroupNode, MeshNode, PatternParams, PrimitiveNode, Scene, SceneNode, Shape2DNode, ShellParams, Vec3 } from '../scene/types';
+import type { ArrayParams, Binding, CornerNode, EdgeNode, GroupNode, MeshNode, PatternParams, PrimitiveNode, Scene, SceneNode, Shape2DNode, ShellParams, Vec3 } from '../scene/types';
 import { cavityOf, SHELL_OPEN_MARGIN } from '../scene/shell';
 import { cornerCutter } from '../scene/cornerProfile';
 import { isCutter } from '../scene/treatment';
@@ -15,11 +15,31 @@ import { isRotational, revolveParams, shapeContours, svgContours } from '../scen
 import { isProfileShape, profileContours } from '../scene/profiles';
 import { fontInfo, fontsUsed, scadFontName } from '../scene/fontCatalog';
 import { platesOf } from '../scene/plates';
+import { dropBrokenBindings, resolveParams } from '../scene/params';
 import { maxPolyhedronRadius, polygonMaxRadius, polygonShrunkRadius, polyhedronVertices, roundedPolyhedronCenters } from '../scene/polyhedra';
 
 const IND = '  ';
 const n = (v: number) => String(round(v, 4));
 const vec = (v: readonly number[]) => `[${v.map(n).join(', ')}]`;
+
+/** Nodo con campi legati a una formula. */
+type Bound = { exprs?: Record<string, Binding> };
+
+/**
+ * Misura di un campo: se è legato a una formula esce la formula con i nomi dei parametri (tra parentesi se è un calcolo),
+ * altrimenti il numero. Si usa solo dove il valore scritto coincide con quello del campo; dove è derivato esce il numero.
+ */
+function field(node: Bound | undefined, path: string, value: number): string {
+  const expr = node?.exprs?.[path]?.expr.trim();
+  if (!expr) return n(value);
+  return /^(?:[A-Za-z_]\w*|\d+(?:\.\d+)?)$/.test(expr) ? expr : `(${expr})`;
+}
+
+/** Vettore di tre campi legati ("size.0", "size.1", "size.2") con le formule dove ci sono. */
+const vecField = (node: Bound | undefined, key: string, v: readonly number[]) => `[${v.map((x, i) => field(node, `${key}.${i}`, x)).join(', ')}]`;
+
+/** Vero se qualche componente del vettore ha una formula. */
+const hasBound = (node: Bound, key: string) => [0, 1, 2].some((i) => node.exprs?.[`${key}.${i}`]);
 
 /** Vettori per riga negli elenchi lunghi (points, centri delle sfere). */
 const VECTORS_PER_LINE = 3;
@@ -57,7 +77,7 @@ function primitiveLines(p: PrimitiveNode): string[] {
   switch (p.kind) {
     case 'box': {
       const r = Math.min(Math.max(0, p.cornerRadius ?? 0), (Math.min(...p.size) - 0.01) / 2);
-      if (r <= 0) return [`cube(${vec(p.size)}, center = true);`];
+      if (r <= 0) return [`cube(${vecField(p, 'size', p.size)}, center = true);`];
       // Scatola arrotondata: involucro convesso di otto sfere agli angoli
       const [hx, hy, hz] = p.size.map((v) => v / 2 - r);
       return [
@@ -68,13 +88,13 @@ function primitiveLines(p: PrimitiveNode): string[] {
       ];
     }
     case 'cylinder':
-      return [...stretchLine(p), `cylinder(h = ${n(p.height)}, r = ${n(p.radius)}, center = true, $fn = ${p.segments});`];
+      return [...stretchLine(p), `cylinder(h = ${field(p, 'height', p.height)}, r = ${field(p, 'radius', p.radius)}, center = true, $fn = ${p.segments});`];
     case 'cone':
-      return [...stretchLine(p), `cylinder(h = ${n(p.height)}, r1 = ${n(p.radiusBottom)}, r2 = ${n(p.radiusTop)}, center = true, $fn = ${p.segments});`];
+      return [...stretchLine(p), `cylinder(h = ${field(p, 'height', p.height)}, r1 = ${field(p, 'radiusBottom', p.radiusBottom)}, r2 = ${field(p, 'radiusTop', p.radiusTop)}, center = true, $fn = ${p.segments});`];
     case 'sphere':
-      return [...stretchLine(p), `sphere(r = ${n(p.radius)}, $fn = ${p.segments});`];
+      return [...stretchLine(p), `sphere(r = ${field(p, 'radius', p.radius)}, $fn = ${p.segments});`];
     case 'torus':
-      return [`rotate_extrude($fn = ${p.segments})`, `translate([${n(p.majorRadius)}, 0])`, `circle(r = ${n(p.minorRadius)}, $fn = ${p.segments});`];
+      return [`rotate_extrude($fn = ${p.segments})`, `translate([${field(p, 'majorRadius', p.majorRadius)}, 0])`, `circle(r = ${field(p, 'minorRadius', p.minorRadius)}, $fn = ${p.segments});`];
     case 'octahedron':
     case 'decahedron':
     case 'dodecahedron':
@@ -135,21 +155,21 @@ function shape2dLines(p: Shape2DNode): string[] {
  * in manifold in senso antiorario: il segno si inverte per ottenere lo stesso solido.
  */
 function linearShape2dLines(p: Shape2DNode): string[] {
-  const extrude = `linear_extrude(height = ${n(p.height)}, center = true, twist = ${n(-p.twist)}, scale = ${n(p.scaleTop)}, slices = ${Math.max(1, twistDivisions(p.twist))})`;
+  const extrude = `linear_extrude(height = ${field(p, 'height', p.height)}, center = true, twist = ${n(-p.twist)}, scale = ${n(p.scaleTop)}, slices = ${Math.max(1, twistDivisions(p.twist))})`;
   if (p.kind === 'circle') {
     const rc = Math.min(Math.max(0, p.cornerRadius ?? 0), polygonMaxRadius(p.radius, p.segments));
     // L'ellisse si ottiene scalando il profilo già arrotondato
     if (rc > 0) {
       return [extrude, ...stretchLine(p), `offset(r = ${n(rc)}, $fn = 32)`, `circle(r = ${n(polygonShrunkRadius(p.radius, p.segments, rc))}, $fn = ${p.segments});`];
     }
-    return [extrude, ...stretchLine(p), `circle(r = ${n(p.radius)}, $fn = ${p.segments});`];
+    return [extrude, ...stretchLine(p), `circle(r = ${field(p, 'radius', p.radius)}, $fn = ${p.segments});`];
   }
   if (p.kind === 'text') {
     // Il font si importa con `use <file.ttf>` in testa al file (il file sta accanto al codice); la centratura è quella
     // del kernel (orizzontale sull'avanzamento, verticale sull'ingombro dei glifi)
     const text = p.text.replace(/[\\"]/g, (c) => `\\${c}`);
     const spacing = p.spacing !== undefined && p.spacing !== 1 ? `, spacing = ${n(p.spacing)}` : '';
-    return [extrude, `text("${text}", size = ${n(p.size)}${spacing}, font = "${scadFontName(fontInfo(p.font))}", halign = "center", valign = "center");`];
+    return [extrude, `text("${text}", size = ${field(p, 'size', p.size)}${spacing}, font = "${scadFontName(fontInfo(p.font))}", halign = "center", valign = "center");`];
   }
   if (p.kind !== 'square') {
     // Forme poligonali, profilati e disegni SVG: un contorno, oppure più contorni (il foro dell'anello) con `paths`;
@@ -169,7 +189,7 @@ function linearShape2dLines(p: Shape2DNode): string[] {
   }
   const r = Math.min(Math.max(0, p.cornerRadius), (Math.min(p.width, p.depth) - 0.01) / 2);
   if (r > 0) return [extrude, `offset(r = ${n(r)}, $fn = 32)`, `square([${n(p.width - 2 * r)}, ${n(p.depth - 2 * r)}], center = true);`];
-  return [extrude, `square([${n(p.width)}, ${n(p.depth)}], center = true);`];
+  return [extrude, `square([${field(p, 'width', p.width)}, ${field(p, 'depth', p.depth)}], center = true);`];
 }
 
 /**
@@ -242,8 +262,8 @@ function mirrorLines(mirror?: Mirror): string[] {
 /** Modificatori di posizione e colore di un nodo, uno per riga. Gli hole non hanno colore (verranno sottratti). */
 function transformLines(node: SceneNode): string[] {
   // OpenSCAD applica le trasformazioni da destra verso sinistra: translate esterno, rotate interno
-  const lines = [`translate(${vec(node.position)})`];
-  if (node.rotation.some((v) => v !== 0)) lines.push(`rotate(${vec(node.rotation)})`);
+  const lines = [`translate(${vecField(node, 'position', node.position)})`];
+  if (node.rotation.some((v) => v !== 0) || hasBound(node, 'rotation')) lines.push(`rotate(${vecField(node, 'rotation', node.rotation)})`);
   // Lo specchio è il più interno (si applica per primo, come in x' = R·D·x + p)
   lines.push(...mirrorLines(node.mirror));
   // La scala di un gruppo ridimensionato è la più interna di tutte (x' = R·D·S·x + p)
@@ -265,13 +285,15 @@ const NO_TRANSFORM: Inherited = { position: [0, 0, 0], rotation: [0, 0, 0] };
  */
 function nodeLines(scene: Scene, node: SceneNode, depth: number, inherited: Inherited = NO_TRANSFORM, free = true): string[] {
   const pad = IND.repeat(depth);
+  // Le formule di posizione e rotazione valgono solo senza Raggruppa antenati: altrimenti il valore esce composto, in numeri
+  const direct = inherited === NO_TRANSFORM ? node.exprs : undefined;
 
   if (free && node.type === 'group' && node.op === 'group') {
     // Un Raggruppa ridimensionato: la scala non si compone nelle trasformazioni dei figli, quindi i figli stanno dentro
     // un blocco con la trasformazione del gruppo (e la sua scala) e non ereditano altro
     if (isScaled(node)) {
       const placed = inherited === NO_TRANSFORM ? node : composeTransform(inherited, node);
-      const head = transformLines({ ...node, position: placed.position.map((v) => round(v)) as Vec3, rotation: placed.rotation.map((v) => round(v)) as Vec3, mirror: placed.mirror, mode: 'hole' })
+      const head = transformLines({ ...node, position: placed.position.map((v) => round(v)) as Vec3, rotation: placed.rotation.map((v) => round(v)) as Vec3, mirror: placed.mirror, mode: 'hole', exprs: direct })
         .map((l) => `${pad}${l}`);
       head[head.length - 1] += ' {';
       return [`${pad}// ${node.name} (gruppo ridimensionato: oggetti separati)`, ...head, ...node.children.flatMap((c) => nodeLines(scene, scene.nodes[c], depth + 1, NO_TRANSFORM, true)), `${pad}}`];
@@ -284,7 +306,7 @@ function nodeLines(scene: Scene, node: SceneNode, depth: number, inherited: Inhe
   // La trasformazione effettiva è quella dei Raggruppa antenati composta con la propria
   // (senza gruppi antenati si usa la trasformazione del nodo così com'è, senza ricalcolare gli angoli)
   const placed = inherited === NO_TRANSFORM ? node : composeTransform(inherited, node);
-  const head = transformLines({ ...node, position: placed.position.map((v) => round(v)) as Vec3, rotation: placed.rotation.map((v) => round(v)) as Vec3, mirror: placed.mirror }).map((l) => `${pad}${l}`);
+  const head = transformLines({ ...node, position: placed.position.map((v) => round(v)) as Vec3, rotation: placed.rotation.map((v) => round(v)) as Vec3, mirror: placed.mirror, exprs: direct }).map((l) => `${pad}${l}`);
 
   if (node.type === 'group') {
     out.push(...groupLines(scene, node, head, depth));
@@ -347,7 +369,7 @@ function shellCavityLines(scene: Scene, child: SceneNode, shell: ShellParams, de
   // Cavità scalata (le trasformazioni si leggono dal basso verso l'alto): il figlio senza posizione né rotazione,
   // spostato col perno nell'origine, scalato, riportato al perno e alzato dello spessore del fondo
   const [px, py, pz] = cavity.pivot;
-  const bare = { ...child, position: [0, 0, 0], rotation: [0, 0, 0], mirror: undefined } as SceneNode;
+  const bare = { ...child, position: [0, 0, 0], rotation: [0, 0, 0], mirror: undefined, exprs: undefined } as SceneNode;
   return [
     label + ' (approssimata: oggetto scalato)',
     ...place,
@@ -363,7 +385,7 @@ function shellCavityLines(scene: Scene, child: SceneNode, shell: ShellParams, de
  * circolare `rotate` attorno al centro (con le copie non ruotate: `translate(c) rotate(a) translate(-c) rotate(-a)`, che
  * equivale allo spostamento lungo la circonferenza). `child(depth)` restituisce le righe dell'originale a quel rientro.
  */
-function arrayLines(params: ArrayParams, child: (depth: number) => string[], depth: number): string[] {
+function arrayLines(params: ArrayParams, child: (depth: number) => string[], depth: number, node?: Bound): string[] {
   const p = normalizeArray(params);
   const out: string[] = [];
   /** Rientro di ogni blocco aperto, per chiuderli in ordine inverso. */
@@ -376,20 +398,24 @@ function arrayLines(params: ArrayParams, child: (depth: number) => string[], dep
     level++;
   };
   const first = p.includeOriginal ? 0 : 1;
+  /** Ultimo indice di un conteggio: con la formula `(formula) - 1`, altrimenti il numero. */
+  const countMinusOne = (path: string, count: number) => (node?.exprs?.[path] ? `${field(node, path, count)} - 1` : String(count - 1));
   if (p.kind === 'grid') {
     const names = ['i', 'j', 'k'];
-    for (let a = 0; a < 3; a++) if (p.counts[a] > 1) block(`for (${names[a]} = [0 : ${p.counts[a] - 1}])`);
+    for (let a = 0; a < 3; a++) if (p.counts[a] > 1) block(`for (${names[a]} = [0 : ${countMinusOne(`array.counts.${a}`, p.counts[a])}])`);
     // Gli assi con una sola copia valgono sempre 0
-    block(`translate([${[0, 1, 2].map((a) => (p.counts[a] > 1 ? `${names[a]} * ${n(p.gridStep[a])}` : '0')).join(', ')}])`);
+    block(`translate([${[0, 1, 2].map((a) => (p.counts[a] > 1 ? `${names[a]} * ${field(node, `array.gridStep.${a}`, p.gridStep[a])}` : '0')).join(', ')}])`);
   } else if (p.kind === 'linear') {
     const d = linearStep(p);
-    block(`for (i = [${first} : ${p.count - 1}])`);
-    block(`translate([i * ${n(d[0])}, i * ${n(d[1])}, i * ${n(d[2])}])`);
+    block(`for (i = [${first} : ${countMinusOne('array.count', p.count)}])`);
+    // Con la distanza "Passo" il passo è il valore del campo; con "Totale" è derivato (diviso per le copie): numero
+    const stepOf = (a: number) => (p.spacing === 'step' ? field(node, `array.step.${a}`, d[a]) : n(d[a]));
+    block(`translate([i * ${stepOf(0)}, i * ${stepOf(1)}, i * ${stepOf(2)}])`);
   } else {
     const step = circularStep(p);
     const turn = (sign: string) => `rotate([${[0, 1, 2].map((a) => (a === p.axis ? `${sign}i * ${n(step)}` : '0')).join(', ')}])`;
-    block(`for (i = [${first} : ${p.count - 1}])`);
-    modifier(`translate(${vec(p.center)})`);
+    block(`for (i = [${first} : ${countMinusOne('array.count', p.count)}])`);
+    modifier(`translate(${vecField(node, 'array.center', p.center)})`);
     modifier(turn(''));
     if (p.rotateCopies) {
       block(`translate(${vec(p.center.map((v) => -v))})`);
@@ -483,7 +509,7 @@ function groupLines(scene: Scene, g: GroupNode, head: string[], depth: number): 
   }
 
   // RIPETIZIONE: l'originale dentro i for() di OpenSCAD, uno per asse (griglia) o uno solo (lineare e circolare)
-  if (g.op === 'array' && g.array && kids.length === 1) return [...open, ...arrayLines(g.array, (d) => body(kids, d), depth + 1), `${pad}}`];
+  if (g.op === 'array' && g.array && kids.length === 1) return [...open, ...arrayLines(g.array, (d) => body(kids, d), depth + 1, g), `${pad}}`];
 
   // PATTERN: il pezzo meno il disegno (celle Voronoi, esagoni, cerchi) oppure il pezzo ritagliato sul reticolo 3D
   if (g.op === 'pattern' && g.pattern && kids.length === 1) return [...open, ...patternLines(g.pattern, (d) => body(kids, d), depth + 1), `${pad}}`];
@@ -517,10 +543,24 @@ export const plateComment = (index: number, name: string) => `// === Piatto ${in
  * Genera il codice OpenSCAD dell'intera scena. Gli hole alla radice non producono geometria. Con più piatti ognuno è un
  * `module piatto_N()` e i moduli sono richiamati affiancati lungo X di `plateSpacing` mm, come nell'esportazione 3MF.
  */
-export function sceneToOpenScad(scene: Scene, options: { plateSpacing?: number } = {}): string {
+export function sceneToOpenScad(source: Scene, options: { plateSpacing?: number } = {}): string {
+  // I campi con una formula che non si calcola (parametro rotto o mancante) escono come numeri: il codice resta valido
+  const { values } = resolveParams(source.params);
+  const scene = dropBrokenBindings(source, values);
   // Un `use <font.ttf>` per ogni font del testo: i file TTF stanno nella stessa cartella del codice (vedi l'export ZIP)
   const fontLines = fontsUsed(scene).map((f) => `use <${f.file}>;`);
-  const header = ['// Generato da Construct. Unità: millimetri.', ...(fontLines.length ? ['// I font usati dal testo (file .ttf) devono stare nella stessa cartella di questo file.', ...fontLines] : []), ''];
+  // Parametri come variabili, in ordine di dipendenza (quelli in errore non si scrivono). Il blocco `[Parametri]` li mostra
+  // nel Customizer di OpenSCAD; una nota diventa il commento che lo precede
+  const paramLines = Object.keys(values).flatMap((name) => {
+    const param = scene.params!.find((p) => p.name === name)!;
+    return [...(param.note?.trim() ? [`// ${param.note.trim().replace(/\s+/g, ' ')}`] : []), `${name} = ${param.expr.trim()};`];
+  });
+  const header = [
+    '// Generato da Construct. Unità: millimetri.',
+    ...(fontLines.length ? ['// I font usati dal testo (file .ttf) devono stare nella stessa cartella di questo file.', ...fontLines] : []),
+    ...(paramLines.length ? ['', '/* [Parametri] */', ...paramLines] : []),
+    '',
+  ];
   const solidsOf = (rootIds: string[]) => rootIds.map((id) => scene.nodes[id]).filter((nd) => nd.mode === 'solid');
   const plates = platesOf(scene);
   if (plates.length > 1) {

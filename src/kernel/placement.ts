@@ -108,6 +108,8 @@ export function applyPlacement(): boolean {
     const z = minZ[id];
     // Oggetto sparito, vuoto o non ancora ricalcolato: niente da fare
     if (!node || z === undefined) continue;
+    // La quota Z legata a una formula non si corregge: la scioglierebbe (la formula decide dove sta il pezzo)
+    if (node.exprs?.['position.2']) continue;
     const delta = target - z;
     if (Math.abs(delta) < 1e-6) continue;
     store.updateNode(id, { position: [node.position[0], node.position[1], round(node.position[2] + delta)] });

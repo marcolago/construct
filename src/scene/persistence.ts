@@ -13,8 +13,8 @@ const KEY = 'construct:scene';
 const LEGACY_KEY = 'webcad:scene';
 const FORMAT = 'construct-scene';
 const LEGACY_FORMAT = 'webcad-scene';
-/** Versione 2: il progetto include le mesh importate; 4: i piatti (`plates`). Le versioni precedenti si leggono ancora (un piatto solo). */
-const VERSION = 4;
+/** Versione 2: il progetto include le mesh importate; 4: i piatti (`plates`); 5: parametri e formule (`params`, `exprs`). Le versioni precedenti si leggono ancora. */
+const VERSION = 5;
 
 /** Vero durante la pulizia dei dati: la scena non deve essere riscritta mentre si cancella. */
 let autosaveSuspended = false;
@@ -22,10 +22,13 @@ export const suspendAutosave = () => {
   autosaveSuspended = true;
 };
 
+/** I parametri, se ci sono, sono un elenco di {id, name, expr} di testi. */
+const paramsAreValid = (s: Scene) => s.params === undefined || (Array.isArray(s.params) && s.params.every((p) => typeof p?.id === 'string' && typeof p.name === 'string' && typeof p.expr === 'string'));
+
 /** Controllo minimo di forma: evita di caricare file che non sono scene Construct. */
 function isScene(value: unknown): value is Scene {
   const s = value as Scene | undefined;
-  return !!s && typeof s.nodes === 'object' && Array.isArray(s.rootIds) && s.rootIds.every((id) => s.nodes[id]) && platesAreValid(s);
+  return !!s && typeof s.nodes === 'object' && Array.isArray(s.rootIds) && s.rootIds.every((id) => s.nodes[id]) && platesAreValid(s) && paramsAreValid(s);
 }
 
 /**

@@ -83,8 +83,8 @@ export function cleanSettings(value: unknown): Settings {
   };
 }
 
-/** Scheda della sezione sotto la libreria: elenco degli oggetti del piatto attivo oppure elenco dei piatti. */
-export type OutlinerTab = 'objects' | 'plates';
+/** Scheda della sezione sotto la libreria: oggetti del piatto attivo, elenco dei piatti o parametri del progetto. */
+export type OutlinerTab = 'objects' | 'plates' | 'params';
 
 /** Tab della libreria nella barra laterale sinistra. */
 export type LibraryTab = 'shapes3d' | 'shapes2d' | 'symbols' | 'emoji';

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { isAppGroup, isLocked, parentOf, useSceneStore } from '../../scene/store';
 import { queueKeepBase } from '../../kernel/placement';
 import { CORNER_ICONS, CORNER_NAMES, EDGE_ICONS, GROUP_ICONS, GROUP_NAMES } from '../groupIcons';
@@ -18,6 +18,8 @@ import { bedReach, useBedReach, useUiStore } from '../uiStore';
 import type { CornerNode, EdgeNode, GroupNode, MeshNode, PrimitiveNode, SceneNode, Shape2DNode, ShellParams, Vec3 } from '../../scene/types';
 import { shellQuality } from '../../scene/shell';
 import { NumberField } from '../NumberField/NumberField';
+import { FormulaContext, type FormulaApi } from '../NumberField/formulaContext';
+import { resolveParams } from '../../scene/params';
 import { ArrayFields } from '../Array/ArrayFields';
 import { useArrayTool } from '../Array/arrayToolStore';
 import { PatternFields } from '../Pattern/PatternFields';
@@ -64,6 +66,26 @@ export function PropertiesPanel() {
   // Lato massimo del piano: è il limite morbido dei cursori delle misure e dell'altezza (il piano non ha un'altezza propria)
   const reach = bedReach(bedSize);
 
+  // Formule dei campi dell'oggetto e valori dei parametri, per i campi che dichiarano un `path`
+  const params = useSceneStore((s) => s.scene.params);
+  const bindField = useSceneStore((s) => s.bindField);
+  const values = useMemo(() => resolveParams(params).values, [params]);
+  const formulas = useMemo<FormulaApi | null>(
+    () =>
+      node
+        ? {
+            exprs: node.exprs,
+            values,
+            bind: (path, binding) => {
+              // Come per le misure scritte a mano: la base dell'oggetto resta dov'era (lo spostamento no)
+              if (!path.startsWith('position')) queueKeepBase(node.id);
+              bindField(node.id, path, binding);
+            },
+          }
+        : null,
+    [node, values, bindField],
+  );
+
   if (selection.length === 0) return <p className="properties__empty">Seleziona un oggetto per modificarne le proprietà.</p>;
   if (!node) return <p className="properties__empty">{selection.length} oggetti selezionati. Ctrl+G li raggruppa (restano separati), U li unisce in un solo solido.</p>;
 
@@ -79,6 +101,7 @@ export function PropertiesPanel() {
   };
 
   return (
+    <FormulaContext.Provider value={formulas}>
     <div className="properties">
       <Section
         title={node.type === 'group' ? GROUP_NAMES[node.op] : node.type === 'edge' ? (node.treatment === 'fillet' ? 'Raccordo' : 'Smusso') : node.type === 'corner' ? CORNER_NAMES[node.treatment] : 'Oggetto'}
@@ -164,6 +187,7 @@ export function PropertiesPanel() {
             tooltip={[TIPS.posX, TIPS.posY, TIPS.posZ][i]}
             disabled={locked}
             value={node.position[i]}
+            path={`position.${i}`}
             onCommit={(v) => setVec('position', i, v)}
           />
         ))}
@@ -180,6 +204,7 @@ export function PropertiesPanel() {
             tooltip={[TIPS.rotX, TIPS.rotY, TIPS.rotZ][i]}
             disabled={locked}
             value={node.rotation[i]}
+            path={`rotation.${i}`}
             onCommit={(v) => setVec('rotation', i, v)}
           />
         ))}
@@ -228,6 +253,7 @@ export function PropertiesPanel() {
       )}
       {node.type === 'shape2d' && <Shape2DFields node={node} patch={patch} locked={locked} />}
     </div>
+    </FormulaContext.Provider>
   );
 }
 
@@ -253,6 +279,7 @@ function ShellFields({ node, shell, patch, locked }: { node: GroupNode; shell: S
         tooltip="Spessore delle pareti laterali, in mm."
         disabled={locked}
         value={wall}
+        path="shell.wall"
         onCommit={(v) => patch({ shell: { ...shell, wall: v } })}
       />
       <SliderField
@@ -266,6 +293,7 @@ function ShellFields({ node, shell, patch, locked }: { node: GroupNode; shell: S
         tooltip="Spessore del fondo, in mm. La cima resta sempre aperta."
         disabled={locked}
         value={bottom}
+        path="shell.bottom"
         onCommit={(v) => patch({ shell: { ...shell, bottom: v } })}
       />
     </Section>
@@ -309,6 +337,7 @@ function CornerFields({ node, patch, locked }: { node: CornerNode; patch: (p: Pa
         tooltip="Distanza dal vertice, lungo ogni spigolo, dove il taglio incontra lo spigolo, in mm."
         disabled={locked}
         value={node.distance}
+        path="distance"
         onCommit={(v) => patch({ distance: v })}
       />
       {node.treatment === 'fillet' && (
@@ -350,6 +379,7 @@ function EdgeFields({ node, patch, locked }: { node: EdgeNode; patch: (p: Partia
             tooltip="Raggio del raccordo, in mm. Il massimo dipende dalla larghezza delle due superfici."
             disabled={locked}
             value={node.radius}
+            path="radius"
             onCommit={(v) => patch({ radius: v })}
           />
           {/* Scene salvate prima della 0.9.0 non hanno il campo: valgono 64 segmenti */}
@@ -379,6 +409,7 @@ function EdgeFields({ node, patch, locked }: { node: EdgeNode; patch: (p: Partia
             tooltip="Distanza dello smusso dallo spigolo lungo la prima superficie, in mm."
             disabled={locked}
             value={node.distance1}
+            path="distance1"
             onCommit={(v) => patch({ distance1: v })}
           />
           <SliderField
@@ -392,6 +423,7 @@ function EdgeFields({ node, patch, locked }: { node: EdgeNode; patch: (p: Partia
             tooltip="Distanza dello smusso dallo spigolo lungo la seconda superficie, in mm."
             disabled={locked}
             value={node.distance2}
+            path="distance2"
             onCommit={(v) => patch({ distance2: v })}
           />
         </>
@@ -454,6 +486,7 @@ function PrimitiveFields({ node, patch, locked }: { node: Extract<SceneNode, { t
       tooltip={tooltip}
       disabled={locked}
       value={value}
+      path={key}
       onCommit={(v) => patch({ [key]: v } as Partial<PrimitiveNode>)}
     />
   );
@@ -469,6 +502,7 @@ function PrimitiveFields({ node, patch, locked }: { node: Extract<SceneNode, { t
       tooltip={tooltip}
       disabled={locked}
       value={value}
+      path={key}
       onCommit={(v) => patch({ [key]: Math.abs(v - base) < 1e-9 ? undefined : v } as Partial<PrimitiveNode>)}
     />
   );
@@ -494,6 +528,7 @@ function PrimitiveFields({ node, patch, locked }: { node: Extract<SceneNode, { t
       tooltip={TIPS.rounding}
       disabled={locked}
       value={value}
+      path="cornerRadius"
       onCommit={(v) => patch({ cornerRadius: v } as Partial<PrimitiveNode>)}
     />
   );
@@ -512,6 +547,7 @@ function PrimitiveFields({ node, patch, locked }: { node: Extract<SceneNode, { t
               tooltip={tips[i]}
               disabled={locked}
               value={node.size[i]}
+              path={`size.${i}`}
               onCommit={(v) => {
                 // Con il lucchetto chiuso anche gli altri lati scalano dello stesso fattore
                 const coupled = isRatioLocked(node) ? lockedPatch(node, 'size', v, i) : null;
@@ -732,7 +768,7 @@ function Shape2DFields({ node, patch, locked }: { node: Shape2DNode; patch: (p: 
   /** Misura modificata: con il lucchetto chiuso le misure legate scalano dello stesso fattore, in un solo passo di Annulla. */
   const edit = (key: string, value: number) => patch((ratioLocked ? lockedPatch(node, key, value) : null) ?? ({ [key]: value } as Partial<Shape2DNode>));
   const slider = (label: string, value: number, key: string, tooltip: string, opts: { unit: string; min: number; max: number; step?: number; hardMin?: number; hardMax?: number }) => (
-    <SliderField key={key} label={label} tooltip={tooltip} disabled={locked} value={value} onCommit={(v) => edit(key, v)} {...opts} />
+    <SliderField key={key} label={label} tooltip={tooltip} disabled={locked} value={value} path={key === 'revolveSegments' ? undefined : key} onCommit={(v) => edit(key, v)} {...opts} />
   );
   const length = { unit: 'mm', min: 0.5, max: reach, step: 0.5, hardMin: 0.1, hardMax: 2000 };
   const rotational = isRotational(node);
@@ -779,7 +815,7 @@ function Shape2DFields({ node, patch, locked }: { node: Shape2DNode; patch: (p: 
     if (Object.keys(changed).length > 0) patch(changed as Partial<Shape2DNode>);
   };
   const profileSlider = (label: string, value: number, key: ProfileKey, tooltip: string, opts: { min: number; max: number; step?: number; hardMin?: number; hardMax?: number }) => (
-    <SliderField key={key} label={label} unit="mm" tooltip={tooltip} disabled={locked} value={value} onCommit={(v) => editProfile(key, v)} {...opts} />
+    <SliderField key={key} label={label} unit="mm" tooltip={tooltip} disabled={locked} value={value} path={key} onCommit={(v) => editProfile(key, v)} {...opts} />
   );
   /** Slider di uno spessore: fino a metà del lato minore, con il campo che accetta anche di più (poi limitato). */
   const thickness = (label: string, value: number, key: ProfileKey, tooltip: string, limit: number) =>
@@ -889,6 +925,7 @@ function Shape2DFields({ node, patch, locked }: { node: Shape2DNode; patch: (p: 
                 tooltip={TIPS.radiusY}
                 disabled={locked}
                 value={node.radiusY ?? node.radius}
+                path="radiusY"
                 onCommit={(v) => {
                   // Con il lucchetto chiuso cambia anche il raggio X; se i due raggi coincidono la forma torna tonda
                   const next = (ratioLocked ? lockedPatch(node, 'radiusY', v) : null) ?? { radiusY: v };

@@ -35,6 +35,8 @@ export function ArrayFields({ params: p, onChange, disabled, history = true }: P
             max={opts.max}
             step={opts.step}
             disabled={disabled}
+            path={`array.${key}.${i}`}
+            integer={key === 'counts'}
             onCommit={(v) => onChange({ [key]: p[key].map((old, j) => (j === i ? v : old)) as Vec3 })}
           />
         ))}
@@ -72,6 +74,8 @@ export function ArrayFields({ params: p, onChange, disabled, history = true }: P
       hardMax={ARRAY_MAX_COPIES}
       disabled={disabled}
       history={history}
+      path="array.count"
+      integer
       onCommit={(v) => onChange({ count: v })}
     />
   );
@@ -110,6 +114,7 @@ export function ArrayFields({ params: p, onChange, disabled, history = true }: P
             unit="°"
             disabled={disabled}
             history={history}
+            path="array.angle"
             onCommit={(v) => onChange({ angle: v })}
           />
           {choice('Asse', 'Asse di rotazione della serie.', p.axis, [[0, 'X'], [1, 'Y'], [2, 'Z']], (axis) => onChange({ axis: axis as ArrayParams['axis'] }))}

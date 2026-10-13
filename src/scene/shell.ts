@@ -61,9 +61,9 @@ const fail = (error: string): Cavity => ({ kind: 'error', error });
 const TOO_THICK = 'Le pareti sono troppo spesse per questo oggetto.';
 const BOTTOM_TOO_THICK = 'Lo spessore inferiore supera l\'altezza dell\'oggetto.';
 
-/** Forma derivata: stessi parametri del solido, origine e orientamento azzerati (li rimette chi la usa). */
+/** Forma derivata: stessi parametri del solido, origine e orientamento azzerati (li rimette chi la usa) e senza formule (i valori non sono più quelli del campo). */
 const derived = <T extends PrimitiveNode | Shape2DNode>(node: T, patch: Record<string, unknown>): T =>
-  ({ ...node, ...patch, position: [0, 0, 0], rotation: [0, 0, 0] }) as T;
+  ({ ...node, ...patch, position: [0, 0, 0], rotation: [0, 0, 0], exprs: undefined }) as T;
 
 /**
  * Altezza e posizione verticale (centro) della cavità di un solido alto `h` e centrato nell'origine.

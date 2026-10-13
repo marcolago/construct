@@ -29,6 +29,30 @@ interface BaseNode {
    * insieme. Assente = bloccate per gli SVG e libere per le altre forme (vedi `isRatioLocked` in resize.ts).
    */
   lockRatio?: boolean;
+  /**
+   * Campi numerici legati a una formula, per percorso puntato ("height", "size.0", "array.count"). Il valore del campo
+   * resta sempre un numero già calcolato: la formula serve a ricalcolarlo quando cambia un parametro e al codice OpenSCAD.
+   */
+  exprs?: Record<string, Binding>;
+}
+
+/** Formula di un campo numerico, con i limiti del campo (per applicarli di nuovo a ogni ricalcolo). */
+export interface Binding {
+  expr: string;
+  min?: number;
+  max?: number;
+  /** Il campo vuole un numero intero (conteggi): il risultato si arrotonda. */
+  int?: boolean;
+}
+
+/** Parametro di progetto: una variabile con nome, come in OpenSCAD (`altezza = 2 * spessore;`). */
+export interface Param {
+  id: string;
+  /** Nome della variabile: solo lettere ASCII, cifre e trattino basso (vedi `validName` in params.ts). */
+  name: string;
+  /** Formula, anche solo un numero ("2.4"). Può usare altri parametri. */
+  expr: string;
+  note?: string;
 }
 
 /** Solidi dei dadi: ottaedro (d8), decaedro (d10, trapezoedro pentagonale), dodecaedro (d12), icosaedro (d20). */
@@ -381,4 +405,6 @@ export interface Scene {
   plates?: Plate[];
   /** Id del piatto attivo, il cui elenco di oggetti è `rootIds`. */
   activePlateId?: string;
+  /** Parametri di progetto, validi per tutti i piatti. Assente = nessuno. */
+  params?: Param[];
 }
