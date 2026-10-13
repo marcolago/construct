@@ -12,6 +12,7 @@ import type { PickHit } from './pick';
 import { round } from '../scene/math';
 import { halfHeight } from '../scene/defaults';
 import { applyScale } from '../scene/resize';
+import { holdBound } from '../scene/params';
 import { resizeGroup } from '../scene/groupScale';
 import { localBounds } from '../scene/shell';
 import { cornerAt, faceMap } from '../scene/edgeTool';
@@ -392,7 +393,8 @@ export function SceneObject({ rootId, meshes, selection, locked, showGizmo }: Pr
       p.scale.set(1, 1, 1);
       if (scale.every((v) => v === 1)) return;
       // La scala diventa misure vere (Maiusc: passo fine di 0,01 mm invece di 0,5 mm)
-      const patch = applyScale(node, scale, shift ? 0.01 : 0.5);
+      // I campi legati a un parametro non cambiano: il resto scala e la base si sposta di conseguenza
+      const patch = holdBound(node, applyScale(node, scale, shift ? 0.01 : 0.5)).patch;
       // La base resta ferma: il centro si sposta lungo lo Z locale della differenza di mezza altezza
       const dz = halfHeight({ ...node, ...patch } as typeof node) - halfHeight(node);
       const shift3 = new THREE.Vector3(0, 0, dz).applyQuaternion(new THREE.Quaternion().setFromRotationMatrix(nodeMatrix(node.position, node.rotation)));

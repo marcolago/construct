@@ -1,7 +1,7 @@
 import { queueKeepBase } from '../../kernel/placement';
 import { usageCount } from '../../scene/params';
 import { useSceneStore } from '../../scene/store';
-import type { Param } from '../../scene/types';
+import type { Binding, Param } from '../../scene/types';
 import { confirmDialog } from '../notify/notifyStore';
 
 /**
@@ -39,4 +39,13 @@ export async function deleteParam(id: string): Promise<void> {
     if (!ok) return;
   }
   useSceneStore.getState().removeParam(id);
+}
+
+/**
+ * Lega un campo di un nodo a una formula, o la scioglie con null. Come per le misure scritte a mano, la base
+ * dell'oggetto resta dov'era (lo spostamento no).
+ */
+export function bindFieldKeepingBase(nodeId: string, path: string, binding: Binding | null): void {
+  if (!path.startsWith('position')) queueKeepBase(nodeId);
+  useSceneStore.getState().bindField(nodeId, path, binding);
 }

@@ -2,11 +2,11 @@
 
 .shape-library {
   display: flex;
-  // Altezza fissa: cambiando tab la sezione Oggetti sotto non si sposta (il pannello della tab scorre da solo)
-  flex: 0 0 52%;
+  // Altezza fissa: cambiando tab la sezione Oggetti sotto non si sposta (il pannello della tab scorre da solo). La misura
+  // la decide il separatore sotto la libreria (variabile --library-share sulla barra, 52% di partenza)
+  flex: 0 0 var(--library-share, 52%);
   flex-direction: column;
   min-height: 0;
-  border-bottom: 1px solid color('border');
 
   &__tabs {
     display: flex;

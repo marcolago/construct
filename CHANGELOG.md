@@ -18,6 +18,23 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.54.0] - 2026-10-13
+
+### Aggiunto
+- **Ignora un avviso.** Ogni avviso di stampabilità ha un'icona per ignorarlo; finisce nell'elenco **Ignorati (N)** in fondo alla sezione, da cui si ripristina uno alla volta o tutti ("Ripristina tutti"). La scelta sta nel progetto (`ignoredWarnings`, tipo e oggetto dell'avviso), si annulla con Ctrl+Z e gli avvisi ignorati non contano nel contatore né si evidenziano.
+- **Barra sinistra ridimensionabile.** Una maniglia tra la libreria e la sezione Oggetti/Piatti si trascina per cambiarne le altezze (da 25% a 80% della barra); con il fuoco funzionano le frecce su e giù, Home ed End, e il doppio clic riporta alla misura iniziale. La misura si ricorda nelle preferenze.
+- **Finestra Parametri.** Aggiungere, modificare ed eliminare i parametri avviene in una finestra grande come la documentazione (menu, voce Parametri…, o pulsante Gestisci parametri…).
+- **Scheda Parametri a destra.** La barra destra ha le schede Proprietà e Parametri; la seconda elenca i parametri in sola lettura (nome, formula, valore, uso).
+- **Selettore del parametro.** Un doppio clic sul nome di un campo nel pannello Proprietà apre un piccolo selettore con i parametri e la riga Formula (anche un calcolo come `2 * spessore`), con anteprima del valore, Applica, Annulla e, per un campo già legato, **Togli parametro**.
+
+### Modificato
+- **Campi legati non modificabili.** Un campo legato a un parametro non mostra più lo slider né il campo: al loro posto l'icona **fx** con il valore, non editabile (la formula è nel tooltip). Non cambia nemmeno con il gizmo, le quote o il ridimensionamento proporzionale (tasto R): quei campi restano com'erano e gli altri scalano; un avviso lo spiega (al massimo ogni 3 secondi). Prima la modifica a mano scioglieva la formula.
+- I campi numerici non accettano più una formula con i parametri scritta a mano (si usa il selettore); i calcoli senza parametri (`10 / 2`) restano.
+- La scheda Parametri esce dall'Outliner (restano Oggetti e Piatti).
+
+### Test
+- Campi legati che non cambiano (patch, vettori, oggetti annidati, scala proporzionale), Togli parametro, e2e della finestra Parametri e del selettore (anche con formula non valida o senza parametri), del separatore (mouse, tastiera, persistenza), delle schede a destra e di Ignora e Ripristina.
+
 ## [0.53.0] - 2026-10-13
 
 ### Aggiunto

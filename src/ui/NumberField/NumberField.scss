@@ -14,22 +14,18 @@
     color: color('text-muted');
   }
 
-  // Chip "fx" dei campi legati a una formula
-  &__fx {
-    flex: none;
-    padding: 0 3px;
-    border-radius: $radius-sm;
-    background: color('accent');
-    color: color('bg');
-    font-family: $font-mono;
-    font-size: 9px;
-    font-weight: 700;
-    line-height: 14px;
+  // Il nome di un campo che si può legare a un parametro (doppio clic)
+  &__label[data-pickable] {
+    cursor: pointer;
+    user-select: none;
   }
 
-  &--bound &__input {
-    border-color: color('accent');
-    text-align: left;
+  // Campo legato a un parametro: icona fx e valore, non modificabili
+  &--bound {
+    .bound-value {
+      flex: 1;
+      justify-content: flex-end;
+    }
   }
 
   &__input {
@@ -56,5 +52,37 @@
     width: 20px;
     font-size: 11px;
     color: color('text-muted');
+  }
+}
+
+// Icona fx con il valore di un campo legato a un parametro
+.bound-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 5px $space-2;
+  border: 1px dashed color('accent');
+  border-radius: $radius-sm;
+  background: color('accent-soft');
+  font-family: $font-mono;
+  font-size: 12px;
+  cursor: default;
+
+  &__fx {
+    flex: none;
+    padding: 0 3px;
+    border-radius: $radius-sm;
+    background: color('accent');
+    color: color('bg');
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 14px;
+  }
+
+  &__num {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }

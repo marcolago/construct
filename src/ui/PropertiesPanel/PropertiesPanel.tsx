@@ -20,6 +20,7 @@ import { shellQuality } from '../../scene/shell';
 import { NumberField } from '../NumberField/NumberField';
 import { FormulaContext, type FormulaApi } from '../NumberField/formulaContext';
 import { resolveParams } from '../../scene/params';
+import { useParamPicker } from '../Params/paramPickerStore';
 import { ArrayFields } from '../Array/ArrayFields';
 import { useArrayTool } from '../Array/arrayToolStore';
 import { PatternFields } from '../Pattern/PatternFields';
@@ -68,7 +69,7 @@ export function PropertiesPanel() {
 
   // Formule dei campi dell'oggetto e valori dei parametri, per i campi che dichiarano un `path`
   const params = useSceneStore((s) => s.scene.params);
-  const bindField = useSceneStore((s) => s.bindField);
+  const openPicker = useParamPicker((s) => s.open);
   const values = useMemo(() => resolveParams(params).values, [params]);
   const formulas = useMemo<FormulaApi | null>(
     () =>
@@ -76,14 +77,10 @@ export function PropertiesPanel() {
         ? {
             exprs: node.exprs,
             values,
-            bind: (path, binding) => {
-              // Come per le misure scritte a mano: la base dell'oggetto resta dov'era (lo spostamento no)
-              if (!path.startsWith('position')) queueKeepBase(node.id);
-              bindField(node.id, path, binding);
-            },
+            pick: (path, label, limits) => openPicker({ nodeId: node.id, path, label, ...limits }),
           }
         : null,
-    [node, values, bindField],
+    [node, values, openPicker],
   );
 
   if (selection.length === 0) return <p className="properties__empty">Seleziona un oggetto per modificarne le proprietà.</p>;
@@ -188,6 +185,7 @@ export function PropertiesPanel() {
             disabled={locked}
             value={node.position[i]}
             path={`position.${i}`}
+            pickLabel={`Posizione ${a}`}
             onCommit={(v) => setVec('position', i, v)}
           />
         ))}
@@ -205,6 +203,7 @@ export function PropertiesPanel() {
             disabled={locked}
             value={node.rotation[i]}
             path={`rotation.${i}`}
+            pickLabel={`Rotazione ${a}`}
             onCommit={(v) => setVec('rotation', i, v)}
           />
         ))}

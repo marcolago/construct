@@ -407,4 +407,6 @@ export interface Scene {
   activePlateId?: string;
   /** Parametri di progetto, validi per tutti i piatti. Assente = nessuno. */
   params?: Param[];
+  /** Avvisi di stampabilità che l'utente ha scelto di ignorare (id del tipo e dell'oggetto, es. "overhang:ab12cd34"). */
+  ignoredWarnings?: string[];
 }

@@ -1,7 +1,8 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { round } from '../../scene/math';
 import { evalFormula, formulaDeps } from '../../scene/params';
 import { notify } from '../notify/notifyStore';
+import { BoundValue } from './BoundValue';
 import { FormulaContext } from './formulaContext';
 import './NumberField.scss';
 
@@ -14,22 +15,23 @@ interface Props {
   step?: number;
   unit?: string;
   disabled?: boolean;
-  /** Percorso del campo nel nodo ("size.2"): se c'è, il campo accetta formule con i parametri del progetto (vedi formulaContext). */
+  /** Percorso del campo nel nodo ("size.2"): se c'è, un doppio clic sul nome apre il selettore dei parametri (vedi formulaContext). */
   path?: string;
-  /** Il campo vuole un numero intero (conteggi): il risultato di una formula si arrotonda. */
+  /** Nome del campo per il selettore dei parametri, se l'etichetta da sola non basta ("X" diventa "Posizione X"). */
+  pickLabel?: string;
+  /** Il campo vuole un numero intero (conteggi): il risultato di un calcolo si arrotonda. */
   integer?: boolean;
 }
 
 /**
  * Campo numerico che modifica la scena solo alla conferma (Invio o uscita dal campo):
  * ogni modifica è così una singola voce di undo e non si ricalcola la geometria a ogni tasto.
- * Accetta anche un calcolo ("10 / 2") e, nel pannello Proprietà, una formula con i parametri ("2 * spessore"), che
- * resta legata al campo (chip fx) e si ricalcola quando il parametro cambia.
+ * Accetta anche un calcolo senza parametri ("10 / 2"). Nel pannello Proprietà un doppio clic sul nome lo lega a un
+ * parametro: il campo diventa allora un'icona fx con il valore, non modificabile.
  */
-export function NumberField({ label, value, onCommit, min = -Infinity, max = Infinity, step = 1, unit, disabled, path, integer }: Props) {
+export function NumberField({ label, value, onCommit, min = -Infinity, max = Infinity, step = 1, unit, disabled, path, pickLabel, integer }: Props) {
   const [text, setText] = useState(String(value));
   const [focused, setFocused] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
   const formulas = useContext(FormulaContext);
   // Formula legata a questo campo (solo dentro il pannello Proprietà e con un percorso)
   const formula = path ? formulas?.exprs?.[path]?.expr : undefined;
@@ -39,56 +41,54 @@ export function NumberField({ label, value, onCommit, min = -Infinity, max = Inf
     if (!focused) setText(String(round(value, 3)));
   }, [value, focused]);
 
-  /** Applica un numero già calcolato: se il campo era legato a una formula, scriverne il valore la scioglie. */
-  const commitNumber = (parsed: number) => {
-    const clamped = Math.min(max, Math.max(min, parsed));
-    const next = integer ? Math.round(clamped) : round(clamped, 3);
-    setText(String(next));
-    if (next !== value) onCommit(next);
-    else if (formula && path) formulas?.bind(path, null);
-  };
-
   const commit = (raw: string) => {
-    // Con la formula legata, lasciarla com'è (focus e uscita senza modifiche) non cambia nulla
-    if (formula && raw.trim() === formula) return setText(String(round(value, 3)));
     // Accetta la virgola decimale italiana
     const parsed = Number(raw.replace(',', '.'));
     if (raw.trim() === '') return setText(String(round(value, 3)));
-    if (Number.isFinite(parsed)) return commitNumber(parsed);
-    // Non è un numero semplice: è un calcolo o una formula con i parametri
-    const result = evalFormula(raw, formulas?.values ?? {});
-    if (!result.ok) {
-      notify.error(`Formula non valida: ${result.error}`);
-      return setText(String(round(value, 3)));
+    let number = parsed;
+    if (!Number.isFinite(parsed)) {
+      // Non è un numero semplice: un calcolo senza parametri ("10 / 2")
+      const result = evalFormula(raw, {});
+      if (!result.ok) {
+        notify.error(formulaDeps(raw).length ? 'Per usare un parametro fai doppio clic sul nome del campo' : `Calcolo non valido: ${result.error}`);
+        return setText(String(round(value, 3)));
+      }
+      number = result.value;
     }
-    if (formulaDeps(raw).length === 0) return commitNumber(result.value);
-    if (!path || !formulas) {
-      notify.error('In questo campo non si possono usare i parametri');
-      return setText(String(round(value, 3)));
-    }
-    formulas.bind(path, { expr: raw.trim(), ...(min > -Infinity && { min }), ...(max < Infinity && { max }), ...(integer && { int: true }) });
+    const clamped = Math.min(max, Math.max(min, number));
+    const next = integer ? Math.round(clamped) : round(clamped, 3);
+    setText(String(next));
+    if (next !== value) onCommit(next);
   };
 
+  /** Doppio clic sul nome: apre il selettore dei parametri (solo se il campo ha un percorso e c'è un oggetto). */
+  const pickable = !!path && !!formulas && !disabled;
+  const labelProps = pickable
+    ? { onDoubleClick: () => formulas.pick(path, pickLabel ?? label, { ...(min > -Infinity && { min }), ...(max < Infinity && { max }), ...(integer && { int: true }) }), title: 'Doppio clic: usa un parametro', 'data-pickable': true }
+    : {};
+
+  if (formula) {
+    return (
+      <div className="number-field number-field--bound">
+        <span className="number-field__label" {...labelProps}>{label}</span>
+        <BoundValue value={value} formula={formula} />
+        {unit && <span className="number-field__unit">{unit}</span>}
+      </div>
+    );
+  }
+
   return (
-    <label className={`number-field${formula ? ' number-field--bound' : ''}`}>
-      <span className="number-field__label">{label}</span>
-      {formula && <span className="number-field__fx" aria-hidden="true">fx</span>}
+    <label className="number-field">
+      <span className="number-field__label" {...labelProps}>{label}</span>
       <input
-        ref={input}
         className="number-field__input"
         type="text"
         inputMode="decimal"
         disabled={disabled}
         value={text}
-        title={formula ? `= ${formula}` : path ? 'Numero, calcolo o formula con i parametri (es. 2 * spessore). Nelle formule la virgola separa gli argomenti: i decimali vanno col punto' : undefined}
-        aria-description={formula ? `Formula: ${formula}` : undefined}
         onFocus={(e) => {
           setFocused(true);
-          // Con una formula si modifica il suo testo, non il valore
-          if (formula) {
-            setText(formula);
-            requestAnimationFrame(() => input.current?.select());
-          } else e.currentTarget.select();
+          e.currentTarget.select();
         }}
         onChange={(e) => setText(e.target.value)}
         onBlur={(e) => {

@@ -1,0 +1,87 @@
+@use '../../styles/abstracts' as *;
+
+.params-view {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  padding: $space-3;
+
+  &__empty {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: color('text-muted');
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: $space-2;
+    row-gap: 2px;
+    padding: $space-2;
+    border: 1px solid color('border');
+    border-radius: $radius-md;
+    background: color('panel-raised');
+    font-family: $font-mono;
+    font-size: 12px;
+
+    &--error {
+      border-color: color('danger');
+    }
+  }
+
+  &__name {
+    font-weight: 600;
+  }
+
+  &__value {
+    grid-row: 1;
+    grid-column: 2;
+    color: color('accent');
+  }
+
+  &__expr {
+    grid-column: 1 / -1;
+    color: color('text-muted');
+  }
+
+  &__used,
+  &__error {
+    grid-column: 1 / -1;
+    font-family: $font-sans;
+    font-size: 11px;
+    color: color('text-muted');
+  }
+
+  &__error {
+    color: color('danger');
+  }
+
+  &__manage {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px;
+    border: 1px dashed color('border');
+    border-radius: $radius-md;
+    background: transparent;
+    font-size: 12px;
+    cursor: pointer;
+    @include focus-ring;
+
+    &:hover {
+      border-color: color('accent');
+      color: color('accent');
+    }
+  }
+}

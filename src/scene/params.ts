@@ -206,6 +206,33 @@ export function setPath(node: unknown, path: string, value: number): boolean {
   return true;
 }
 
+/**
+ * Patch di un nodo senza le modifiche ai campi legati a un parametro: quei campi tengono il valore che hanno (la formula
+ * decide la misura, non il gizmo, le quote o il ridimensionamento proporzionale). `held` dice se qualche campo legato
+ * doveva cambiare. La patch passata non si modifica.
+ */
+export function holdBound<P extends object>(node: { exprs?: Record<string, Binding> }, patch: P): { patch: P; held: boolean } {
+  const paths = Object.keys(node.exprs ?? {});
+  if (!paths.length) return { patch, held: false };
+  const out = { ...patch } as Record<string, unknown>;
+  let held = false;
+  for (const path of paths) {
+    const [top, ...rest] = path.split('.');
+    if (!(top in out)) continue;
+    const before = getPath(node, path);
+    // Si lavora su una copia del campo della patch (vettore o oggetto) per non toccare l'originale
+    if (rest.length) out[top] = structuredClone(out[top]);
+    const probe = { [top]: out[top] };
+    if (getPath(probe, path) === before) continue;
+    held = true;
+    if (before === undefined) {
+      if (!rest.length) delete out[top];
+    } else if (rest.length) setPath(probe, path, before);
+    else out[top] = before;
+  }
+  return { patch: out as P, held };
+}
+
 /** Valore di un campo legato: risultato della formula, con i limiti del campo e i decimali del NumberField. */
 export function boundValue(binding: Binding, values: Readonly<Record<string, number>>): FormulaResult {
   const result = evalFormula(binding.expr, values);

@@ -27,6 +27,12 @@ const pickSettings = (s: Settings): Settings => ({ showDimensions: s.showDimensi
 /** Lato maggiore del piano (mm): limite morbido dei cursori delle misure. Il piano non ha altezza, quindi vale anche per lo Z. */
 export const bedReach = (bed: BedSize): number => Math.max(bed.width, bed.depth);
 
+/** Altezza della libreria nella barra sinistra come frazione dell'altezza della barra: predefinita e limiti del separatore. */
+export const DEFAULT_LIBRARY_SHARE = 0.52;
+export const LIBRARY_SHARE_LIMITS = { min: 0.25, max: 0.8 } as const;
+const cleanLibraryShare = (value: unknown): number =>
+  typeof value === 'number' && Number.isFinite(value) ? Math.round(Math.min(LIBRARY_SHARE_LIMITS.max, Math.max(LIBRARY_SHARE_LIMITS.min, value)) * 1000) / 1000 : DEFAULT_LIBRARY_SHARE;
+
 /** Tendine della barra strumenti che si possono aprire anche da tastiera. */
 export type ToolbarMenu = 'align' | 'mirror' | 'views' | 'more';
 
@@ -34,7 +40,7 @@ export type ToolbarMenu = 'align' | 'mirror' | 'views' | 'more';
 export type Projection = 'perspective' | 'orthographic';
 
 /** Pannelli del menu hamburger (Importa, Esporta, ...): il menu del vuoto della vista li apre da fuori, quindi lo stato sta qui. */
-export type AppPanel = 'import' | 'export' | 'examples' | 'settings' | 'shortcuts' | 'news' | 'about' | 'docs';
+export type AppPanel = 'import' | 'export' | 'examples' | 'settings' | 'shortcuts' | 'news' | 'about' | 'docs' | 'params';
 
 /**
  * Impostazioni dell'utente (modale Impostazioni), salvate in localStorage con le altre preferenze. I limiti servono anche
@@ -98,8 +104,11 @@ export function cleanSettings(value: unknown): Settings {
   };
 }
 
-/** Scheda della sezione sotto la libreria: oggetti del piatto attivo, elenco dei piatti o parametri del progetto. */
-export type OutlinerTab = 'objects' | 'plates' | 'params';
+/** Scheda della sezione sotto la libreria: oggetti del piatto attivo oppure elenco dei piatti. */
+export type OutlinerTab = 'objects' | 'plates';
+
+/** Scheda della barra destra: proprietà dell'oggetto selezionato oppure elenco (di sola lettura) dei parametri. */
+export type SidebarTab = 'properties' | 'params';
 
 /** Tab della libreria nella barra laterale sinistra. */
 export type LibraryTab = 'shapes3d' | 'shapes2d' | 'symbols' | 'emoji';
@@ -146,6 +155,8 @@ interface UiState extends Settings {
   resetSettings: () => void;
   /** Scheda aperta sotto la libreria (non si salva: si parte sempre dagli oggetti). */
   outlinerTab: OutlinerTab;
+  sidebarTab: SidebarTab;
+  setSidebarTab: (tab: SidebarTab) => void;
   setOutlinerTab: (tab: OutlinerTab) => void;
   /** Pannello del menu hamburger aperto in una modale (non si salva). */
   appPanel: AppPanel | null;
@@ -158,6 +169,9 @@ interface UiState extends Settings {
   setBedDialogOpen: (open: boolean) => void;
   /** Tab della libreria aperta (si salva in localStorage). */
   libraryTab: LibraryTab;
+  /** Altezza della libreria sulla barra sinistra (frazione), cambiata dal separatore. */
+  librarySplit: number;
+  setLibrarySplit: (share: number) => void;
   setLibraryTab: (tab: LibraryTab) => void;
   /**
    * Gruppi (accordion) aperti nelle tab Simboli ed Emoji, per chiave (es. `symbols:Frecce`). Chi non è nell'elenco
@@ -218,6 +232,8 @@ export const useUiStore = create<UiState>()(
       setSettings: (patch) => set(cleanSettings({ ...pickSettings(get()), ...patch })),
       resetSettings: () => set({ ...DEFAULT_SETTINGS, theme: 'dark', bedMode: 'full', projection: 'perspective', bedSize: DEFAULT_BED }),
       outlinerTab: 'objects',
+      sidebarTab: 'properties',
+      setSidebarTab: (sidebarTab) => set({ sidebarTab }),
       setOutlinerTab: (outlinerTab) => set({ outlinerTab }),
       appPanel: null,
       setAppPanel: (appPanel) => set({ appPanel }),
@@ -226,6 +242,8 @@ export const useUiStore = create<UiState>()(
       bedDialogOpen: false,
       setBedDialogOpen: (bedDialogOpen) => set({ bedDialogOpen }),
       libraryTab: 'shapes3d',
+      librarySplit: DEFAULT_LIBRARY_SHARE,
+      setLibrarySplit: (share) => set({ librarySplit: cleanLibraryShare(share) }),
       setLibraryTab: (libraryTab) => set({ libraryTab }),
       libraryGroupsOpen: {},
       setLibraryGroupOpen: (key, open) => set({ libraryGroupsOpen: { ...get().libraryGroupsOpen, [key]: open } }),
@@ -257,7 +275,7 @@ export const useUiStore = create<UiState>()(
     {
       name: STORAGE.ui.now,
       // La modale del codice non si ripristina all'avvio
-      partialize: (s) => ({ ...pickSettings(s), theme: s.theme, bedMode: s.bedMode, projection: s.projection, bedSize: s.bedSize, libraryTab: s.libraryTab, libraryGroupsOpen: s.libraryGroupsOpen, libraryFavorites: s.libraryFavorites, libraryRecent: s.libraryRecent }),
+      partialize: (s) => ({ ...pickSettings(s), theme: s.theme, bedMode: s.bedMode, projection: s.projection, bedSize: s.bedSize, libraryTab: s.libraryTab, librarySplit: s.librarySplit, libraryGroupsOpen: s.libraryGroupsOpen, libraryFavorites: s.libraryFavorites, libraryRecent: s.libraryRecent }),
       // Si accettano solo i campi noti e validi: un valore salvato da una versione precedente (o rovinato) non rompe l'avvio
       merge: (saved, current) => {
         const s = (saved ?? {}) as Partial<UiState>;
@@ -270,6 +288,7 @@ export const useUiStore = create<UiState>()(
           bedMode: s.bedMode === 'none' ? 'none' : 'full',
           projection: s.projection === 'orthographic' ? 'orthographic' : current.projection,
           bedSize: { width: cleanBedSide(s.bedSize?.width, DEFAULT_BED.width), depth: cleanBedSide(s.bedSize?.depth, DEFAULT_BED.depth) },
+          librarySplit: cleanLibraryShare(s.librarySplit),
           libraryTab: s.libraryTab && LIBRARY_TABS.includes(s.libraryTab) ? s.libraryTab : current.libraryTab,
           // Solo valori booleani: il resto del localStorage non è fidato
           libraryGroupsOpen: Object.fromEntries(Object.entries(s.libraryGroupsOpen ?? {}).filter(([, v]) => typeof v === 'boolean')),

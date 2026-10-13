@@ -36,6 +36,7 @@ export function ArrayFields({ params: p, onChange, disabled, history = true }: P
             step={opts.step}
             disabled={disabled}
             path={`array.${key}.${i}`}
+            pickLabel={`${label.replace(/ \(mm\)$/, '')} ${axis}`}
             integer={key === 'counts'}
             onCommit={(v) => onChange({ [key]: p[key].map((old, j) => (j === i ? v : old)) as Vec3 })}
           />

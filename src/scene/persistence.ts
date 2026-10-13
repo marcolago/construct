@@ -28,7 +28,7 @@ const paramsAreValid = (s: Scene) => s.params === undefined || (Array.isArray(s.
 /** Controllo minimo di forma: evita di caricare file che non sono scene Construct. */
 function isScene(value: unknown): value is Scene {
   const s = value as Scene | undefined;
-  return !!s && typeof s.nodes === 'object' && Array.isArray(s.rootIds) && s.rootIds.every((id) => s.nodes[id]) && platesAreValid(s) && paramsAreValid(s);
+  return !!s && typeof s.nodes === 'object' && Array.isArray(s.rootIds) && s.rootIds.every((id) => s.nodes[id]) && platesAreValid(s) && paramsAreValid(s) && (s.ignoredWarnings === undefined || (Array.isArray(s.ignoredWarnings) && s.ignoredWarnings.every((w) => typeof w === 'string')));
 }
 
 /**

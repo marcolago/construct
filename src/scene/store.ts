@@ -5,7 +5,7 @@ import { temporal } from 'zundo';
 import type { ScadImport } from '../import/scad/toScene';
 import type { Binding, CornerNode, EdgeNode, GroupNode, GroupOp, MeshNode, Param, PrimitiveKind, PrimitiveNode, Scene, SceneNode, Shape2DKind, Shape2DNode, Vec3 } from './types';
 import { notify } from '../ui/notify/notifyStore';
-import { applyBindings, boundValue, formulaDeps, getPath, nameProblem, renameInExpr, resolveParams, setPath } from './params';
+import { applyBindings, boundValue, formulaDeps, holdBound, nameProblem, renameInExpr, resolveParams, setPath } from './params';
 import { randomColor } from './color';
 import { lastShape, rememberShape } from './lastValues';
 import { layFlatPatch } from './layFlat';
@@ -92,6 +92,10 @@ interface SceneState {
   updateParam: (id: string, patch: Partial<Pick<Param, 'name' | 'expr' | 'note'>>) => boolean;
   /** Elimina un parametro: i campi che lo usavano restano con il valore che avevano, senza formula. */
   removeParam: (id: string) => void;
+  /** Ignora un avviso di stampabilità (si ricorda nel progetto); `restoreWarning` lo rimette, `restoreAllWarnings` rimette tutti. */
+  ignoreWarning: (id: string) => void;
+  restoreWarning: (id: string) => void;
+  restoreAllWarnings: () => void;
   /** Lega un campo numerico di un nodo a una formula (o la scioglie con null). Un solo passo di Annulla. */
   bindField: (id: string, path: string, binding: Binding | null) => void;
 }
@@ -193,6 +197,17 @@ function updateLabel(name: string | undefined, patch: object): string {
   const keys = Object.keys(patch);
   const verb = keys.includes('groupScale') ? 'Ridimensiona' : keys.includes('position') ? 'Sposta' : keys.includes('rotation') ? 'Ruota' : keys.includes('name') ? 'Rinomina' : keys.includes('color') ? 'Colore' : 'Modifica';
   return name ? `${verb} ${name}` : verb;
+}
+
+/** Istante dell'ultimo avviso sui campi legati: un trascinamento chiama updateNode decine di volte, l'avviso è uno solo. */
+let lastHeldNotice = 0;
+
+/** Avvisa (al massimo ogni 3 secondi) che un campo legato a un parametro non è stato modificato. */
+function noteHeld(name?: string): void {
+  const now = Date.now();
+  if (now - lastHeldNotice < 3000) return;
+  lastHeldNotice = now;
+  notify.info(`«${name ?? 'Oggetto'}»: i campi legati a un parametro non cambiano. Doppio clic sul nome del campo per scegliere un altro parametro o toglierlo`);
 }
 
 /** Campi che si possono cambiare anche su un oggetto bloccato. */
@@ -339,23 +354,19 @@ export const useSceneStore = create<SceneState>()(
 
       updateNode: (id, patch) => {
         const before = get().scene.nodes[id];
-        let dissolved = 0;
+        let held = false;
         act(updateLabel(before?.name, patch), (s) => {
           const node = s.scene.nodes[id];
           if (!node) return;
           // Su un oggetto bloccato passano solo nome, colore e il blocco stesso
           if (isLocked(s.scene, id) && Object.keys(patch).some((k) => !ALWAYS_EDITABLE.has(k))) return;
-          // Valori dei campi legati prima della modifica: chi cambia a mano un campo legato ne scioglie la formula
-          const bound = Object.keys(node.exprs ?? {}).map((path) => [path, getPath(node, path)] as const);
-          Object.assign(node, patch);
-          for (const [path, old] of bound) {
-            if (getPath(node, path) === old) continue;
-            delete node.exprs![path];
-            dissolved++;
-          }
-          if (node.exprs && Object.keys(node.exprs).length === 0) delete node.exprs;
+          // I campi legati a un parametro non cambiano (gizmo, quote, ridimensionamento): per toglierli dalla formula si
+          // usa il selettore dei parametri
+          const kept = holdBound(node, patch);
+          if (kept.held) held = true;
+          Object.assign(node, kept.patch);
         });
-        if (dissolved) notify.info(`Formula rimossa da «${before?.name}»: il campo è stato modificato a mano`);
+        if (held) noteHeld(before?.name);
         // Le misure inserite diventano il punto di partenza delle prossime forme dello stesso tipo
         if (before && (before.type === 'primitive' || before.type === 'shape2d') && !isLocked(get().scene, id)) rememberShape(before.kind, patch);
       },
@@ -749,6 +760,25 @@ export const useSceneStore = create<SceneState>()(
           s.scene.params = s.scene.params!.filter((p) => p.id !== id);
           if (s.scene.params.length === 0) delete s.scene.params;
           applyBindings(s.scene);
+        }),
+
+      ignoreWarning: (id) =>
+        act('Ignora avviso', (s) => {
+          if (s.scene.ignoredWarnings?.includes(id)) return;
+          s.scene.ignoredWarnings = [...(s.scene.ignoredWarnings ?? []), id];
+        }),
+
+      restoreWarning: (id) =>
+        act('Ripristina avviso', (s) => {
+          if (!s.scene.ignoredWarnings?.includes(id)) return;
+          const rest = s.scene.ignoredWarnings.filter((w) => w !== id);
+          if (rest.length) s.scene.ignoredWarnings = rest;
+          else delete s.scene.ignoredWarnings;
+        }),
+
+      restoreAllWarnings: () =>
+        act('Ripristina gli avvisi', (s) => {
+          delete s.scene.ignoredWarnings;
         }),
 
       bindField: (id, path, binding) => {

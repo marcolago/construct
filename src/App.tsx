@@ -1,15 +1,17 @@
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, type CSSProperties } from 'react';
 import { Brand } from './ui/Brand/Brand';
 import { Toolbar } from './ui/Toolbar/Toolbar';
 import { ContextMenu } from './ui/ContextMenu/ContextMenu';
 import { WelcomeDialog } from './ui/Welcome/WelcomeDialog';
 import { LibraryTabs } from './ui/ShapeLibrary/LibraryTabs';
 import { Outliner } from './ui/Outliner/Outliner';
+import { Splitter } from './ui/Splitter/Splitter';
 import { Sidebar } from './ui/Sidebar/Sidebar';
 import { StatusBar } from './ui/StatusBar/StatusBar';
 import { Timeline } from './ui/Timeline/Timeline';
 import { UpdatePrompt } from './ui/UpdatePrompt/UpdatePrompt';
 import { Notifications } from './ui/notify/Notifications';
+import { ParamPicker } from './ui/Params/ParamPicker';
 import { Viewport } from './viewport/Viewport';
 import { useUiStore } from './ui/uiStore';
 import { lazyLoad } from './ui/lazyLoad';
@@ -30,6 +32,7 @@ export default function App() {
   useShortcuts();
   const theme = useUiStore((s) => s.theme);
   const codeOpen = useUiStore((s) => s.codeOpen);
+  const librarySplit = useUiStore((s) => s.librarySplit);
   const scadReport = useScadReport((s) => s.report);
 
   // Il tema è un attributo sulla radice: le variabili CSS cambiano di conseguenza
@@ -49,9 +52,10 @@ export default function App() {
         void importFiles(Array.from(e.dataTransfer.files));
       }}
     >
-      <aside className="app__left" aria-label="Libreria e oggetti">
+      <aside className="app__left" aria-label="Libreria e oggetti" style={{ '--library-share': `${librarySplit * 100}%` } as CSSProperties}>
         <Brand />
         <LibraryTabs />
+        <Splitter />
         <Outliner />
       </aside>
       <div className="app__main">
@@ -78,6 +82,7 @@ export default function App() {
       <UpdatePrompt />
       <WelcomeDialog />
       <ContextMenu />
+      <ParamPicker />
       <Notifications />
     </div>
   );

@@ -6,8 +6,10 @@ import { useSceneStore } from '../../scene/store';
 import { useUiStore } from '../uiStore';
 
 interface WarningsState {
-  /** Avvisi di stampabilità del piatto attivo, errori per primi: quelli veloci e quelli del kernel insieme. */
+  /** Avvisi di stampabilità del piatto attivo da mostrare, errori per primi: quelli veloci e quelli del kernel insieme. */
   issues: PrintIssue[];
+  /** Avvisi trovati che l'utente ha scelto di ignorare (vedi `Scene.ignoredWarnings`): non contano né si evidenziano. */
+  ignored: PrintIssue[];
   /** Avvisi dei controlli veloci (dalle mesh) e di quelli del kernel (pareti sottili, parti sospese), tenuti a parte. */
   fast: PrintIssue[];
   deep: PrintIssue[];
@@ -21,6 +23,7 @@ interface WarningsState {
 
 export const useWarnings = create<WarningsState>((set) => ({
   issues: [],
+  ignored: [],
   fast: [],
   deep: [],
   focusId: null,
@@ -39,9 +42,11 @@ const DEEP_DEBOUNCE_MS = 1200;
 function publish(fast: PrintIssue[], deep: PrintIssue[]): void {
   const { rootIds } = useSceneStore.getState().scene;
   const liveDeep = deep.filter((i) => !i.rootId || rootIds.includes(i.rootId));
-  const issues = mergeIssues(fast, liveDeep);
+  const all = mergeIssues(fast, liveDeep);
+  const skip = new Set(useSceneStore.getState().scene.ignoredWarnings);
+  const issues = all.filter((i) => !skip.has(i.id));
   const { focusId } = useWarnings.getState();
-  useWarnings.setState({ fast, deep: liveDeep, issues, focusId: focusId && issues.some((i) => i.id === focusId) ? focusId : null });
+  useWarnings.setState({ fast, deep: liveDeep, issues, ignored: all.filter((i) => skip.has(i.id)), focusId: focusId && issues.some((i) => i.id === focusId) ? focusId : null });
 }
 
 /** Ricalcola gli avvisi veloci dallo stato attuale (mesh del kernel, scena, impostazioni). */
@@ -92,7 +97,10 @@ export function startPrintChecks(): void {
     if (s.meshes !== prev.meshes || s.busy !== prev.busy) schedule();
   });
   useSceneStore.subscribe((s, prev) => {
-    if (s.scene !== prev.scene) schedule();
+    if (s.scene === prev.scene) return;
+    // Ignorare o ripristinare un avviso si vede subito, senza aspettare la pausa del ricalcolo
+    if (s.scene.ignoredWarnings !== prev.scene.ignoredWarnings) publish(useWarnings.getState().fast, useWarnings.getState().deep);
+    schedule();
   });
   useUiStore.subscribe((s, prev) => {
     if (s.printChecks !== prev.printChecks || s.overhangAngle !== prev.overhangAngle || s.bedHeight !== prev.bedHeight || s.bedSize !== prev.bedSize || s.minWall !== prev.minWall) schedule();

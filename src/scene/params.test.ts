@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { evalFormula, formulaDeps, nameProblem, renameInExpr, resolveParams, validName } from './params';
+import { evalFormula, formulaDeps, holdBound, nameProblem, renameInExpr, resolveParams, validName } from './params';
 import { useSceneStore } from './store';
+import { applyScale } from './resize';
+import { primitiveDefaults } from './defaults';
+import type { PrimitiveNode } from './types';
 import type { Param } from './types';
 
 const p = (name: string, expr: string): Param => ({ id: name, name, expr });
@@ -125,14 +128,24 @@ describe('parametri nello store', () => {
     expect(st().scene.params![0].name).toBe('parete');
   });
 
-  it('modificare a mano un campo legato ne scioglie la formula', () => {
+  it('un campo legato non si modifica (gizmo, quote, ridimensionamento): gli altri campi sì, e si avvisa', () => {
     const id = boundBox();
-    st().updateNode(id, { size: [20, 20, 7] } as never);
+    const node = () => st().scene.nodes[id] as { size: number[]; exprs?: Record<string, unknown> };
+    // Il patch cambia tutti e tre i lati: l'altezza (legata) resta com'è
+    st().updateNode(id, { size: [30, 25, 7] } as never);
+    expect(node().size).toEqual([30, 25, 4]);
+    expect(node().exprs!['size.2']).toBeDefined();
+    // Un patch che non tocca campi legati passa intero
+    st().updateNode(id, { position: [5, 5, 2] } as never);
+    expect(st().scene.nodes[id].position).toEqual([5, 5, 2]);
+  });
+
+  it('bindField(null) toglie il parametro e il campo torna modificabile con il valore che aveva', () => {
+    const id = boundBox();
+    st().bindField(id, 'size.2', null);
     expect(st().scene.nodes[id].exprs).toBeUndefined();
-    // Un campo non legato dello stesso vettore non scioglie nulla
-    const id2 = boundBox();
-    st().updateNode(id2, { size: [30, 20, 4] } as never);
-    expect(st().scene.nodes[id2].exprs?.['size.2']).toBeDefined();
+    st().updateNode(id, { size: [20, 20, 9] } as never);
+    expect((st().scene.nodes[id] as { size: number[] }).size[2]).toBe(9);
   });
 
   it('eliminando un parametro i campi restano con il valore e senza formula', () => {
@@ -142,5 +155,31 @@ describe('parametri nello store', () => {
     expect(st().scene.params).toBeUndefined();
     expect(st().scene.nodes[id].exprs).toBeUndefined();
     expect((st().scene.nodes[id] as { size: number[] }).size[2]).toBe(4);
+  });
+});
+
+describe('holdBound', () => {
+  const node = { size: [20, 20, 4], radius: 5, array: { count: 3, angle: 90 }, exprs: { 'size.2': { expr: 'a' }, radius: { expr: 'b' }, 'array.count': { expr: 'c' } } };
+
+  it('rimette il valore dei soli campi legati, anche dentro vettori e oggetti, senza toccare la patch originale', () => {
+    const patch = { size: [30, 30, 8], radius: 9, array: { count: 7, angle: 45 }, height: 3 };
+    const r = holdBound(node, patch);
+    expect(r.held).toBe(true);
+    expect(r.patch).toEqual({ size: [30, 30, 4], array: { count: 3, angle: 45 }, height: 3, radius: 5 });
+    expect(patch.size).toEqual([30, 30, 8]);
+    expect(patch.array.count).toBe(7);
+  });
+
+  it('non fa nulla se la patch non cambia campi legati', () => {
+    expect(holdBound(node, { size: [30, 30, 4] })).toEqual({ patch: { size: [30, 30, 4] }, held: false });
+    expect(holdBound({}, { size: [1, 1, 1] }).held).toBe(false);
+  });
+});
+
+describe('ridimensionamento con campi legati', () => {
+  it('la scala proporzionale lascia i campi legati e ridimensiona gli altri', () => {
+    const box = { ...primitiveDefaults('box'), id: 'b', name: 'b', position: [0, 0, 10], size: [20, 20, 20], exprs: { 'size.2': { expr: 'a' } } } as PrimitiveNode;
+    const patch = holdBound(box, applyScale(box, [2, 2, 2], 0.5)).patch as unknown as { size: number[] };
+    expect(patch.size).toEqual([40, 40, 20]);
   });
 });

@@ -1,0 +1,106 @@
+@use '../../styles/abstracts' as *;
+
+.param-picker {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  min-width: 320px;
+
+  &__empty {
+    margin: 0;
+    font-size: 12.5px;
+    color: color('text-muted');
+  }
+
+  &__link {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: color('accent');
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 240px;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    @include thin-scrollbar;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-3;
+    width: 100%;
+    padding: 6px $space-3;
+    border: 1px solid color('border');
+    border-radius: $radius-sm;
+    background: color('panel-raised');
+    color: color('text');
+    font-family: $font-mono;
+    font-size: 12.5px;
+    cursor: pointer;
+    @include focus-ring;
+
+    &:hover,
+    &--active {
+      border-color: color('accent');
+    }
+
+    &--active {
+      background: color('accent-soft');
+    }
+  }
+
+  &__value {
+    color: color('accent');
+  }
+
+  &__formula {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: color('text-muted');
+  }
+
+  &__input {
+    padding: 6px $space-2;
+    border: 1px solid color('border');
+    border-radius: $radius-sm;
+    background: color('bg');
+    color: color('text');
+    font-family: $font-mono;
+    font-size: 13px;
+    @include focus-ring;
+  }
+
+  &__preview {
+    min-height: 1.4em;
+    margin: 0;
+    font-size: 12px;
+    color: color('text-muted');
+
+    &--error {
+      color: color('danger');
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+}

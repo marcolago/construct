@@ -13,6 +13,25 @@
     color: color('text-muted');
   }
 
+  // Il nome di un campo che si può legare a un parametro (doppio clic)
+  &__label[data-pickable] {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  // Campo legato a un parametro: al posto dello slider e del campo, icona fx e valore
+  &--bound .bound-value {
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  &__unit {
+    flex: none;
+    width: 20px;
+    font-size: 11px;
+    color: color('text-muted');
+  }
+
   &__range {
     flex: 1;
     min-width: 0;
