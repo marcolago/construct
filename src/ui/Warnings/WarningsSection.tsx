@@ -9,7 +9,7 @@ import './WarningsSection.scss';
 function pick(issue: PrintIssue): void {
   if (issue.rootId) useSceneStore.getState().select([issue.rootId]);
   const { focusId, setFocus } = useWarnings.getState();
-  setFocus(issue.triangles && focusId !== issue.id ? issue.id : null);
+  setFocus((issue.triangles || issue.boxes) && focusId !== issue.id ? issue.id : null);
 }
 
 /**
@@ -46,8 +46,8 @@ export function WarningsSection() {
                       type="button"
                       className={`warnings__item warnings__item--${issue.level}${focusId === issue.id ? ' warnings__item--focus' : ''}`}
                       data-kind={issue.kind}
-                      aria-pressed={issue.triangles ? focusId === issue.id : undefined}
-                      title={issue.rootId ? (issue.triangles ? 'Seleziona l\'oggetto e mostra le zone nella vista' : 'Seleziona l\'oggetto') : undefined}
+                      aria-pressed={issue.triangles || issue.boxes ? focusId === issue.id : undefined}
+                      title={issue.rootId ? (issue.triangles || issue.boxes ? 'Seleziona l\'oggetto e mostra le zone nella vista' : 'Seleziona l\'oggetto') : undefined}
                       onClick={() => pick(issue)}
                     >
                       <Icon size={14} aria-hidden="true" />

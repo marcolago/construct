@@ -61,3 +61,36 @@ test('Avvisi: una formula che non si calcola è un errore con il nome del parame
   await page.evaluate(() => window.__construct!.store.getState().addParam('spessore', '1 / 0'));
   await expect(page.locator('.warnings__item[data-kind="formula"]')).toContainText('Il parametro «spessore» non si calcola');
 });
+
+test('Avvisi: una parete più sottile del minimo e il suo evidenziamento nella vista', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  const id = (await sceneState(page)).rootIds[0];
+  // Lastra di 0,4 mm: più sottile di due passate di un ugello da 0,4 mm
+  await page.evaluate((nodeId) => window.__construct!.store.getState().updateNode(nodeId, { size: [0.4, 20, 20], position: [0, 0, 10] } as never), id);
+  await settled(page);
+  const thin = page.locator('.warnings__item[data-kind="thin"]');
+  // Le analisi del kernel partono dopo una breve pausa
+  await expect(thin).toContainText('Pareti sotto 0,8 mm su «Cubo»', { timeout: 15000 });
+  await thin.click();
+  await expect(thin).toHaveAttribute('aria-pressed', 'true');
+
+  // Con la parete minima a 0,3 mm la lastra va bene
+  await page.evaluate(() => window.__construct!.ui!.setState({ minWall: 0.3 }));
+  await expect(thin).toHaveCount(0, { timeout: 15000 });
+});
+
+test('Avvisi: una parte staccata e sospesa dentro un Raggruppa appoggiato sul piano', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  await addShape(page, 'Cubo');
+  const ids: string[] = (await sceneState(page)).rootIds;
+  await page.evaluate(([a, b]) => {
+    const store = window.__construct!.store.getState();
+    store.updateNode(a, { position: [0, 0, 10] } as never);
+    // Il secondo cubo, piccolo, a mezz'aria
+    store.updateNode(b, { size: [5, 5, 5], position: [0, 0, 40] } as never);
+    store.select([a, b]);
+    store.groupSelected();
+  }, ids);
+  await settled(page);
+  await expect(page.locator('.warnings__item[data-kind="detached"]')).toContainText('Una parte staccata e sospesa', { timeout: 15000 });
+});

@@ -14,6 +14,8 @@ import { textContours } from '../scene/fontOutline';
 import { fontInfo } from '../scene/fontCatalog';
 import { cavityOf, SHELL_OPEN_MARGIN } from '../scene/shell';
 import { cornerCutter } from '../scene/cornerProfile';
+import { separateParts, thinWalls, type PartBox } from './analyze';
+import type { DeepResult, DetachedFinding, ThinFinding } from '../scene/printability';
 import { maxPolyhedronRadius, polygonMaxRadius, polygonShrunkRadius, polyhedronVertices, roundedPolyhedronCenters } from '../scene/polyhedra';
 import type { Transform } from '../scene/math';
 import type { CornerNode, EdgeNode, GroupNode, MeshNode, PrimitiveNode, Scene, SceneNode, Shape2DNode, ShellParams, Vec3 } from '../scene/types';
@@ -72,6 +74,8 @@ export class Evaluator {
   private assets = new Map<string, Manifold>();
   /** Chiavi toccate nella valutazione corrente, per liberare le altre a fine giro. */
   private touched = new Set<string>();
+  /** Esito dell'analisi di ogni oggetto alla radice per chiave geometrica e parete minima: un oggetto non modificato non si rianalizza. */
+  private analysis = new Map<string, RootAnalysis>();
 
   constructor(private readonly wasm: ManifoldToplevel) {}
 
@@ -685,6 +689,70 @@ export class Evaluator {
     });
   }
 
+  /**
+   * Analisi per i controlli di stampabilità del piatto attivo: pareti più sottili di `minWall` e parti staccate e sospese.
+   * Si ferma dopo `ANALYZE_BUDGET_MS` (il resto è segnalato come incompleto) e ricorda l'esito di ogni oggetto, quindi dopo
+   * una modifica si rianalizzano solo gli oggetti cambiati. I fori alla radice non entrano.
+   */
+  analyze(scene: Scene, opts: { minWall: number }): DeepResult {
+    const deadline = performance.now() + ANALYZE_BUDGET_MS;
+    let partial = false;
+    const thin: ThinFinding[] = [];
+    /** Parti staccate candidate: tutte le parti di tutti gli oggetti, per sapere se una è sostenuta da un'altra. */
+    const parts: { rootId: string; box: PartBox }[] = [];
+    for (const id of scene.rootIds) {
+      const root = scene.nodes[id];
+      if (root.mode !== 'solid') continue;
+      const cacheKey = `${this.key(scene, root)}|${opts.minWall}`;
+      let found = this.analysis.get(cacheKey);
+      if (!found) {
+        if (performance.now() > deadline) {
+          partial = true;
+          continue;
+        }
+        const fresh: RootAnalysis = { thin: { boxes: [], slices: 0, zMin: Infinity, zMax: -Infinity }, parts: [], partial: false };
+        this.visit(scene, root, [], (_node, m) => {
+          if (m.isEmpty()) return;
+          const t = thinWalls(m, opts.minWall, deadline);
+          fresh.thin.boxes.push(...t.boxes);
+          fresh.thin.slices += t.slices;
+          fresh.thin.zMin = Math.min(fresh.thin.zMin, t.zMin);
+          fresh.thin.zMax = Math.max(fresh.thin.zMax, t.zMax);
+          fresh.partial ||= t.partial;
+          fresh.parts.push(...separateParts(m));
+        });
+        // Un esito interrotto dal tempo non si ricorda: al prossimo giro si riprova
+        if (!fresh.partial) {
+          if (this.analysis.size >= ANALYSIS_CACHE_LIMIT) this.analysis.clear();
+          this.analysis.set(cacheKey, fresh);
+        }
+        found = fresh;
+      }
+      partial ||= found.partial;
+      if (found.thin.slices > 0) thin.push({ rootId: id, ...found.thin });
+      for (const box of found.parts) parts.push({ rootId: id, box });
+    }
+
+    // Parti sospese: non toccano il piano né stanno sopra un'altra parte. Solo in oggetti che per il resto stanno sul piano
+    // (un oggetto intero sollevato lo segnala già il controllo "sospeso")
+    const TOUCH = 0.05;
+    const grounded = new Set(parts.filter((p) => p.box.min[2] <= TOUCH).map((p) => p.rootId));
+    const detachedBy = new Map<string, DetachedFinding>();
+    for (const p of parts) {
+      if (p.box.min[2] <= TOUCH || !grounded.has(p.rootId)) continue;
+      const supported = parts.some(
+        (o) => o !== p && o.box.max[2] >= p.box.min[2] - TOUCH && o.box.min[2] < p.box.min[2] && o.box.max[0] > p.box.min[0] && o.box.min[0] < p.box.max[0] && o.box.max[1] > p.box.min[1] && o.box.min[1] < p.box.max[1],
+      );
+      if (supported) continue;
+      const acc = detachedBy.get(p.rootId);
+      if (acc) {
+        acc.count++;
+        acc.lowestZ = Math.min(acc.lowestZ, p.box.min[2]);
+      } else detachedBy.set(p.rootId, { rootId: p.rootId, count: 1, lowestZ: p.box.min[2] });
+    }
+    return { thin, detached: [...detachedBy.values()], partial };
+  }
+
   /** Libera tutta la cache. */
   dispose(): void {
     for (const h of this.cache.values()) h.delete();
@@ -692,6 +760,18 @@ export class Evaluator {
     for (const h of this.assets.values()) h.delete();
     this.assets.clear();
   }
+}
+
+/** Tempo massimo (ms) di un giro di analisi: oltre, i controlli sono incompleti. */
+const ANALYZE_BUDGET_MS = 6000;
+/** Oggetti ricordati dall'analisi: oltre, la memoria si svuota. */
+const ANALYSIS_CACHE_LIMIT = 200;
+
+/** Esito dell'analisi di un oggetto alla radice. */
+interface RootAnalysis {
+  thin: { boxes: number[]; slices: number; zMin: number; zMax: number };
+  parts: PartBox[];
+  partial: boolean;
 }
 
 /** Converte un Manifold in buffer pronti per three.js, esportatori e misure. */

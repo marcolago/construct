@@ -104,6 +104,8 @@ export function SettingsPanel({ run }: { run: (action: () => void | Promise<void
         <p className="settings__hint">Angolo dalla verticale oltre cui una superficie rivolta in basso è uno sbalzo (45° è il valore tipico della stampa FDM).</p>
         <NumberField label="Altezza" unit="mm" value={ui.bedHeight} min={SETTING_LIMITS.bedHeight.min} max={SETTING_LIMITS.bedHeight.max} step={1} disabled={!ui.printChecks} onCommit={set('bedHeight')} />
         <p className="settings__hint">Altezza utile della stampante: un oggetto più alto esce dal volume di stampa.</p>
+        <NumberField label="Parete" unit="mm" value={ui.minWall} min={SETTING_LIMITS.minWall.min} max={SETTING_LIMITS.minWall.max} step={0.1} disabled={!ui.printChecks} onCommit={set('minWall')} />
+        <p className="settings__hint">Parete minima stampabile: una parete più sottile è segnalata (0,8 mm sono due passate di un ugello da 0,4 mm).</p>
       </section>
 
       <section>

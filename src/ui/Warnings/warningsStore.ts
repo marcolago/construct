@@ -1,12 +1,16 @@
 import { create } from 'zustand';
 import { useResultStore } from '../../kernel/useKernel';
-import { analyzePrintability, type PrintIssue } from '../../scene/printability';
+import { getKernel } from '../../kernel/client';
+import { analyzePrintability, deepIssues, mergeIssues, type PrintIssue } from '../../scene/printability';
 import { useSceneStore } from '../../scene/store';
 import { useUiStore } from '../uiStore';
 
 interface WarningsState {
-  /** Avvisi di stampabilità del piatto attivo, errori per primi. */
+  /** Avvisi di stampabilità del piatto attivo, errori per primi: quelli veloci e quelli del kernel insieme. */
   issues: PrintIssue[];
+  /** Avvisi dei controlli veloci (dalle mesh) e di quelli del kernel (pareti sottili, parti sospese), tenuti a parte. */
+  fast: PrintIssue[];
+  deep: PrintIssue[];
   /** Avviso messo in evidenza nella vista 3D (clic sull'elenco). */
   focusId: string | null;
   /** Sezione Avvisi aperta. */
@@ -17,6 +21,8 @@ interface WarningsState {
 
 export const useWarnings = create<WarningsState>((set) => ({
   issues: [],
+  fast: [],
+  deep: [],
   focusId: null,
   open: true,
   setFocus: (focusId) => set({ focusId }),
@@ -26,24 +32,61 @@ export const useWarnings = create<WarningsState>((set) => ({
 /** Attesa prima di rianalizzare: durante il trascinamento di uno slider non si ricalcola a ogni passo. */
 const DEBOUNCE_MS = 400;
 
-/** Ricalcola gli avvisi dallo stato attuale (mesh del kernel, scena, impostazioni). */
+/** Attesa prima delle analisi del kernel, più lunghe: dopo una modifica si aspetta che la mano si fermi. */
+const DEEP_DEBOUNCE_MS = 1200;
+
+/** Aggiorna l'elenco unico e toglie l'evidenziazione che non ha più un avviso. Gli avvisi di oggetti spariti non restano. */
+function publish(fast: PrintIssue[], deep: PrintIssue[]): void {
+  const { rootIds } = useSceneStore.getState().scene;
+  const liveDeep = deep.filter((i) => !i.rootId || rootIds.includes(i.rootId));
+  const issues = mergeIssues(fast, liveDeep);
+  const { focusId } = useWarnings.getState();
+  useWarnings.setState({ fast, deep: liveDeep, issues, focusId: focusId && issues.some((i) => i.id === focusId) ? focusId : null });
+}
+
+/** Ricalcola gli avvisi veloci dallo stato attuale (mesh del kernel, scena, impostazioni). */
 function run(): void {
   const { printChecks, overhangAngle, bedHeight, bedSize } = useUiStore.getState();
   const { meshes, busy } = useResultStore.getState();
   // Con un calcolo in corso le mesh sono indietro rispetto alla scena: si aspetta il risultato
   if (busy) return;
-  const issues = printChecks ? analyzePrintability(meshes, useSceneStore.getState().scene, { bedWidth: bedSize.width, bedDepth: bedSize.depth, bedHeight, overhangAngle }) : [];
-  const { focusId } = useWarnings.getState();
-  // L'evidenziazione sparisce con l'avviso che la causava
-  useWarnings.setState({ issues, focusId: focusId && issues.some((i) => i.id === focusId) ? focusId : null });
+  publish(printChecks ? analyzePrintability(meshes, useSceneStore.getState().scene, { bedWidth: bedSize.width, bedDepth: bedSize.depth, bedHeight, overhangAngle }) : [], useWarnings.getState().deep);
+}
+
+/** Numero dell'ultima richiesta di analisi al kernel: una risposta arrivata dopo una richiesta più recente si scarta. */
+let deepRequest = 0;
+
+/** Chiede al kernel le pareti sottili e le parti sospese (nel worker, dopo il calcolo della scena). */
+async function runDeep(): Promise<void> {
+  const request = ++deepRequest;
+  const { printChecks, minWall } = useUiStore.getState();
+  if (!printChecks) {
+    publish(useWarnings.getState().fast, []);
+    return;
+  }
+  const scene = useSceneStore.getState().scene;
+  try {
+    const result = await (await getKernel()).analyze(scene, { minWall });
+    if (request === deepRequest) publish(useWarnings.getState().fast, deepIssues(result, scene, minWall));
+  } catch {
+    // Il kernel segnala già i suoi errori (barra di stato): qui basta non avere avvisi di questo tipo
+    if (request === deepRequest) publish(useWarnings.getState().fast, []);
+  }
 }
 
 /** Collega i controlli di stampabilità ai cambi di mesh, scena e impostazioni (da chiamare una volta, all'avvio). */
 export function startPrintChecks(): void {
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let deepTimer: ReturnType<typeof setTimeout> | undefined;
   const schedule = () => {
     clearTimeout(timer);
     timer = setTimeout(run, DEBOUNCE_MS);
+    // Le analisi del kernel partono più tardi e solo a calcolo finito (scene e mesh coerenti)
+    clearTimeout(deepTimer);
+    deepTimer = setTimeout(() => {
+      if (!useResultStore.getState().busy) void runDeep();
+      else schedule();
+    }, DEEP_DEBOUNCE_MS);
   };
   useResultStore.subscribe((s, prev) => {
     if (s.meshes !== prev.meshes || s.busy !== prev.busy) schedule();
@@ -52,7 +95,7 @@ export function startPrintChecks(): void {
     if (s.scene !== prev.scene) schedule();
   });
   useUiStore.subscribe((s, prev) => {
-    if (s.printChecks !== prev.printChecks || s.overhangAngle !== prev.overhangAngle || s.bedHeight !== prev.bedHeight || s.bedSize !== prev.bedSize) schedule();
+    if (s.printChecks !== prev.printChecks || s.overhangAngle !== prev.overhangAngle || s.bedHeight !== prev.bedHeight || s.bedSize !== prev.bedSize || s.minWall !== prev.minWall) schedule();
   });
   schedule();
 }

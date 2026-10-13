@@ -7,7 +7,7 @@ import { round } from './math';
 import type { Scene, Vec3 } from './types';
 
 export type IssueLevel = 'error' | 'warning';
-export type IssueKind = 'formula' | 'invalid' | 'empty' | 'below' | 'outside' | 'floating' | 'overhang';
+export type IssueKind = 'formula' | 'invalid' | 'empty' | 'below' | 'outside' | 'floating' | 'overhang' | 'thin' | 'detached' | 'partial';
 
 export interface PrintIssue {
   /** Chiave stabile (tipo e oggetto): serve all'elenco e a ricordare l'avviso in evidenza. */
@@ -20,6 +20,8 @@ export interface PrintIssue {
   rootId?: string;
   /** Triangoli da evidenziare nella vista (xyz non indicizzati, in coordinate mondo). */
   triangles?: Float32Array;
+  /** Scatole da evidenziare nella vista (min x, y, z, max x, y, z per ognuna, in coordinate mondo). */
+  boxes?: Float32Array;
 }
 
 export interface PrintOptions {
@@ -167,4 +169,61 @@ export function analyzePrintability(meshes: readonly NodeMesh[], scene: Scene, o
 
   // Ordine: errori prima, poi attenzioni, a parità l'ordine di scoperta
   return issues.sort((a, b) => Number(b.level === 'error') - Number(a.level === 'error'));
+}
+
+/** Pareti sottili di un oggetto alla radice, trovate dal kernel (vedi `thinWalls` in kernel/analyze.ts). */
+export interface ThinFinding {
+  rootId: string;
+  /** Scatole delle zone sottili: min x, y, z, max x, y, z per zona. */
+  boxes: number[];
+  /** Sezioni in cui compare una zona sottile, e quote Z minima e massima. */
+  slices: number;
+  zMin: number;
+  zMax: number;
+}
+
+/** Parti separate e sospese dentro un oggetto alla radice che per il resto sta sul piano. */
+export interface DetachedFinding {
+  rootId: string;
+  count: number;
+  /** Quota più bassa tra le parti sospese (mm dal piano). */
+  lowestZ: number;
+}
+
+/** Esito delle analisi del kernel: le pareti sottili e le parti sospese. */
+export interface DeepResult {
+  thin: ThinFinding[];
+  detached: DetachedFinding[];
+  /** Vero se il kernel si è fermato per il tempo a disposizione (modello molto complesso). */
+  partial: boolean;
+}
+
+/** Avvisi delle analisi del kernel, con il nome dell'oggetto preso dalla scena (quelli di oggetti spariti non entrano). */
+export function deepIssues(result: DeepResult, scene: Scene, minWall: number): PrintIssue[] {
+  const issues: PrintIssue[] = [];
+  const nameOf = (rootId: string) => scene.nodes[rootId]?.name;
+  for (const t of result.thin) {
+    const name = nameOf(t.rootId);
+    if (!name || !scene.rootIds.includes(t.rootId)) continue;
+    const quota = t.zMax - t.zMin < 0.05 ? `quota Z ${fmt(t.zMin)} mm` : `quota Z ${fmt(t.zMin)}–${fmt(t.zMax)} mm`;
+    issues.push({
+      id: `thin:${t.rootId}`, kind: 'thin', level: 'warning', rootId: t.rootId, boxes: new Float32Array(t.boxes),
+      text: `Pareti sotto ${fmt(minWall)} mm su «${name}» (${quota}, ${t.slices === 1 ? '1 sezione' : `${t.slices} sezioni`})`,
+    });
+  }
+  for (const d of result.detached) {
+    const name = nameOf(d.rootId);
+    if (!name || !scene.rootIds.includes(d.rootId)) continue;
+    issues.push({
+      id: `detached:${d.rootId}`, kind: 'detached', level: 'warning', rootId: d.rootId,
+      text: `${d.count === 1 ? 'Una parte staccata e sospesa' : `${d.count} parti staccate e sospese`} in «${name}» (la più bassa a ${fmt(d.lowestZ)} mm dal piano)`,
+    });
+  }
+  if (result.partial) issues.push({ id: 'partial:deep', kind: 'partial', level: 'warning', text: 'Il controllo delle pareti sottili è incompleto: il modello è molto complesso' });
+  return issues;
+}
+
+/** Unisce gli avvisi veloci e quelli del kernel, errori prima. */
+export function mergeIssues(fast: readonly PrintIssue[], deep: readonly PrintIssue[]): PrintIssue[] {
+  return [...fast, ...deep].sort((a, b) => Number(b.level === 'error') - Number(a.level === 'error'));
 }

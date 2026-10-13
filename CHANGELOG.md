@@ -18,6 +18,20 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.53.0] - 2026-10-13
+
+### Aggiunto
+- **Pareti sottili.** Il kernel taglia ogni oggetto in 24 sezioni per asse (X, Y e Z) e da ogni sezione toglie, con un'apertura morfologica (erosione di metà parete e dilatazione), ciò che è più stretto della **parete minima** (0,8 mm di default, modificabile dalle Impostazioni). Ciò che sparisce è una parete sottile: l'avviso dice dove ("Pareti sotto 0,8 mm su «Scatola» (quota Z 2–5 mm, 4 sezioni)") e il clic mostra nella vista le zone come scatole traslucide. Le punte e le curve non danno falsi allarmi (si ignora ciò che è sotto 0,5 mm²).
+- **Parti staccate e sospese.** Dentro un oggetto che per il resto sta sul piano, il kernel separa le parti non connesse (`decompose`) e segnala quelle che non toccano il piano né stanno sopra un'altra parte ("Una parte staccata e sospesa in «Lampada»").
+- **Analisi nel worker.** Il kernel ha il nuovo metodo `analyze`, richiamato 1,2 secondi dopo l'ultima modifica e a calcolo finito; l'esito di ogni oggetto si ricorda per chiave geometrica e parete minima, quindi dopo una modifica si rianalizzano solo gli oggetti cambiati. Un giro che supera i 6 secondi si ferma e un avviso dice che il controllo è incompleto.
+- **Impostazione Parete minima** (0,1-5 mm) nella sezione Stampabilità.
+
+### Modificato
+- Il ponte di prova `window.__construct` espone anche l'`ui` store (solo nella build e2e).
+
+### Test
+- Kernel su geometria reale: blocco pieno, lastra sottile in X e in Z con le quote giuste (verifica del passaggio dalle sezioni ruotate al mondo), parete al limite, guscio da 2 mm e da 0,5 mm, memoria dell'analisi, parti sospese e impilate; avvisi (testi, singolare, oggetti spariti, ordine); e2e con parete sottile (evidenziazione e cambio della parete minima) e parte staccata.
+
 ## [0.52.0] - 2026-10-13
 
 ### Aggiunto

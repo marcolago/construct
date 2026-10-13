@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NodeMesh } from '../kernel/evaluate';
-import { analyzePrintability, type PrintOptions } from './printability';
+import { analyzePrintability, deepIssues, mergeIssues, type PrintOptions } from './printability';
 import { primitiveDefaults } from './defaults';
 import type { PrimitiveNode, Scene, Vec3 } from './types';
 
@@ -100,5 +100,44 @@ describe('controlli di stampabilità', () => {
     const issues = analyzePrintability([boxMesh('a', [-10, -10, 10], [10, 10, 30]), boxMesh('b', [200, 0, 0], [220, 10, 10])], sceneOf(['a', 'b']), OPTS);
     expect(issues[0].level).toBe('error');
     expect(issues.at(-1)!.level).toBe('warning');
+  });
+});
+
+describe('avvisi delle analisi del kernel', () => {
+  it('pareti sottili e parti staccate diventano avvisi con il nome dell\'oggetto, la quota e le zone', () => {
+    const scene = sceneOf(['Scatola', 'Lampada']);
+    const issues = deepIssues(
+      {
+        thin: [{ rootId: 'Scatola', boxes: [0, 0, 2, 5, 5, 3], slices: 4, zMin: 2, zMax: 5 }],
+        detached: [{ rootId: 'Lampada', count: 2, lowestZ: 12.34 }],
+        partial: false,
+      },
+      scene,
+      0.8,
+    );
+    expect(issues.map((i) => i.text)).toEqual([
+      'Pareti sotto 0,8 mm su «Scatola» (quota Z 2–5 mm, 4 sezioni)',
+      '2 parti staccate e sospese in «Lampada» (la più bassa a 12,3 mm dal piano)',
+    ]);
+    expect(issues[0].boxes).toEqual(new Float32Array([0, 0, 2, 5, 5, 3]));
+    expect(issues.every((i) => i.level === 'warning')).toBe(true);
+  });
+
+  it('una sola sezione o una sola parte usa il singolare; gli oggetti spariti e il controllo incompleto', () => {
+    const scene = sceneOf(['a']);
+    const [thin, part, partial] = deepIssues(
+      { thin: [{ rootId: 'a', boxes: [0, 0, 1, 1, 1, 1.2], slices: 1, zMin: 1, zMax: 1.2 }, { rootId: 'sparito', boxes: [], slices: 1, zMin: 0, zMax: 0 }], detached: [{ rootId: 'a', count: 1, lowestZ: 5 }], partial: true },
+      scene,
+      0.8,
+    );
+    expect(thin.text).toBe('Pareti sotto 0,8 mm su «a» (quota Z 1–1,2 mm, 1 sezione)');
+    expect(part.text).toContain('Una parte staccata e sospesa in «a»');
+    expect(partial.kind).toBe('partial');
+  });
+
+  it('mergeIssues mette gli errori prima', () => {
+    const fast = [{ id: 'w', kind: 'floating' as const, level: 'warning' as const, text: 'w' }, { id: 'e', kind: 'below' as const, level: 'error' as const, text: 'e' }];
+    const deep = [{ id: 't', kind: 'thin' as const, level: 'warning' as const, text: 't' }];
+    expect(mergeIssues(fast, deep).map((i) => i.id)).toEqual(['e', 'w', 't']);
   });
 });

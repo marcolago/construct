@@ -3,7 +3,7 @@ declare const __APP_VERSION__: string;
 
 /** Ponte per i test end-to-end (presente solo nella build con --mode e2e). */
 interface Window {
-  __construct?: { store: typeof import('./scene/store').useSceneStore; results: typeof import('./kernel/useKernel').useResultStore };
+  __construct?: { store: typeof import('./scene/store').useSceneStore; results: typeof import('./kernel/useKernel').useResultStore; ui: typeof import('./ui/uiStore').useUiStore };
   __r3f?: import('@react-three/fiber').RootState;
 }
 

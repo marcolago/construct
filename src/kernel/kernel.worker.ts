@@ -7,6 +7,7 @@ import { writeStl } from './export/stl';
 import { write3mf } from './export/threemf';
 import { ensureFonts } from './fontLoader';
 import { platesOf, sceneForPlate } from '../scene/plates';
+import type { DeepResult } from '../scene/printability';
 import type { PrimitiveNode, Scene } from '../scene/types';
 
 // Il WASM viene caricato una sola volta, alla prima richiesta
@@ -45,6 +46,13 @@ const api = {
     const ev = await getEvaluator();
     await ensureFonts(scene);
     return ev.fitInside(scene, rootId, parts);
+  },
+
+  /** Pareti sottili e parti sospese del piatto attivo, per gli avvisi di stampabilità (vedi `Evaluator.analyze`). */
+  async analyze(scene: Scene, opts: { minWall: number }): Promise<DeepResult> {
+    const ev = await getEvaluator();
+    await ensureFonts(scene);
+    return ev.analyze(scene, opts);
   },
 
   /** STL binario con l'unione di tutti i solid alla radice del piatto indicato (il piatto attivo se non si dice). */
