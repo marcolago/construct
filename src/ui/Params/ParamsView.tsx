@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Pencil } from 'lucide-react';
 import { round } from '../../scene/math';
 import { resolveParams, usageCount } from '../../scene/params';
+import { selectUsers } from './paramActions';
 import { useSceneStore } from '../../scene/store';
 import { useUiStore } from '../uiStore';
 import './ParamsView.scss';
@@ -28,7 +29,9 @@ export function ParamsView() {
             const value = resolved.values[p.name];
             return (
               <li key={p.id} className={`params-view__row${error ? ' params-view__row--error' : ''}`} data-param={p.name} title={p.note || undefined}>
-                <span className="params-view__name">{p.name}</span>
+                <button type="button" className="params-view__name" title="Seleziona gli oggetti che usano questo parametro" onClick={() => selectUsers(p.name)}>
+                  {p.name}
+                </button>
                 <span className="params-view__expr">{p.expr}</span>
                 <span className="params-view__value">{value === undefined ? '—' : round(value, 3)}</span>
                 {error && <span className="params-view__error" role="alert">{error}</span>}

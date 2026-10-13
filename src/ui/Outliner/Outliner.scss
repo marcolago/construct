@@ -225,6 +225,19 @@
     }
   }
 
+  // Icona fx: l'oggetto ha campi legati a un parametro
+  &__fx {
+    flex: none;
+    padding: 0 3px;
+    border-radius: $radius-sm;
+    background: color('accent');
+    color: color('bg');
+    font-family: $font-mono;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 14px;
+  }
+
   &__hole-badge {
     flex: none;
     color: color('hole');

@@ -8,6 +8,7 @@ import { CORNER_ICONS, CORNER_NAMES, EDGE_ICONS, GROUP_ICONS, GROUP_NAMES } from
 import { dropTarget, zoneAt, type DropZone } from './dnd';
 import { PlatesPanel } from '../Plates/PlatesPanel';
 import { activePlateOf, hasManyPlates } from '../../scene/plates';
+import { paramsUsedBy } from '../../scene/params';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { OutlinerTab } from '../uiStore';
 import './Outliner.scss';
@@ -226,6 +227,11 @@ function Row({ id, depth, collapsed, toggle, hint, setHint }: RowProps) {
               // Nascosto perché lo è il gruppo che lo contiene: si mostra dal gruppo
               <EyeOff size={13} className="outliner__hidden outliner__hidden--inherited" aria-label="Nascosto" />
             ))}
+          {node.exprs && (
+            <span className="outliner__fx" title={`Usa i parametri: ${paramsUsedBy(node).join(', ')}`} aria-label="Usa un parametro">
+              fx
+            </span>
+          )}
           {node.mode === 'hole' && <CircleDashed size={14} className="outliner__hole-badge" aria-label="Foro" />}
         </div>
       </li>

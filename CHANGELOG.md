@@ -18,6 +18,20 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.55.0] - 2026-10-13
+
+### Aggiunto
+- **Icona fx nell'elenco degli oggetti.** Un oggetto con campi legati a un parametro porta l'icona fx nella sua riga; il tooltip elenca i parametri usati.
+- **Nuovo parametro dal selettore.** Il selettore del parametro ha "Nuovo parametro…" (e "Crea un parametro" quando non ce ne sono): nome e valore, con controllo di nomi non validi, doppi e valori che non si calcolano; il parametro creato è subito scelto nella formula.
+- **Seleziona chi usa un parametro.** Nella scheda Parametri a destra, un clic sul nome del parametro seleziona nella vista gli oggetti che lo usano (con un avviso se nessuno lo usa).
+- **Rinomina con anteprima.** Rinominare un parametro usato dalla finestra Parametri chiede conferma elencando gli oggetti e i parametri le cui formule vengono aggiornate; la riga mostra anche "usato da" con i nomi.
+
+### Corretto
+- Premendo Invio nel nome di un parametro usato, il tasto si ripeteva sul pulsante della conferma e la annullava subito.
+
+### Test
+- `paramsUsedBy` e `usersOf`; e2e della creazione al volo (anche nomi rifiutati), dell'icona fx, della selezione dal nome e della rinomina con conferma e annullamento.
+
 ## [0.54.0] - 2026-10-13
 
 ### Aggiunto

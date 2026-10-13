@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { evalFormula, formulaDeps, holdBound, nameProblem, renameInExpr, resolveParams, validName } from './params';
+import { evalFormula, formulaDeps, holdBound, nameProblem, paramsUsedBy, usersOf, renameInExpr, resolveParams, validName } from './params';
 import { useSceneStore } from './store';
 import { applyScale } from './resize';
 import { primitiveDefaults } from './defaults';
@@ -181,5 +181,17 @@ describe('ridimensionamento con campi legati', () => {
     const box = { ...primitiveDefaults('box'), id: 'b', name: 'b', position: [0, 0, 10], size: [20, 20, 20], exprs: { 'size.2': { expr: 'a' } } } as PrimitiveNode;
     const patch = holdBound(box, applyScale(box, [2, 2, 2], 0.5)).patch as unknown as { size: number[] };
     expect(patch.size).toEqual([40, 40, 20]);
+  });
+});
+
+describe('chi usa un parametro', () => {
+  it('elenca i parametri di un nodo senza ripetizioni e chi usa un parametro (oggetti e altri parametri)', () => {
+    const a = { ...primitiveDefaults('box'), id: 'a', name: 'A', position: [0, 0, 0], exprs: { 'size.0': { expr: 'x * 2' }, 'size.1': { expr: 'x + y' } } } as PrimitiveNode;
+    const b = { ...primitiveDefaults('box'), id: 'b', name: 'B', position: [0, 0, 0] } as PrimitiveNode;
+    expect(paramsUsedBy(a)).toEqual(['x', 'y']);
+    expect(paramsUsedBy(b)).toEqual([]);
+    const scene = { nodes: { a, b }, rootIds: ['a', 'b'], params: [{ id: '1', name: 'x', expr: '1' }, { id: '2', name: 'z', expr: 'x * 3' }] };
+    expect(usersOf(scene, 'x')).toEqual({ nodes: ['a'], params: ['z'] });
+    expect(usersOf(scene, 'z')).toEqual({ nodes: [], params: [] });
   });
 });

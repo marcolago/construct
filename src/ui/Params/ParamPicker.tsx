@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
 import { round } from '../../scene/math';
-import { evalFormula, formulaDeps, resolveParams } from '../../scene/params';
+import { evalFormula, formulaDeps, nameProblem, resolveParams } from '../../scene/params';
 import { useSceneStore } from '../../scene/store';
 import { Modal } from '../Modal/Modal';
-import { useUiStore } from '../uiStore';
 import { bindFieldKeepingBase } from './paramActions';
 import { useParamPicker, type PickerTarget } from './paramPickerStore';
 import './ParamPicker.scss';
@@ -16,6 +15,21 @@ function PickerBody({ target }: { target: PickerTarget }) {
   const names = Object.keys(values);
   // Parte dalla formula attuale (se il campo è già legato)
   const [text, setText] = useState(current?.expr ?? '');
+
+  // Nuovo parametro creato al volo, senza aprire la finestra Parametri
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newValue, setNewValue] = useState('');
+  const newValid = evalFormula(newValue, values);
+  const newProblem = nameProblem(newName.trim()) ?? (names.includes(newName.trim()) ? `Esiste già un parametro «${newName.trim()}»` : null) ?? (newValid.ok ? null : newValid.error);
+  const create = () => {
+    if (newProblem) return;
+    useSceneStore.getState().addParam(newName.trim(), newValue.trim());
+    setText(newName.trim());
+    setCreating(false);
+    setNewName('');
+    setNewValue('');
+  };
 
   const result = text.trim() ? evalFormula(text, values) : null;
   const usesParam = text.trim() !== '' && formulaDeps(text).length > 0;
@@ -42,14 +56,7 @@ function PickerBody({ target }: { target: PickerTarget }) {
       {names.length === 0 ? (
         <p className="param-picker__empty">
           Il progetto non ha ancora parametri.{' '}
-          <button
-            type="button"
-            className="param-picker__link"
-            onClick={() => {
-              close();
-              useUiStore.getState().setAppPanel('params');
-            }}
-          >
+          <button type="button" className="param-picker__link" onClick={() => setCreating(true)}>
             Crea un parametro
           </button>
         </p>
@@ -64,6 +71,20 @@ function PickerBody({ target }: { target: PickerTarget }) {
             </li>
           ))}
         </ul>
+      )}
+      {creating ? (
+        <div className="param-picker__new">
+          <input className="param-picker__input" aria-label="Nome del nuovo parametro" placeholder="nome (es. spessore)" value={newName} autoFocus spellCheck={false} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') create(); }} />
+          <input className="param-picker__input" aria-label="Valore del nuovo parametro" placeholder="valore (es. 2)" value={newValue} spellCheck={false} onChange={(e) => setNewValue(e.target.value)} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') create(); }} />
+          <button type="button" className="modal__button" disabled={!!newProblem} title={newProblem ?? undefined} onClick={create}>Crea</button>
+          <button type="button" className="modal__button" onClick={() => setCreating(false)}>Annulla</button>
+        </div>
+      ) : (
+        names.length > 0 && (
+          <button type="button" className="param-picker__link param-picker__newlink" onClick={() => setCreating(true)}>
+            Nuovo parametro…
+          </button>
+        )
       )}
       <label className="param-picker__formula">
         <span>Formula</span>
@@ -84,6 +105,7 @@ function PickerBody({ target }: { target: PickerTarget }) {
       <p className={`param-picker__preview${result && !result.ok ? ' param-picker__preview--error' : ''}`} role="status">
         {canApply && result?.ok ? `Valore: ${round(result.value, 3)}` : hint}
       </p>
+      {creating && newProblem && (newName.trim() !== '' || newValue.trim() !== '') && <p className="param-picker__preview param-picker__preview--error">{newProblem}</p>}
       <div className="param-picker__actions">
         {current && (
           <button type="button" className="modal__button param-picker__remove" onClick={remove}>

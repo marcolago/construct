@@ -257,6 +257,19 @@ export function applyBindings(scene: Scene): void {
   }
 }
 
+/** Nomi dei parametri usati dai campi legati di un nodo, senza ripetizioni. */
+export function paramsUsedBy(node: { exprs?: Record<string, Binding> }): string[] {
+  return [...new Set(Object.values(node.exprs ?? {}).flatMap((b) => formulaDeps(b.expr)))];
+}
+
+/** Chi usa un parametro: gli oggetti con un campo legato (id) e gli altri parametri che lo nominano (nomi). */
+export function usersOf(scene: Scene, name: string): { nodes: string[]; params: string[] } {
+  return {
+    nodes: Object.values(scene.nodes).filter((n) => paramsUsedBy(n).includes(name)).map((n) => n.id),
+    params: (scene.params ?? []).filter((p) => p.name !== name && formulaDeps(p.expr).includes(name)).map((p) => p.name),
+  };
+}
+
 /** Quanti campi usano ogni parametro (per nome), per avvisare prima di eliminarlo. */
 export function usageCount(scene: Scene): Record<string, number> {
   const count: Record<string, number> = {};

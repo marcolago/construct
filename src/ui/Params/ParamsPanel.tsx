@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { nameProblem, resolveParams, usageCount } from '../../scene/params';
+import { nameProblem, resolveParams, usersOf } from '../../scene/params';
 import { round } from '../../scene/math';
 import { useSceneStore } from '../../scene/store';
 import type { Param } from '../../scene/types';
-import { createParam, deleteParam, editParam } from './paramActions';
+import { createParam, deleteParam, editParam, renameParam } from './paramActions';
 import './ParamsPanel.scss';
 
 /** Un campo di testo che salva all'uscita o con Invio (Esc annulla): ogni modifica è un solo passo di Annulla. */
@@ -26,7 +26,11 @@ function TextCell({ label, value, onSave, mono, placeholder }: { label: string; 
       onKeyDown={(e) => {
         // Le scorciatoie dell'editor (Canc, lettere degli strumenti) non devono scattare mentre si scrive
         e.stopPropagation();
-        if (e.key === 'Enter') e.currentTarget.blur();
+        // preventDefault: il tasto Invio non deve ripetersi sul pulsante che prende il fuoco se si apre una conferma
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
         else if (e.key === 'Escape') {
           setText(null);
           e.currentTarget.blur();
@@ -36,14 +40,17 @@ function TextCell({ label, value, onSave, mono, placeholder }: { label: string; 
   );
 }
 
-function ParamRow({ param, value, error, used }: { param: Param; value: number | undefined; error?: string; used: number }) {
+function ParamRow({ param, value, error, users }: { param: Param; value: number | undefined; error?: string; users: string[] }) {
   // Messaggio di un nome rifiutato (non valido o già usato)
   const [nameError, setNameError] = useState<string | null>(null);
-  const saveName = (name: string) => {
+  const saveName = async (name: string) => {
     const trimmed = name.trim();
     const problem = nameProblem(trimmed);
     if (problem) return setNameError(problem);
-    setNameError(editParam(param.id, { name: trimmed }) ? null : `Esiste già un parametro «${trimmed}»`);
+    if (useSceneStore.getState().scene.params?.some((p) => p.id !== param.id && p.name === trimmed)) return setNameError(`Esiste già un parametro «${trimmed}»`);
+    setNameError(null);
+    // Se è usato chiede conferma elencando chi viene aggiornato
+    await renameParam(param.id, trimmed);
   };
   const message = nameError ?? error;
   return (
@@ -61,7 +68,12 @@ function ParamRow({ param, value, error, used }: { param: Param; value: number |
       </div>
       <div className="params__line">
         <TextCell label={`Nota di ${param.name}`} value={param.note ?? ''} onSave={(note) => editParam(param.id, { note })} placeholder="Nota (diventa un commento nel codice)" />
-        {used > 0 && <span className="params__used" title="Campi e parametri che usano questo parametro">usato {used} {used === 1 ? 'volta' : 'volte'}</span>}
+        {users.length > 0 && (
+          <span className="params__used" title={`Usato da: ${users.join(', ')}`}>
+            usato da {users.slice(0, 3).join(', ')}
+            {users.length > 3 ? ` e altri ${users.length - 3}` : ''}
+          </span>
+        )}
       </div>
       {message && <p className="params__error" role="alert">{message}</p>}
     </li>
@@ -76,7 +88,14 @@ export function ParamsPanel() {
   const scene = useSceneStore((s) => s.scene);
   const params = scene.params ?? [];
   const resolved = useMemo(() => resolveParams(scene.params), [scene.params]);
-  const usage = useMemo(() => usageCount(scene), [scene]);
+  // Chi usa ogni parametro: nomi degli oggetti con un campo legato e degli altri parametri
+  const users = useMemo(
+    () => Object.fromEntries((scene.params ?? []).map((p) => {
+      const u = usersOf(scene, p.name);
+      return [p.name, [...u.nodes.map((n) => scene.nodes[n].name), ...u.params.map((n) => `parametro ${n}`)]];
+    })),
+    [scene],
+  );
   return (
     <div className="params">
       {params.length === 0 ? (
@@ -86,7 +105,7 @@ export function ParamsPanel() {
       ) : (
         <ul className="params__list" aria-label="Parametri">
           {params.map((p) => (
-            <ParamRow key={p.id} param={p} value={resolved.values[p.name]} error={resolved.errors[p.id]} used={usage[p.name] ?? 0} />
+            <ParamRow key={p.id} param={p} value={resolved.values[p.name]} error={resolved.errors[p.id]} users={users[p.name] ?? []} />
           ))}
         </ul>
       )}

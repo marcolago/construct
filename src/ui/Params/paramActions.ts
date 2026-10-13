@@ -1,8 +1,8 @@
 import { queueKeepBase } from '../../kernel/placement';
-import { usageCount } from '../../scene/params';
+import { usageCount, usersOf } from '../../scene/params';
 import { useSceneStore } from '../../scene/store';
 import type { Binding, Param } from '../../scene/types';
-import { confirmDialog } from '../notify/notifyStore';
+import { confirmDialog, notify } from '../notify/notifyStore';
 
 /**
  * Cambiare un parametro ridimensiona gli oggetti legati: come per le misure scritte a mano, la base di ciascuno resta
@@ -48,4 +48,32 @@ export async function deleteParam(id: string): Promise<void> {
 export function bindFieldKeepingBase(nodeId: string, path: string, binding: Binding | null): void {
   if (!path.startsWith('position')) queueKeepBase(nodeId);
   useSceneStore.getState().bindField(nodeId, path, binding);
+}
+
+/** Seleziona nella vista gli oggetti che usano il parametro (così si vedono evidenziati). */
+export function selectUsers(name: string): void {
+  const { nodes } = usersOf(useSceneStore.getState().scene, name);
+  if (nodes.length === 0) {
+    notify.info(`Nessun oggetto usa «${name}»`);
+    return;
+  }
+  useSceneStore.getState().select(nodes);
+}
+
+/**
+ * Cambia il nome di un parametro. Se è usato chiede conferma elencando chi verrà aggiornato (le formule seguono il nuovo
+ * nome). Restituisce false se il nome è stato rifiutato o l'utente ha annullato.
+ */
+export async function renameParam(id: string, name: string): Promise<boolean> {
+  const scene = useSceneStore.getState().scene;
+  const param = scene.params?.find((p) => p.id === id);
+  if (!param) return false;
+  const users = usersOf(scene, param.name);
+  const who = [...users.nodes.map((n) => `«${scene.nodes[n].name}»`), ...users.params.map((p) => `il parametro «${p}»`)];
+  if (who.length > 0) {
+    const shown = who.length > 6 ? `${who.slice(0, 6).join(', ')} e altri ${who.length - 6}` : who.join(', ');
+    const ok = await confirmDialog(`Rinominare «${param.name}» in «${name}»? Le formule che lo usano seguono il nuovo nome: ${shown}.`, 'Rinomina');
+    if (!ok) return false;
+  }
+  return useSceneStore.getState().updateParam(id, { name });
 }

@@ -64,6 +64,21 @@
     color: color('accent');
   }
 
+  &__newlink {
+    align-self: flex-start;
+    font-size: 12px;
+  }
+
+  &__new {
+    display: flex;
+    gap: $space-2;
+
+    .param-picker__input {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
   &__formula {
     display: flex;
     flex-direction: column;

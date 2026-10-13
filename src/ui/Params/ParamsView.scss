@@ -40,7 +40,20 @@
   }
 
   &__name {
+    justify-self: start;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: color('text');
+    font: inherit;
     font-weight: 600;
+    cursor: pointer;
+    @include focus-ring;
+
+    &:hover {
+      color: color('accent');
+      text-decoration: underline;
+    }
   }
 
   &__value {
