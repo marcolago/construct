@@ -663,6 +663,28 @@ export class Evaluator {
     return union;
   }
 
+  /**
+   * Per ogni parte (primitive già nel mondo) la frazione del suo volume che sta dentro l'oggetto alla radice `rootId`:
+   * 1 = tutta dentro, 0 = tutta fuori. Serve a Dividi per avvisare che un connettore esce dal pezzo.
+   */
+  fitInside(scene: Scene, rootId: string, parts: PrimitiveNode[]): number[] {
+    const { Manifold } = this.wasm;
+    // Il pezzo è di proprietà della cache; le parti sono temporanee e non entrano in cache
+    const piece = this.build(scene, scene.nodes[rootId]);
+    return parts.map((part) => {
+      // `place` non libera il suo argomento: la primitiva centrata si libera subito dopo averla posizionata
+      const centred = this.primitive(part);
+      const solid = this.place(centred, part);
+      centred.delete();
+      const common = Manifold.intersection([piece, solid]);
+      const total = solid.volume();
+      const ratio = total > 0 ? common.volume() / total : 0;
+      solid.delete();
+      common.delete();
+      return ratio;
+    });
+  }
+
   /** Libera tutta la cache. */
   dispose(): void {
     for (const h of this.cache.values()) h.delete();

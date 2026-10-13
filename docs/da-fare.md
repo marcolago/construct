@@ -24,7 +24,7 @@ import STL, 3MF, SVG e OpenSCAD, export STL, 3MF, OpenSCAD e immagine PNG con le
 | 1 | Serie di copie, lineare e circolare | Tinkercad (Duplica e Ripeti), Fusion (Pattern rettangolare e circolare), Blender (Array), OpenSCAD (`for`) | Ripetere un pezzo è la richiesta più frequente | **Fatta** in 0.19.0: strumento Serie (tasto O) con gruppo Ripetizione parametrico. Resta "Rendi indipendenti" (vedi sotto) |
 | 2 | Appoggia su una faccia (piano di lavoro) | Tinkercad (Workplane), Blender, Fusion | Orientare il pezzo per stamparlo | **Fatta** in 0.18.0: strumento a clic sulla faccia (tasto V). Resta il piano di lavoro vero e proprio |
 | 3 | Viste: ortografica, preset (alto, fronte, iso), zoom sulla selezione | Tutti e tre | Misurare e allineare con precisione | **Fatta** in 0.39.0: tendina Viste (7, 1, 3, 0), Inquadra selezione (.) e tutto (Home), ortografica (5) |
-| 4 | Dividi con un piano, con eventuali connettori | Fusion (Split Body), Blender (Bisect) | Pezzi più grandi del piatto | **Fatta** in 0.40.0 (piano per asse e quota, due gruppi Intersezione parametrici) e 0.49.0 (piano inclinato con angolo e asse di rotazione). Restano i connettori (spine e sedi) |
+| 4 | Dividi con un piano, con eventuali connettori | Fusion (Split Body), Blender (Bisect) | Pezzi più grandi del piatto | **Fatta** in 0.40.0 (piano per asse e quota, due gruppi Intersezione parametrici) e 0.49.0 (piano inclinato con angolo e asse di rotazione). Connettori **fatti** in 0.50.0 (perni e sedi, oppure fori e spine, tondi o quadrati, con tolleranza, fila regolabile e avviso se escono dal pezzo); restano la griglia di connettori, la posizione automatica e gli incastri a coda di rondine |
 | 5 | Offset 2D e inviluppo convesso | OpenSCAD (`offset`, `hull`), Fusion (Offset) | Spessori, giochi, forme che uniscono due oggetti | **Fatta** in 0.18.0: campo Contorno nel Profilo 2D e Inviluppo convesso (tasto J) |
 | 6 | Disegno di profili con linee e curve | Fusion (Sketch), Tinkercad (Scribble) | Oggi i profili vengono solo da forme o SVG: è la funzione strategica più grande | Da fare. In 0.33.0 e 0.34.0 sono arrivati i profilati strutturali a L, T, H e U e i tubolari rettangolari e tondi, con spessori e raccordi; mancano la Z, i preset commerciali e il disegno libero |
 | 7 | Deformazioni Twist, Bend e Taper su qualunque solido; elica (passo) per la rotazione | Blender (Simple Deform, Screw) | Molle, viti, forme organiche | Da fare |
@@ -93,7 +93,7 @@ Primo passo economico alla Tinkercad: **Duplica e ripeti** (Ctrl+D ripete l'ulti
 - Pulsante per ripristinare i valori ricordati (ultimi valori usati).
 - Lucchetto delle proporzioni e Scala per le altre primitive (cilindro, cono, sfera, toro).
 - Controllo automatico del peso dei chunk in build (`size-limit`).
-- Dividi: connettori (spine e sedi, o incastri a coda di rondine) generati sul taglio, con gioco regolabile per la stampa.
+- Dividi, connettori: griglia (righe per colonne) oltre alla fila, posizione automatica dentro la sezione del taglio, incastri a coda di rondine o a tenone, smusso in punta al perno, scelta del punto con un clic sul piano di taglio.
 - Immagine delle 4 viste: scelta delle viste e della risoluzione, e immagine singola della vista corrente (oggi solo PNG 1600 × 1600 con le quattro viste).
 - Nascondi: nascondere anche gli oggetti dentro un gruppo (oggi solo quelli alla radice) e isolare l'oggetto selezionato.
 - Modelli di esempio: altri progetti nel catalogo (`src/examples/catalog.ts`), per esempio una scatola con coperchio e un supporto parametrico.

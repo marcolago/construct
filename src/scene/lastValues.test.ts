@@ -5,7 +5,7 @@ import { useSceneStore } from './store';
 const st = () => useSceneStore.getState();
 
 beforeEach(() => {
-  useLastValues.setState({ shapes: {}, tools: { edge: {}, shell: {} } });
+  useLastValues.setState({ shapes: {}, tools: { edge: {}, shell: {}, split: {} } });
   st().clear();
   useSceneStore.temporal.getState().clear();
 });

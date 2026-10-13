@@ -7,7 +7,7 @@ import { writeStl } from './export/stl';
 import { write3mf } from './export/threemf';
 import { ensureFonts } from './fontLoader';
 import { platesOf, sceneForPlate } from '../scene/plates';
-import type { Scene } from '../scene/types';
+import type { PrimitiveNode, Scene } from '../scene/types';
 
 // Il WASM viene caricato una sola volta, alla prima richiesta
 let evaluatorPromise: Promise<Evaluator> | undefined;
@@ -38,6 +38,13 @@ const api = {
     await ensureFonts(scene);
     const meshes = ev.ghosts(scene, rootIds);
     return Comlink.transfer(meshes, meshes.flatMap((m) => [m.positions.buffer, m.indices.buffer]));
+  },
+
+  /** Per ogni parte (primitive nel mondo) la frazione di volume dentro l'oggetto alla radice indicato (vedi `Evaluator.fitInside`). */
+  async connectorFit(scene: Scene, rootId: string, parts: PrimitiveNode[]): Promise<number[]> {
+    const ev = await getEvaluator();
+    await ensureFonts(scene);
+    return ev.fitInside(scene, rootId, parts);
   },
 
   /** STL binario con l'unione di tutti i solid alla radice del piatto indicato (il piatto attivo se non si dice). */

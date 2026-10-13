@@ -18,6 +18,21 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.50.0] - 2026-10-13
+
+### Aggiunto
+- **Connettori di Dividi.** Il pannello ha una sezione **Connettori** per rimontare le due metà dopo la stampa. Il tipo **Perno** unisce un maschio a una metà (a scelta la prima o la seconda) e scava la sede nell'altra; il tipo **Spine** fa un foro in ciascuna metà e crea un oggetto "Spine" a parte, con le spine sdraiate sul piatto accanto al pezzo (lunghe il doppio della profondità). La forma è **tonda** (cilindro a 48 lati) o **quadrata**. Si imposta diametro o lato, **profondità**, **tolleranza**, **numero**, **distanza** tra i centri, la direzione della **fila** (uno dei due assi del piano) e lo spostamento del centro della fila rispetto al centro del taglio, su entrambi gli assi del piano. Funziona anche con il piano inclinato: i connettori restano perpendicolari al piano.
+- **Tolleranza per l'incastro.** Perno e spina hanno la misura scelta; sede e fori sono più larghi del doppio della tolleranza (predefinita 0,2 mm) e più profondi della tolleranza, così l'incastro entra anche dopo la stampa. Il perno affonda di 0,5 mm nella propria metà e la sede sfora di 0,5 mm oltre il piano, per non lasciare facce coincidenti né pellicole.
+- **Avviso del kernel.** Se un connettore (con la sua tolleranza) esce dal pezzo, il pannello lo dice ("Il connettore 2 esce dal pezzo") e nella vista 3D la sagoma del connettore diventa rossa. Non blocca OK. Le sagome, sulla lastra del piano, mostrano sempre posizione e misura di perno e sede.
+- Le ultime misure usate (forma, diametro, profondità, tolleranza, numero, distanza) si ricordano per la prossima volta; il tipo riparte sempre da Nessuno.
+
+### Modificato
+- Le metà con connettori sono gruppi **Unione** (intersezione con il cubo di taglio, più perni, meno sedi): restano parametriche e il codice OpenSCAD è un `difference()` con `cylinder` o `cube`, senza nuovi tipi di nodo. Con tipo Nessuno il risultato è identico a prima.
+- Il pannello di Dividi scorre se è più alto della vista.
+
+### Test
+- Volumi esatti di perno e sede (tondi e quadrati), Perno sulla seconda metà, Spine, fila e spostamenti, piano inclinato, pezzo ruotato, codice OpenSCAD, misure non valide e il controllo `fitInside` del kernel; un test e2e con Perno, avviso, Spine, Esc e un solo passo di Annulla.
+
 ## [0.49.1] - 2026-10-13
 
 ### Modificato

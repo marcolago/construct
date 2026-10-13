@@ -159,6 +159,7 @@ export default function DocsPanel() {
         <Command id="shell" />
         <Command id="split" />
         <p>Con <strong>Dividi</strong> il piano di taglio si sceglie per asse e quota, e si può inclinare: imposta l&apos;<strong>angolo</strong> (45° per un taglio diagonale) e l&apos;asse attorno a cui il piano ruota. Le due metà restano due oggetti parametrici (intersezioni con un cubo di taglio) che si possono ancora spostare o ruotare.</p>
+        <p>Nella sezione <strong>Connettori</strong> si aggiungono gli incastri per rimontare il pezzo: il <strong>Perno</strong> è unito a una metà e ha la sede nell&apos;altra; con le <strong>Spine</strong> ogni metà ha un foro e le spine compaiono in un oggetto a parte, sdraiate sul piatto. Si sceglie la forma (tonda o quadrata), il diametro, la profondità, il numero, la distanza tra i centri e la posizione della fila rispetto al centro del taglio. La <strong>tolleranza</strong> è il gioco per lato tra perno e sede (0,2 mm va bene per la maggior parte delle stampanti): senza, dopo la stampa l&apos;incastro non entra. Se un connettore esce dal pezzo compare un avviso e la sua sagoma diventa rossa.</p>
         <Command id="mirror" />
         <Command id="align" />
         <Command id="measure" />

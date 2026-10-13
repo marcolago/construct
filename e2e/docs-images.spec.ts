@@ -130,6 +130,11 @@ test.describe('immagini di esempio', () => {
     const angle = panel.locator('.slider-field', { hasText: 'Angolo' }).locator('.number-field__input');
     await angle.fill('45');
     await angle.press('Enter');
+    // Un perno al centro del taglio: la sagoma mostra perno e sede con la tolleranza
+    await panel.getByRole('group', { name: 'Tipo di connettore' }).getByRole('button', { name: 'Perno', exact: true }).click();
+    const count = panel.locator('.slider-field', { hasText: 'Numero' }).locator('.number-field__input');
+    await count.fill('1');
+    await count.press('Enter');
     await settled(page);
     await help(page, 'split');
   });

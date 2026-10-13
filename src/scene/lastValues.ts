@@ -45,10 +45,11 @@ const SHAPE_FIELDS: Record<string, readonly string[]> = {
   tubeRound: ['radius', 'wall', 'segments', 'height', 'twist', 'scaleTop'],
 };
 
-/** Campi ricordati degli strumenti: Raccordo/Smusso/Smusso angolare (`edge`) e Guscio (`shell`). */
+/** Campi ricordati degli strumenti: Raccordo/Smusso/Smusso angolare (`edge`), Guscio (`shell`) e connettori di Dividi (`split`). */
 const TOOL_FIELDS = {
   edge: ['radius', 'distance1', 'distance2', 'angle', 'chamferMode', 'segments', 'cornerType', 'cornerDistance', 'cornerSegments'],
   shell: ['wall', 'bottom'],
+  split: ['shape', 'size', 'depth', 'tolerance', 'count', 'spacing'],
 } as const;
 
 export type RememberedTool = keyof typeof TOOL_FIELDS;
@@ -64,6 +65,12 @@ function isValid(field: string, value: unknown): boolean {
       return Array.isArray(value) ? value.length === 3 && value.every((v) => between(v, 0.01, 5000)) : between(value, 0.01, 5000);
     case 'segments':
       return Number.isInteger(value) && between(value, 3, 256);
+    case 'shape':
+      return value === 'round' || value === 'square';
+    case 'count':
+      return Number.isInteger(value) && between(value, 1, 10);
+    case 'tolerance':
+      return between(value, 0, 2);
     case 'cornerSegments':
       return Number.isInteger(value) && between(value, 8, 256) && (value as number) % 4 === 0;
     case 'cornerRadius':
@@ -113,7 +120,7 @@ interface LastState {
 migrateLocalKey(STORAGE.last.legacy, STORAGE.last.now);
 
 export const useLastValues = create<LastState>()(
-  persist(() => ({ shapes: {}, tools: { edge: {}, shell: {} } }) as LastState, {
+  persist(() => ({ shapes: {}, tools: { edge: {}, shell: {}, split: {} } }) as LastState, {
     name: STORAGE.last.now,
     version: 1,
     // Solo i dati noti, e validi: il localStorage può contenere di tutto
@@ -124,7 +131,7 @@ export const useLastValues = create<LastState>()(
       return {
         ...current,
         shapes,
-        tools: { edge: filter(TOOL_FIELDS.edge, s.tools?.edge), shell: filter(TOOL_FIELDS.shell, s.tools?.shell) },
+        tools: { edge: filter(TOOL_FIELDS.edge, s.tools?.edge), shell: filter(TOOL_FIELDS.shell, s.tools?.shell), split: filter(TOOL_FIELDS.split, s.tools?.split) },
       };
     },
   }),

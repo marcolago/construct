@@ -1751,6 +1751,63 @@ test('Dividi con angolo: 45° attorno a Y con il piano Z a 5 mm dà metà di 225
   expect((await sceneState(page)).rootIds).toHaveLength(1);
 });
 
+test('Dividi con i connettori: Perno con sede e tolleranza, avviso se escono dal pezzo, Spine in un oggetto a parte, un solo passo di Annulla', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  const meshes = () => page.evaluate(() => window.__construct!.results.getState().meshes.map((m) => ({ rootId: m.rootId, volume: m.volume })));
+  const steps = () => page.evaluate(() => window.__construct!.store.temporal.getState().pastStates.length);
+  const before = await steps();
+  await page.keyboard.press('Shift+S');
+  const panel = page.getByRole('region', { name: 'Dividi' });
+  await expect(panel).toBeVisible();
+  const type = panel.getByRole('group', { name: 'Tipo di connettore' });
+  // Senza connettori i campi non ci sono
+  await expect(panel.getByRole('group', { name: 'Forma dei connettori' })).toHaveCount(0);
+
+  // Perno: compaiono i campi. I due predefiniti stanno sul bordo del cubo (distanza 20 su un lato di 20): avviso del kernel
+  await type.getByRole('button', { name: 'Perno', exact: true }).click();
+  await expect(panel.getByRole('group', { name: 'Forma dei connettori' })).toBeVisible();
+  await expect(panel.getByRole('status')).toContainText('escono dal pezzo');
+
+  // Un solo connettore al centro: l'avviso sparisce. Perno tondo da 5 mm lungo 6 e sede da 5,4 mm lunga 6,2 mm
+  const count = panel.locator('.slider-field', { hasText: 'Numero' }).locator('.number-field__input');
+  await count.fill('1');
+  await count.press('Enter');
+  await expect(panel.getByRole('status')).toHaveCount(0);
+  // 4000 + 19,58 · 6 e 4000 − 22,84 · 6,2, arrotondati alla decina
+  await expect.poll(async () => (await meshes()).map((m) => Math.round(m.volume / 10)).sort((a, b) => a - b)).toEqual([386, 412]);
+  await settled(page);
+  const roots = (await sceneState(page)).rootIds;
+  expect(roots).toHaveLength(2);
+
+  // Spine: due metà con il foro e un terzo oggetto con la spina
+  await type.getByRole('button', { name: 'Spine', exact: true }).click();
+  await expect.poll(async () => (await sceneState(page)).rootIds.length).toBe(3);
+  await settled(page);
+  const withDowels = await sceneState(page);
+  expect(withDowels.nodes[withDowels.rootIds[2]].name).toBe('Spine');
+
+  // Esc: scena di partenza e nessun passo in cronologia
+  await page.keyboard.press('Escape');
+  await settled(page);
+  await expect(panel).toBeHidden();
+  expect((await sceneState(page)).rootIds).toHaveLength(1);
+  expect(await steps()).toBe(before);
+
+  // Di nuovo con il Perno e OK: un solo passo, il codice ha la sede come foro; Ctrl+Z rimette il cubo intero
+  await page.keyboard.press('Shift+S');
+  await expect(panel).toBeVisible();
+  await type.getByRole('button', { name: 'Perno', exact: true }).click();
+  await settled(page);
+  await page.keyboard.press('Enter');
+  await expect(panel).toBeHidden();
+  await settled(page);
+  expect(await steps()).toBe(before + 1);
+  expect((await readCode(page))).toContain('(foro)');
+  await page.keyboard.press('Control+z');
+  await settled(page);
+  expect((await sceneState(page)).rootIds).toHaveLength(1);
+});
+
 test('Con uno strumento a pannello aperto la barra si ferma (resta il suo pulsante) e il clic destro sull\'oggetto non apre il menu', async ({ page }) => {
   await addShape(page, 'Cubo');
   const toolbar = page.locator('header.toolbar');
