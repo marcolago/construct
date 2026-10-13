@@ -22,7 +22,7 @@ const cleanBedSide = (value: unknown, fallback: number): number =>
   typeof value === 'number' && Number.isFinite(value) ? Math.round(Math.min(BED_LIMITS.max, Math.max(BED_LIMITS.min, value)) * 10) / 10 : fallback;
 
 /** Le sole impostazioni di uno stato dello store. */
-const pickSettings = (s: Settings): Settings => ({ showDimensions: s.showDimensions, nudgeStep: s.nudgeStep, snapMove: s.snapMove, snapRotate: s.snapRotate, autosave: s.autosave, welcomeAlways: s.welcomeAlways });
+const pickSettings = (s: Settings): Settings => ({ showDimensions: s.showDimensions, nudgeStep: s.nudgeStep, snapMove: s.snapMove, snapRotate: s.snapRotate, autosave: s.autosave, welcomeAlways: s.welcomeAlways, printChecks: s.printChecks, overhangAngle: s.overhangAngle, bedHeight: s.bedHeight });
 
 /** Lato maggiore del piano (mm): limite morbido dei cursori delle misure. Il piano non ha altezza, quindi vale anche per lo Z. */
 export const bedReach = (bed: BedSize): number => Math.max(bed.width, bed.depth);
@@ -53,26 +53,34 @@ export interface Settings {
   autosave: boolean;
   /** Mostra la schermata di benvenuto a ogni avvio (predefinito), non solo il primo. */
   welcomeAlways: boolean;
+  /** Controlli di stampabilità: la sezione Avvisi segnala sbalzi, oggetti sospesi o fuori dal piano, mesh non valide. */
+  printChecks: boolean;
+  /** Angolo massimo dalla verticale (gradi) oltre cui una superficie rivolta in basso è uno sbalzo da segnalare. */
+  overhangAngle: number;
+  /** Altezza utile della stampante (mm): oltre questa quota un oggetto esce dal volume di stampa. */
+  bedHeight: number;
 }
 
-export const DEFAULT_SETTINGS: Settings = { showDimensions: true, nudgeStep: 1, snapMove: 1, snapRotate: 15, autosave: true, welcomeAlways: true };
+export const DEFAULT_SETTINGS: Settings = { showDimensions: true, nudgeStep: 1, snapMove: 1, snapRotate: 15, autosave: true, welcomeAlways: true, printChecks: true, overhangAngle: 45, bedHeight: 256 };
 
 /** Limiti dei valori numerici delle impostazioni. */
 export const SETTING_LIMITS = {
   nudgeStep: { min: 0.1, max: 50 },
   snapMove: { min: 0.1, max: 50 },
   snapRotate: { min: 1, max: 90 },
+  overhangAngle: { min: 20, max: 80 },
+  bedHeight: { min: 20, max: 2000 },
 } as const;
 
 /** Impostazioni valide da un valore qualsiasi (il localStorage può contenere di tutto): il resto torna al predefinito. */
 export function cleanSettings(value: unknown): Settings {
   const v = (value ?? {}) as Partial<Record<keyof Settings, unknown>>;
-  const num = (key: 'nudgeStep' | 'snapMove' | 'snapRotate') => {
+  const num = (key: 'nudgeStep' | 'snapMove' | 'snapRotate' | 'overhangAngle' | 'bedHeight') => {
     const n = v[key];
     const { min, max } = SETTING_LIMITS[key];
     return typeof n === 'number' && Number.isFinite(n) ? Math.round(Math.min(max, Math.max(min, n)) * 100) / 100 : DEFAULT_SETTINGS[key];
   };
-  const bool = (key: 'showDimensions' | 'autosave' | 'welcomeAlways') => (typeof v[key] === 'boolean' ? (v[key] as boolean) : DEFAULT_SETTINGS[key]);
+  const bool = (key: 'showDimensions' | 'autosave' | 'welcomeAlways' | 'printChecks') => (typeof v[key] === 'boolean' ? (v[key] as boolean) : DEFAULT_SETTINGS[key]);
   return {
     showDimensions: bool('showDimensions'),
     nudgeStep: num('nudgeStep'),
@@ -80,6 +88,9 @@ export function cleanSettings(value: unknown): Settings {
     snapRotate: num('snapRotate'),
     autosave: bool('autosave'),
     welcomeAlways: bool('welcomeAlways'),
+    printChecks: bool('printChecks'),
+    overhangAngle: num('overhangAngle'),
+    bedHeight: num('bedHeight'),
   };
 }
 

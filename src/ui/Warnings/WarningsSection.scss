@@ -1,0 +1,95 @@
+@use '../../styles/abstracts' as *;
+
+.warnings {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  max-height: 40%;
+  border-top: 1px solid color('border');
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: $space-2 $space-3;
+    border: 0;
+    background: transparent;
+    color: color('text');
+    font-size: 12.5px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    @include focus-ring;
+  }
+
+  &__count {
+    padding: 0 6px;
+    border-radius: 999px;
+    background: color('warn');
+    color: color('bg');
+    font-size: 11px;
+    line-height: 16px;
+
+    &--error {
+      background: color('danger');
+    }
+  }
+
+  &__body {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 $space-2 $space-2;
+    @include thin-scrollbar;
+  }
+
+  &__empty {
+    margin: 0;
+    padding: 0 $space-2;
+    font-size: 12px;
+    color: color('text-muted');
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid transparent;
+    border-radius: $radius-sm;
+    background: color('panel-raised');
+    color: color('text');
+    font-size: 12px;
+    line-height: 1.35;
+    text-align: left;
+    cursor: pointer;
+    @include focus-ring;
+
+    svg {
+      flex: none;
+      margin-top: 1px;
+    }
+
+    &--warning svg {
+      color: color('warn');
+    }
+
+    &--error svg {
+      color: color('danger');
+    }
+
+    &:hover,
+    &--focus {
+      border-color: color('accent');
+    }
+  }
+}

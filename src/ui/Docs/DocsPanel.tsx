@@ -19,6 +19,7 @@ const SECTIONS = [
   { id: 'ripetizioni', title: 'Ripetizioni' },
   { id: 'piatti', title: 'Piatti e piano di stampa' },
   { id: 'parametri', title: 'Parametri e formule' },
+  { id: 'avvisi', title: 'Avvisi di stampabilità' },
   { id: 'codice', title: 'Codice OpenSCAD' },
   { id: 'openscad', title: 'OpenSCAD' },
   { id: 'font', title: 'Font' },
@@ -178,6 +179,12 @@ export default function DocsPanel() {
         <p>Un <strong>parametro</strong> è una misura con un nome, come una variabile di OpenSCAD: <code>spessore = 2</code>. Si creano dalla scheda <strong>Parametri</strong> sotto la libreria (nome, formula, nota) e valgono per tutti i piatti del progetto. Un parametro può usare altri parametri (<code>altezza = 2 * spessore</code>); i nomi hanno solo lettere senza accenti, cifre e trattino basso.</p>
         <p>Nei campi numerici del pannello Proprietà (posizione, rotazione, dimensioni, altezza, Guscio, Ripetizione, Raccordo e Smusso) puoi scrivere un numero, un calcolo (<code>10 / 2</code>) o una <strong>formula con i parametri</strong> (<code>2 * spessore + 1</code>). La formula resta legata al campo, segnalato dal riquadro <strong>fx</strong>: cambiando il parametro il campo si ricalcola e l&apos;oggetto si ridimensiona, con la base che resta sul piatto. Nelle formule valgono gli operatori, <code>PI</code>, le funzioni <code>min</code>, <code>max</code>, <code>abs</code>, <code>sqrt</code>, <code>round</code>, <code>floor</code>, <code>ceil</code>, <code>sin</code>, <code>cos</code> (angoli in gradi) e il condizionale <code>a ? b : c</code>; i decimali si scrivono col punto, perché la virgola separa gli argomenti.</p>
         <p>Scrivere un numero a mano in un campo legato, o muovere l&apos;oggetto con il gizmo, scioglie la formula di quel campo. Il codice OpenSCAD esportato ha i parametri come variabili in testa, in un blocco <code>/* [Parametri] */</code> che il Customizer di OpenSCAD mostra con i suoi cursori, e i campi legati usano i nomi. Dove il valore è derivato (posizioni dentro un Raggruppa, Raccordi e Smussi, Guscio) il codice ha il numero.</p>
+      </Section>
+
+      <Section id="avvisi" title="Avvisi di stampabilità">
+        <p>In fondo alla colonna destra, sotto le proprietà, la sezione <strong>Avvisi</strong> elenca i problemi che renderebbero difficile o impossibile la stampa; se ce ne sono, la barra di stato mostra un contatore (&laquo;3 avvisi&raquo;) che la apre. I controlli leggono la geometria già calcolata e si aggiornano da soli, poco dopo ogni modifica.</p>
+        <p>Gli <strong>errori</strong> (in rosso, in cima all&apos;elenco) sono la mesh non valida, l&apos;oggetto che affonda sotto il piano o esce dal volume di stampa (con lo scarto in mm per asse) e le formule che non si calcolano. Le <strong>attenzioni</strong> (in giallo) sono gli oggetti sospesi, non appoggiati al piano né a un altro oggetto, e gli <strong>sbalzi</strong>: le superfici rivolte in basso con un&apos;inclinazione dalla verticale oltre l&apos;angolo scelto (45° di default), con la loro area in mm². La faccia appoggiata al piano o sulla cima di un altro oggetto non conta.</p>
+        <p>Un clic su un avviso seleziona l&apos;oggetto; sugli sbalzi mostra anche, in arancione nella vista, le zone coinvolte (un secondo clic le nasconde). Dalle Impostazioni, sezione Stampabilità, si spengono i controlli e si regolano l&apos;angolo di sbalzo e l&apos;altezza utile della stampante. Sono segnalazioni, non blocchi: la stampa si può esportare comunque.</p>
       </Section>
 
       <Section id="piatti" title="Piatti e piano di stampa">

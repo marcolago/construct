@@ -1,7 +1,8 @@
 import { PropertiesPanel } from '../PropertiesPanel/PropertiesPanel';
+import { WarningsSection } from '../Warnings/WarningsSection';
 import './Sidebar.scss';
 
-/** Colonna destra con le proprietà dell'oggetto selezionato (il codice OpenSCAD sta in una modale). */
+/** Colonna destra con le proprietà dell'oggetto selezionato e, in fondo, gli avvisi di stampabilità (il codice OpenSCAD sta in una modale). */
 export function Sidebar() {
   return (
     <aside className="sidebar" aria-label="Proprietà">
@@ -9,6 +10,7 @@ export function Sidebar() {
       <div className="sidebar__body">
         <PropertiesPanel />
       </div>
+      <WarningsSection />
     </aside>
   );
 }

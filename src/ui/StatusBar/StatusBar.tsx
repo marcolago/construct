@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useResultStore } from '../../kernel/useKernel';
 import { useUiStore } from '../uiStore';
+import { useWarnings } from '../Warnings/warningsStore';
 import { BedDialog } from './BedDialog';
 import './StatusBar.scss';
 
@@ -9,6 +10,9 @@ export function StatusBar() {
   const { meshes, ms, busy, error } = useResultStore();
   const bedSize = useUiStore((s) => s.bedSize);
   const setBedDialogOpen = useUiStore((s) => s.setBedDialogOpen);
+  const printChecks = useUiStore((s) => s.printChecks);
+  const issues = useWarnings((s) => s.issues);
+  const setWarningsOpen = useWarnings((s) => s.setOpen);
 
   const stats = useMemo(() => {
     const solids = meshes.filter((m) => !m.isHole && !m.empty);
@@ -46,6 +50,16 @@ export function StatusBar() {
         </>
       ) : (
         <span className="status-bar__item">Nessun solido nella scena</span>
+      )}
+      {printChecks && issues.length > 0 && (
+        <button
+          type="button"
+          className={`status-bar__item status-bar__warnings ${issues.some((i) => i.level === 'error') ? 'status-bar__item--error' : 'status-bar__item--warn'}`}
+          title="Problemi di stampa: apre la sezione Avvisi"
+          onClick={() => setWarningsOpen(true)}
+        >
+          {issues.length === 1 ? '1 avviso' : `${issues.length} avvisi`}
+        </button>
       )}
       <span className="status-bar__spacer" />
       <span className="status-bar__item">{busy ? 'Calcolo…' : `Calcolo ${ms.toFixed(0)} ms`}</span>

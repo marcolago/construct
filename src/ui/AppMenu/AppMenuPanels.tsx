@@ -50,6 +50,7 @@ const SHORTCUTS: { title: string; rows: [string, string][] }[] = [
       ['Clic destro su un oggetto', 'Menu con i soli comandi applicabili alla selezione (se l\'oggetto non è selezionato lo seleziona)'],
       ['Clic destro nell\'elenco', 'Sulla riga di un oggetto seleziona l\'oggetto e apre lo stesso menu dei comandi; su un oggetto nascosto offre Mostra'],
       ['Clic destro nel vuoto', 'Menu con sottomenu per aggiungere una forma 3D, 2D, un simbolo o un\'emoji nel punto cliccato, più Importa, Esporta, Dimensioni del piano e Benvenuto'],
+      ['Sezione Avvisi', 'In fondo alla colonna destra: sbalzi, oggetti sospesi o fuori dal piano, mesh non valide e formule errate; un clic sull\'avviso seleziona l\'oggetto (sugli sbalzi mostra le zone nella vista). Si regola dalle Impostazioni'],
       ['Scheda Parametri', 'Variabili del progetto (spessore = 2, altezza = 2 * spessore) da usare come formule nei campi numerici; il campo legato mostra fx e si ricalcola al cambio del parametro'],
       ['Scheda Piatti', 'Un progetto può avere più piatti, ciascuno con i suoi oggetti: si vede un piatto alla volta; 3MF esporta tutti i piatti, STL chiede quale'],
       ['Clic su una quota', 'Le quote X, Y e Z dell\'oggetto selezionato: si digita la misura in mm (Invio applica, Esc annulla); il lucchetto accanto fa scalare tutti gli assi insieme'],

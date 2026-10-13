@@ -18,6 +18,17 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.52.0] - 2026-10-13
+
+### Aggiunto
+- **Sezione Avvisi di stampabilità.** In fondo alla colonna destra, sotto le proprietà, un elenco richiudibile dei problemi di stampa, con un contatore ("3 avvisi", rosso se c'è un errore) nella barra di stato che apre la sezione. Un clic su un avviso seleziona l'oggetto. I controlli leggono le mesh già calcolate dal kernel e si aggiornano 0,4 secondi dopo l'ultima modifica, così non rallentano gli slider.
+- **Controlli.** Errori: mesh non valida, oggetto che affonda sotto il piano ("affonda sotto il piano di stampa di 5 mm"), oggetto fuori dal volume di stampa con lo scarto per asse ("esce dal volume di stampa (X +12 mm)", Z oltre l'altezza utile) e formule o parametri che non si calcolano. Attenzioni: oggetto vuoto, oggetto sospeso (non tocca il piano né un altro oggetto) e **sbalzi**, cioè le superfici rivolte in basso con inclinazione dalla verticale oltre l'angolo scelto, con la loro area ("Sbalzi oltre 45° su «Gancio» (38 mm²)"). Non contano la faccia appoggiata al piano, quella sulla cima di un altro oggetto, i fori e le superfici sotto 1 mm².
+- **Evidenziazione degli sbalzi.** Il clic su un avviso di sbalzo disegna le superfici coinvolte nella vista 3D (arancione, nuovo colore `warning` nelle palette dei due temi); un secondo clic le nasconde.
+- **Impostazioni, sezione Stampabilità.** Interruttore dei controlli, angolo di sbalzo (20-80°, 45° di default) e altezza utile della stampante (256 mm di default, il piano non aveva un'altezza).
+
+### Test
+- Controlli su mesh sintetiche (cubo appoggiato, sospeso, impilato, sotto il piano, fuori piano su X e Z, mesh non valida o vuota, fori, angoli di sbalzo, formule errate, ordine degli avvisi) e tre test e2e: avvisi e contatore, evidenziazione e impostazione, formula che non si calcola.
+
 ## [0.51.0] - 2026-10-13
 
 ### Aggiunto

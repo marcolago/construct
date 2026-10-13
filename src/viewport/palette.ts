@@ -20,6 +20,8 @@ export interface ViewportPalette {
   /** Evidenziazione di Raccordo e Smusso: faccia sotto il puntatore e facce scelte. */
   faceHover: string;
   facePick: string;
+  /** Zone di un avviso di stampabilità messo in evidenza (sbalzi). */
+  warning: string;
 }
 
 export const PALETTES: Record<Theme, ViewportPalette> = {
@@ -36,6 +38,7 @@ export const PALETTES: Record<Theme, ViewportPalette> = {
     axisLabel: '#ffffff',
     faceHover: '#6f9bff',
     facePick: '#2f5fc7',
+    warning: '#d9480f',
   },
   dark: {
     background: '#14171c',
@@ -51,6 +54,7 @@ export const PALETTES: Record<Theme, ViewportPalette> = {
     axisLabel: '#14171c',
     faceHover: '#7fb7ff',
     facePick: '#ffb020',
+    warning: '#ff6b35',
   },
 };
 

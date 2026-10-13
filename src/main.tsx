@@ -6,6 +6,7 @@ import App from './App';
 import { useUiStore } from './ui/uiStore';
 import { initPersistence } from './scene/persistence';
 import { startKernelSync, useResultStore } from './kernel/useKernel';
+import { startPrintChecks } from './ui/Warnings/warningsStore';
 import { useSceneStore } from './scene/store';
 import './styles/main.scss';
 
@@ -20,7 +21,10 @@ void initPersistence()
     const always = useUiStore.getState().welcomeAlways;
     if ((isFirstVisit && !restored) || always) useUiStore.getState().setWelcomeOpen(true);
   })
-  .finally(startKernelSync);
+  .finally(() => {
+    startKernelSync();
+    startPrintChecks();
+  });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

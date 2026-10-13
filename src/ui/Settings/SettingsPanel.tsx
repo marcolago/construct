@@ -98,6 +98,15 @@ export function SettingsPanel({ run }: { run: (action: () => void | Promise<void
       </section>
 
       <section>
+        <h3>Stampabilità</h3>
+        <Toggle id="set-print-checks" label="Controlli di stampabilità" hint="La sezione Avvisi segnala oggetti sospesi, fuori dal piano o sotto di esso, sbalzi e mesh non valide." checked={ui.printChecks} onChange={set('printChecks')} />
+        <NumberField label="Sbalzo" unit="°" value={ui.overhangAngle} min={SETTING_LIMITS.overhangAngle.min} max={SETTING_LIMITS.overhangAngle.max} step={1} disabled={!ui.printChecks} onCommit={set('overhangAngle')} />
+        <p className="settings__hint">Angolo dalla verticale oltre cui una superficie rivolta in basso è uno sbalzo (45° è il valore tipico della stampa FDM).</p>
+        <NumberField label="Altezza" unit="mm" value={ui.bedHeight} min={SETTING_LIMITS.bedHeight.min} max={SETTING_LIMITS.bedHeight.max} step={1} disabled={!ui.printChecks} onCommit={set('bedHeight')} />
+        <p className="settings__hint">Altezza utile della stampante: un oggetto più alto esce dal volume di stampa.</p>
+      </section>
+
+      <section>
         <h3>Salvataggio e dati</h3>
         <Toggle id="set-autosave" label="Salvataggio automatico nel browser" hint="La scena si salva a ogni modifica e si ritrova al prossimo avvio. Spento, vale solo Salva progetto." checked={ui.autosave} onChange={set('autosave')} />
         <p className="settings__hint">
