@@ -8,7 +8,7 @@ import type { FontCategory, FontInfo } from '../../scene/fontCatalog';
 import { Lock, Unlock } from 'lucide-react';
 import { isPolygonShape, isRotational, RATIO_INFO, revolveParams } from '../../scene/shapes2d';
 import { clampProfile, isBarShape, isProfileShape, maxRootRadius, maxTipSize, PROFILE_INFO } from '../../scene/profiles';
-import { isRatioLocked, lockedPatch, scalePatch, scalePercent } from '../../scene/resize';
+import { hasBoundDimension, isRatioLocked, lockedPatch, scalePatch, scalePercent } from '../../scene/resize';
 import { cornerSphere } from '../../scene/cornerProfile';
 import { EDGE_SEGMENTS, maxFilletRadius } from '../../scene/edgeProfile';
 import { CORNER_SPHERE_SEGMENTS, MAX_SEGMENTS, MIN_SEGMENTS, MIN_SPHERE_SEGMENTS, SEGMENT_PRESETS } from '../../scene/defaults';
@@ -715,6 +715,8 @@ function TextField({ label, tooltip, value, disabled, onCommit }: { label: strin
 function ProportionControls({ node, patch, locked }: { node: PrimitiveNode | Shape2DNode; patch: (p: object) => void; locked: boolean }) {
   const ratioLocked = isRatioLocked(node);
   const hasLock = !(node.type === 'shape2d' && node.kind === 'text');
+  // Con una misura legata a un parametro il lucchetto non può valere: resta aperto e disattivato
+  const blocked = hasBoundDimension(node);
   return (
     <>
       {hasLock && (
@@ -724,8 +726,8 @@ function ProportionControls({ node, patch, locked }: { node: PrimitiveNode | Sha
             type="button"
             className="properties__lock"
             aria-pressed={ratioLocked}
-            disabled={locked}
-            title={ratioLocked ? TIPS.ratioLocked : TIPS.ratioUnlocked}
+            disabled={locked || blocked}
+            title={blocked ? TIPS.ratioBlocked : ratioLocked ? TIPS.ratioLocked : TIPS.ratioUnlocked}
             onClick={() => patch({ lockRatio: !ratioLocked })}
           >
             {ratioLocked ? <Lock size={14} /> : <Unlock size={14} />}

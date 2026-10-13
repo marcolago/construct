@@ -88,3 +88,28 @@ test('finestra Parametri: rinominare un parametro usato chiede conferma e aggior
   await expect.poll(async () => (await sceneState(page)).params[0].name).toBe('parete');
   expect((await sceneState(page)).nodes[id].exprs['size.2'].expr).toBe('parete * 5');
 });
+
+test('lucchetto delle proporzioni: con una misura legata resta aperto e disattivato, poi torna', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  const id = (await sceneState(page)).rootIds[0];
+  // Lucchetto chiuso, poi altezza legata a un parametro
+  await page.evaluate((nodeId) => {
+    const s = window.__construct!.store.getState();
+    s.updateNode(nodeId, { lockRatio: true } as never);
+    s.addParam('spessore', '2');
+    s.bindField(nodeId, 'size.2', { expr: 'spessore * 5' });
+  }, id);
+  const lock = page.locator('.properties__lock');
+  await expect(lock).toBeDisabled();
+  await expect(lock).toContainText('Libere');
+  await expect(lock).toHaveAttribute('title', /legata a un parametro/);
+  // Cambiando la larghezza dalla quota, le altre misure non seguono
+  await page.evaluate((nodeId) => window.__construct!.store.getState().updateNode(nodeId, { size: [40, 20, 7] } as never), id);
+  expect((await sceneState(page)).nodes[id].size).toEqual([40, 20, 10]);
+
+  // Tolto il parametro, il lucchetto salvato torna attivo
+  await page.locator('.slider-field', { hasText: 'Altezza' }).locator('.slider-field__label').dblclick();
+  await page.getByRole('dialog', { name: /Parametro per/ }).getByRole('button', { name: 'Togli parametro' }).click();
+  await expect(lock).toBeEnabled();
+  await expect(lock).toContainText('Bloccate');
+});

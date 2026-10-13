@@ -5,7 +5,7 @@ import { useResultStore } from '../kernel/useKernel';
 import { queueKeepBase } from '../kernel/placement';
 import { apply, eulerToMatrix, round } from '../scene/math';
 import { MIN_DIMENSION, resizeAxisPatch, sizeOfBox, type Axis } from '../scene/dimensions';
-import { isRatioLocked } from '../scene/resize';
+import { hasBoundDimension, isRatioLocked } from '../scene/resize';
 import { localBounds } from '../scene/shell';
 import { isLocked, useSceneStore, worldTransform } from '../scene/store';
 import type { Vec3 } from '../scene/types';
@@ -96,15 +96,17 @@ function Quote({ axis, value, readOnly, onCommit }: { axis: Axis; value: number;
 }
 
 /** Lucchetto accanto alle quote: chiuso, cambiando una misura anche le altre scalano dello stesso fattore. */
-function RatioLock({ closed, readOnly, forced, onToggle }: { closed: boolean; readOnly: boolean; forced: boolean; onToggle: () => void }) {
+function RatioLock({ closed, readOnly, forced, blocked, onToggle }: { closed: boolean; readOnly: boolean; forced: boolean; blocked: boolean; onToggle: () => void }) {
   const Icon = closed ? Lock : Unlock;
   const title = forced
     ? 'Proporzioni sempre bloccate: una mesh importata si scala solo in modo uniforme'
+    : blocked
+      ? 'Una misura è legata a un parametro: le proporzioni non si possono bloccare. Togli il parametro per riattivare il lucchetto'
     : closed
       ? 'Proporzioni bloccate: cambiando una quota cambiano anche le altre. Clic per sbloccare'
       : 'Proporzioni libere: ogni quota cambia da sola. Clic per bloccare';
   return (
-    <button type="button" className="dimension-lock" aria-label={closed ? 'Proporzioni bloccate' : 'Proporzioni libere'} aria-pressed={closed} title={title} disabled={readOnly || forced} onClick={onToggle}>
+    <button type="button" className="dimension-lock" aria-label={closed ? 'Proporzioni bloccate' : 'Proporzioni libere'} aria-pressed={closed} title={title} disabled={readOnly || forced || blocked} onClick={onToggle}>
       <Icon size={13} />
     </button>
   );
@@ -156,6 +158,8 @@ export function DimensionOverlay() {
   const locked = isLocked(scene, id);
   // Proporzioni: stesso campo del pulsante "Proporzioni" delle proprietà (per i gruppi vale solo qui); una mesh è sempre uniforme
   const forced = node.type === 'mesh';
+  // Con una misura legata a un parametro il lucchetto è aperto e disattivato (vedi hasBoundDimension)
+  const blocked = (node.type === 'primitive' || node.type === 'shape2d') && hasBoundDimension(node);
   const ratioClosed = forced || (node.type === 'primitive' || node.type === 'shape2d' ? isRatioLocked(node) : node.lockRatio === true);
 
   const commit = (axis: Axis, value: number) => {
@@ -183,7 +187,7 @@ export function DimensionOverlay() {
               <span className="dimension-row">
                 <Quote key={`${id}-${axis}-${size[axis]}`} axis={axis} value={size[axis]} readOnly={locked} onCommit={(v) => commit(axis, v)} />
                 {/* Un lucchetto per ogni quota: sono lo stesso interruttore, cambiarne uno cambia tutti */}
-                <RatioLock closed={ratioClosed} readOnly={locked} forced={forced} onToggle={() => updateNode(id, { lockRatio: !ratioClosed } as never)} />
+                <RatioLock closed={ratioClosed} readOnly={locked} forced={forced} blocked={blocked} onToggle={() => updateNode(id, { lockRatio: !ratioClosed } as never)} />
               </span>
             </Html>
           </group>

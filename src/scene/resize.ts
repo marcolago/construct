@@ -15,10 +15,16 @@ type Resizable = PrimitiveNode | Shape2DNode;
 export type ResizePatch = Record<string, number | Vec3 | undefined>;
 
 /**
+ * Una misura della forma è legata a un parametro (posizione e rotazione non contano): il lucchetto delle proporzioni non
+ * può valere, perché la misura legata non cambia e gli altri assi non potrebbero seguirla.
+ */
+export const hasBoundDimension = (node: { exprs?: Record<string, unknown> }): boolean => Object.keys(node.exprs ?? {}).some((p) => !p.startsWith('position') && !p.startsWith('rotation'));
+
+/**
  * Proporzioni bloccate? Gli SVG lo sono finché non si apre il lucchetto; le altre forme restano libere finché non si
  * chiude (così i progetti salvati prima del lucchetto si comportano come sempre).
  */
-export const isRatioLocked = (node: Resizable): boolean => (node.type === 'shape2d' && node.kind === 'svg' ? node.lockRatio !== false : node.lockRatio === true);
+export const isRatioLocked = (node: Resizable): boolean => !hasBoundDimension(node) && (node.type === 'shape2d' && node.kind === 'svg' ? node.lockRatio !== false : node.lockRatio === true);
 
 /** Misure scalate dello stesso fattore: la più grande si arrotonda, le altre ne seguono il rapporto esatto. */
 function proportional(values: readonly number[], factor: number, q: (v: number, s: number) => number): number[] {

@@ -18,6 +18,14 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.57.0] - 2026-10-13
+
+### Modificato
+- **Lucchetto delle proporzioni con misure legate.** Se una misura di una forma è legata a un parametro (posizione e rotazione non contano), il lucchetto delle proporzioni non può valere: nelle proprietà e accanto alle quote resta **aperto e disattivato**, con un tooltip che lo spiega ("togli il parametro per riattivare il lucchetto"), e ogni misura libera cambia da sola, anche con il gizmo e le quote. Il valore del lucchetto resta salvato: tolto il parametro, il lucchetto torna com'era.
+
+### Test
+- `isRatioLocked` e `hasBoundDimension` (con e senza misure legate, SVG compresi) e un e2e del lucchetto disattivato, della misura legata ferma e del ritorno dopo "Togli parametro".
+
 ## [0.56.1] - 2026-10-13
 
 ### Modificato

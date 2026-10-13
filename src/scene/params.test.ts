@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { evalFormula, formulaDeps, holdBound, nameProblem, paramsUsedBy, usersOf, renameInExpr, resolveParams, validName } from './params';
 import { useSceneStore } from './store';
-import { applyScale, previewScale } from './resize';
+import { applyScale, hasBoundDimension, isRatioLocked, previewScale } from './resize';
 import { primitiveDefaults } from './defaults';
 import type { PrimitiveNode } from './types';
 import type { Param } from './types';
@@ -218,3 +218,19 @@ describe('anteprima del ridimensionamento con campi legati', () => {
     expect(previewScale(h, [2, 2, 2])).toEqual([2, 2, 1]);
   });
 });
+
+describe('lucchetto delle proporzioni con misure legate', () => {
+  it('con una misura legata il lucchetto non vale (anche per gli SVG), con solo posizione o rotazione sì', () => {
+    const box = { ...primitiveDefaults('box'), id: 'b', name: 'b', position: [0, 0, 10], lockRatio: true } as PrimitiveNode;
+    expect(isRatioLocked(box)).toBe(true);
+    const moved = { ...box, exprs: { 'position.0': { expr: 'a' }, 'rotation.2': { expr: 'a' } } } as PrimitiveNode;
+    expect(hasBoundDimension(moved)).toBe(false);
+    expect(isRatioLocked(moved)).toBe(true);
+    const bound = { ...box, exprs: { 'size.2': { expr: 'a' } } } as PrimitiveNode;
+    expect(hasBoundDimension(bound)).toBe(true);
+    expect(isRatioLocked(bound)).toBe(false);
+    // Il valore salvato non cambia: togliendo il parametro il lucchetto torna com'era
+    expect(bound.lockRatio).toBe(true);
+  });
+});
+
