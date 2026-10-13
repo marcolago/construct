@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, ChevronDown, ChevronRight, CircleAlert, EyeOff, Undo2 } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, CircleAlert, Eye, EyeOff, Undo2 } from 'lucide-react';
 import { useSceneStore } from '../../scene/store';
 import type { PrintIssue } from '../../scene/printability';
 import { useUiStore } from '../uiStore';
@@ -70,10 +70,17 @@ export function WarningsSection() {
           )}
           {ignored.length > 0 && (
             <div className="warnings__ignored">
-              <button type="button" className="warnings__ignored-head" aria-expanded={showIgnored} onClick={() => setShowIgnored(!showIgnored)}>
-                {showIgnored ? <ChevronDown size={12} aria-hidden="true" /> : <ChevronRight size={12} aria-hidden="true" />}
-                Ignorati ({ignored.length})
-              </button>
+              <div className="warnings__ignored-bar">
+                <button type="button" className="warnings__ignored-head" aria-expanded={showIgnored} onClick={() => setShowIgnored(!showIgnored)}>
+                  {showIgnored ? <ChevronDown size={12} aria-hidden="true" /> : <ChevronRight size={12} aria-hidden="true" />}
+                  Ignorati ({ignored.length})
+                </button>
+                {/* Sempre a portata di mano, anche con l'elenco chiuso */}
+                <button type="button" className="warnings__restore-all" title="Rimette tutti gli avvisi ignorati" onClick={() => useSceneStore.getState().restoreAllWarnings()}>
+                  <Eye size={12} aria-hidden="true" />
+                  Visualizza tutti
+                </button>
+              </div>
               {showIgnored && (
                 <>
                   <ul className="warnings__list">
@@ -86,9 +93,6 @@ export function WarningsSection() {
                       </li>
                     ))}
                   </ul>
-                  <button type="button" className="warnings__restore-all" onClick={() => useSceneStore.getState().restoreAllWarnings()}>
-                    Ripristina tutti
-                  </button>
                 </>
               )}
             </div>

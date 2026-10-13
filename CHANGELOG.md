@@ -18,6 +18,11 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.56.1] - 2026-10-13
+
+### Modificato
+- **"Visualizza tutti" per gli avvisi ignorati.** Accanto a "Ignorati (N)" c'è ora il pulsante **Visualizza tutti**, sempre visibile anche con l'elenco chiuso, che rimette tutti gli avvisi ignorati (prima si trovava solo dentro l'elenco aperto, come "Ripristina tutti").
+
 ## [0.56.0] - 2026-10-13
 
 ### Modificato

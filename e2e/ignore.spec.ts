@@ -39,7 +39,8 @@ test('Avvisi: si può ignorare un avviso, ritrovarlo tra gli ignorati e ripristi
   await moveTo(page, id, [0, 0, 70]);
   await settled(page);
   await expect(section).toContainText('Nessun problema rilevato (oltre a quelli ignorati)');
-  await section.getByRole('button', { name: /Ignorati \(2\)/ }).click();
-  await section.getByRole('button', { name: 'Ripristina tutti' }).click();
+  // "Visualizza tutti" si usa anche con l'elenco degli ignorati chiuso
+  await expect(section.getByRole('button', { name: /Ignorati \(2\)/ })).toHaveAttribute('aria-expanded', 'false');
+  await section.getByRole('button', { name: 'Visualizza tutti' }).click();
   await expect(section.locator('.warnings__item')).toHaveCount(2);
 });
