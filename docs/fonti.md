@@ -88,3 +88,17 @@ Raccolte durante la ricerca del 5 ottobre 2026, raggruppate per tema.
 - https://spidermonkey.dev/blog/2025/01/15/is-memory64-actually-worth-using.html
 - https://github.com/emscripten-core/emscripten/issues/16880
 - https://www.npmjs.com/package/three-3mf-exporter
+
+## Disegno di profili con curve di Bézier (14 ottobre 2026)
+- https://www.autodesk.com/products/fusion-360/blog/sketch-control-point-splines-faq/
+- https://forums.autodesk.com/t5/fusion-design-validate-document/fit-point-spline-behaving-weird/m-p/9543817
+- https://forums.autodesk.com/t5/fusion-design-validate-document/control-point-spline-tangency/m-p/11156807
+- https://resources.imaginit.com/fusion-360/open-profile-in-your-sketch-fusion-360-shows-you-where
+- https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/GUID-D74BB28A-9570-43AD-97A4-E094021C036B.htm
+- https://discourse.shapr3d.com/t/fit-point-control-handles/4336
+- https://discourse.shapr3d.com/t/question-from-the-shapr3d-team-editing-curves/60
+- https://support.shapr3d.com/hc/en-us/articles/18816009328284-Sketching-in-Shapr3D
+- https://figma-signup.helpjuice.com/en_US/design-with-vector-tools/edit-vector-layers
+- https://forum.figma.com/suggest-a-feature-11/vector-image-settings-43239
+- https://inkscape-manuals.readthedocs.io/en/1.3/node-types.html
+- https://edutechwiki.unige.ch/en/Inkscape_-_path_editing

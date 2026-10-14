@@ -18,6 +18,16 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.59.2] - 2026-10-14
+
+### Aggiunto
+- Documentazione: studio di fattibilità del disegno di profili con curve di Bézier (`docs/studio-profili-bezier.md`): confronto con Fusion, Shapr3D, Figma, Inkscape e Tinkercad, modello dati del nuovo tipo di forma `path` (nodi con maniglie relative, più contorni e fori, profili aperti chiusi sull'asse), campionamento adattivo per tolleranza, coerenza con kernel e codice OpenSCAD, UX della modale (Penna, Seleziona, forme base, import SVG con curve), tre disposizioni dell'interfaccia (A consigliata), rischi, fasi e stima.
+- Prototipo interattivo `docs/prototipi/profilo-bezier.html`: modale funzionante con Penna, nodi e maniglie, fori, import SVG, annulla e ripeti e anteprima 3D approssimata (three.js, non il kernel); sei schermate in `docs/images/profilo-bezier-*.png`.
+- `docs/fonti.md`: fonti della ricerca sugli strumenti di disegno delle curve.
+
+### Modificato
+- `docs/da-fare.md` (funzione 6): rimando allo studio e al prototipo.
+
 ## [0.59.1] - 2026-10-14
 
 ### Modificato
