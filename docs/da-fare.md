@@ -98,6 +98,9 @@ Primo passo economico alla Tinkercad: **Duplica e ripeti** (Ctrl+D ripete l'ulti
 - Nascondi: nascondere anche gli oggetti dentro un gruppo (oggi solo quelli alla radice) e isolare l'oggetto selezionato.
 - Modelli di esempio: altri progetti nel catalogo (`src/examples/catalog.ts`), per esempio una scatola con coperchio e un supporto parametrico.
 - Nomi in italiano e ricerca per le emoji (scartati per ora).
+- Pattern: applicando un secondo Pattern a un oggetto già forato, partire dagli stessi parametri del precedente (tipo, passo, parete, margine, arrotondamento) invece dei valori di default, così le facce forate in momenti diversi hanno lo stesso aspetto.
+- Pattern: pulsante "Cambia faccia" nelle proprietà del gruppo Pattern, che riapre lo strumento sulla faccia già scelta (oggi la faccia si sceglie solo all'applicazione; dopo l'OK si può solo riapplicare il Pattern).
+- Timeline: un clic sulla miniatura nel tooltip per ingrandirla o salvarla come PNG.
 
 ## Importa OpenSCAD: cosa non si legge ancora (aggiornato alla 0.49.0, nessun comando nuovo dalla 0.32.0)
 

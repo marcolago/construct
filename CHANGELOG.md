@@ -18,6 +18,11 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.59.1] - 2026-10-14
+
+### Modificato
+- Documentazione: in `docs/da-fare.md` (Idee minori) sono state aggiunte tre idee emerse con la 0.59.0: parametri del Pattern ereditati dal precedente, "Cambia faccia" nelle proprietà del gruppo Pattern e miniatura della timeline da ingrandire o salvare.
+
 ## [0.59.0] - 2026-10-14
 
 ### Aggiunto
