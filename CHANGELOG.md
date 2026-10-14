@@ -18,6 +18,19 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.58.0] - 2026-10-14
+
+### Aggiunto
+- **Guscio: la faccia aperta la sceglie l'utente.** Il pannello mostra la faccia aperta (all'inizio la cima, come prima) e il pulsante **Scegli faccia**: la vista mostra il solido intero, la faccia sotto il puntatore si evidenzia e un clic la lascia aperta. Valgono le facce piane perpendicolari a un asse dell'oggetto (±X, ±Y, ±Z, nel sistema locale, quindi anche con l'oggetto ruotato); le facce oblique o curve sono rifiutate con un avviso. Esc interrompe la scelta senza chiudere lo strumento, Invio durante la scelta non fa nulla. La scelta si legge e si vede anche nelle proprietà del guscio e nel commento del codice OpenSCAD.
+- Cavità esatta sulla faccia scelta: il cubo su tutti e sei i lati; cilindro, cono, forme 2D dritte e profilati aperti in cima o sul fondo (cavità specchiata). Su tutte le altre combinazioni (cilindro aperto di lato, sfera, mesh, unioni con una faccia diversa dalla cima) si usa la cavità scalata, ora centrata sulla faccia opposta a quella aperta.
+- Un cono che si allarga verso l'apertura (per esempio la base aperta di un cono a punta) ora si svuota: la cavità comincia dove il suo raggio si annulla e la punta resta piena, invece di dare l'errore "pareti troppo spesse".
+
+### Modificato
+- Il campo **Inferiore** del guscio si chiama **Fondo** (la parete opposta alla faccia aperta) e i messaggi d'errore lo dicono di conseguenza. I progetti salvati restano validi: `ShellParams.open` è facoltativo e, se manca, la faccia aperta è la cima.
+
+### Test
+- Unit test della faccia aperta (cubo ±X e ±Y, cilindro e cono sul fondo, ripiego scalato su ±Y, unioni, limiti sull'asse aperto, codice OpenSCAD) e un e2e della scelta con il clic e di Esc durante la scelta.
+
 ## [0.57.0] - 2026-10-13
 
 ### Modificato

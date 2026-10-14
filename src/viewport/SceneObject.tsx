@@ -20,6 +20,7 @@ import { useEdgeTool } from '../ui/EdgeTool/edgeToolStore';
 import { useMeasure } from '../ui/Measure/measureStore';
 import { useLayFlat } from '../ui/LayFlat/layFlatStore';
 import { usePatternTool } from '../ui/Pattern/patternToolStore';
+import { useShellTool } from '../ui/Shell/shellToolStore';
 import { layOnFaceAndDrop } from '../kernel/placement';
 import { notify } from '../ui/notify/notifyStore';
 import { useUiStore } from '../ui/uiStore';
@@ -116,7 +117,9 @@ function Part({ mesh, selected, locked, onDoubleClick, onContextMenu }: PartProp
   const layFlat = useLayFlat((s) => s.active);
   // Pattern: i clic scelgono la faccia da cui parte il disegno (solo dopo "Scegli faccia")
   const patternPicking = usePatternTool((s) => s.picking);
-  const tool = edgeTool ?? (measuring ? 'measure' : layFlat ? 'layflat' : patternPicking ? 'pattern' : null);
+  // Guscio: i clic scelgono la faccia da lasciare aperta (solo dopo "Scegli faccia"; `pickFace` ignora gli altri oggetti)
+  const shellPicking = useShellTool((s) => s.picking);
+  const tool = edgeTool ?? (measuring ? 'measure' : layFlat ? 'layflat' : patternPicking ? 'pattern' : shellPicking ? 'shell' : null);
   const choosing = useEdgeTool((s) => s.tool !== null && s.preview === null);
   const measure = useMeasure.getState();
   const { setHover, pickFace, setHoverCorner, pickCorner } = useEdgeTool.getState();
@@ -151,6 +154,12 @@ function Part({ mesh, selected, locked, onDoubleClick, onContextMenu }: PartProp
               const face = faceAt(e);
               usePatternTool.getState().setHover(face >= 0 ? { mesh, face } : null);
             }
+          : shellPicking
+          ? (e) => {
+              e.stopPropagation();
+              const face = faceAt(e);
+              useShellTool.getState().setHover(face >= 0 ? { mesh, face } : null);
+            }
           : measuring
           ? (e) => {
               e.stopPropagation();
@@ -170,7 +179,7 @@ function Part({ mesh, selected, locked, onDoubleClick, onContextMenu }: PartProp
             }
           : undefined
       }
-      onPointerOut={layFlat ? () => useLayFlat.getState().setHover(null) : patternPicking ? () => usePatternTool.getState().setHover(null) : measuring ? () => measure.setHover(null) : edgeTool ? () => (edgeTool === 'corner' ? setHoverCorner(null) : setHover(null)) : undefined}
+      onPointerOut={layFlat ? () => useLayFlat.getState().setHover(null) : patternPicking ? () => usePatternTool.getState().setHover(null) : shellPicking ? () => useShellTool.getState().setHover(null) : measuring ? () => measure.setHover(null) : edgeTool ? () => (edgeTool === 'corner' ? setHoverCorner(null) : setHover(null)) : undefined}
       onClick={
         layFlat
           ? (e) => {
@@ -189,6 +198,14 @@ function Part({ mesh, selected, locked, onDoubleClick, onContextMenu }: PartProp
               e.stopPropagation();
               const face = faceAt(e);
               if (face >= 0) usePatternTool.getState().pickFace(mesh, face);
+            }
+          : shellPicking
+          ? (e) => {
+              // Un trascinamento (rotazione della vista) non è una scelta
+              if (e.delta > 3) return;
+              e.stopPropagation();
+              const face = faceAt(e);
+              if (face >= 0) useShellTool.getState().pickFace(mesh, face);
             }
           : measuring
           ? (e) => {

@@ -337,14 +337,15 @@ export class Evaluator {
     }
 
     // Cavità scalata: il figlio senza posizione né rotazione (in cache, non si libera) viene scalato attorno al perno
-    // (centro della base), alzato dello spessore del fondo e poi portato dove sta il figlio
+    // (centro della faccia opposta a quella aperta), spostato dello spessore del fondo e poi portato dove sta il figlio
     const bare = { ...child, position: [0, 0, 0], rotation: [0, 0, 0], mirror: undefined } as SceneNode;
     const base = this.build(scene, bare);
     const [px, py, pz] = cavity.pivot;
+    const [lx, ly, lz] = cavity.lift;
     const steps: ((m: Manifold) => Manifold)[] = [
       (m) => m.translate([-px, -py, -pz]),
       (m) => m.scale(cavity.scale),
-      (m) => m.translate([px, py, pz + cavity.lift]),
+      (m) => m.translate([px + lx, py + ly, pz + lz]),
       (m) => this.place(m, child),
     ];
     let current = base;

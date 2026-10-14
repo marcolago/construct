@@ -223,8 +223,13 @@ export type GroupOp = 'group' | 'union' | 'intersection' | 'difference' | 'shell
 export interface ShellParams {
   /** Spessore delle pareti laterali in mm. */
   wall: number;
-  /** Spessore del fondo in mm (la cima resta sempre aperta). */
+  /** Spessore del fondo in mm: la parete opposta alla faccia aperta. */
   bottom: number;
+  /**
+   * Faccia lasciata aperta: normale uscente, nel sistema locale del figlio, lungo uno dei sei assi (±X, ±Y, ±Z).
+   * Assente = la cima (+Z), come nei progetti salvati prima che si potesse scegliere.
+   */
+  open?: Vec3;
   /** Ingombro del figlio nel suo sistema locale: serve alla cavità scalata, usata per le forme senza cavità esatta. */
   bounds?: { min: Vec3; max: Vec3 };
 }

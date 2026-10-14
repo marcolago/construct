@@ -25,20 +25,65 @@ import type { PrimitiveNode, Scene, SceneNode, Shape2DNode, ShellParams, Vec3 } 
  * Quando il poligono è semplice: se le pareti sono verticali e la sezione non cambia con la quota, svuotare è un
  * `offset` 2D più un'estrusione. Con altezze diverse, pareti inclinate o curve servirebbe un'erosione 3D (soffitti e
  * pavimenti a gradini), che con manifold costa da decine di millisecondi a decine di secondi: lì si passa ai figli.
+ *
+ * La faccia aperta la sceglie l'utente (`ShellParams.open`, uno dei sei assi locali; di default la cima). Con la cima
+ * aperta valgono tutte le strategie; con un'altra faccia la cavità è esatta per il cubo (ogni asse) e per le forme
+ * estruse lungo Z aperte in cima o sul fondo, e scalata per tutto il resto (unioni comprese).
  */
 
-/** Quanto la cavità sporge oltre la cima del solido, in mm: garantisce che il guscio resti aperto in alto. */
+/** Quanto la cavità sporge oltre la faccia aperta del solido, in mm: garantisce che il guscio resti aperto. */
 export const SHELL_OPEN_MARGIN = 1;
 
 /** Misura minima accettata per una cavità: sotto questa soglia le pareti hanno mangiato tutto il solido. */
 const MIN_SIZE = 0.01;
 
+/** Faccia aperta come asse locale (0 = X, 1 = Y, 2 = Z) e verso lungo quell'asse. */
+export interface OpenSide {
+  axis: 0 | 1 | 2;
+  sign: 1 | -1;
+}
+
+/** La cima (+Z), la faccia aperta quando `ShellParams.open` manca. */
+const TOP: OpenSide = { axis: 2, sign: 1 };
+
+/** Faccia aperta di un guscio: la cima se non è stata scelta. */
+export function openSide(open?: Vec3): OpenSide {
+  if (!open) return TOP;
+  const axis = open.reduce((best, v, i) => (Math.abs(v) > Math.abs(open[best]) ? i : best), 0) as 0 | 1 | 2;
+  return { axis, sign: open[axis] < 0 ? -1 : 1 };
+}
+
+/** Normale unitaria della faccia aperta (versore dell'asse con il suo verso). */
+export function openNormal({ axis, sign }: OpenSide): Vec3 {
+  const normal: Vec3 = [0, 0, 0];
+  normal[axis] = sign;
+  return normal;
+}
+
+/** Quanto una normale può scostarsi da un asse per contare come allineata (cos ≈ 1,8°). */
+const AXIS_ALIGNED = 0.9995;
+
+/** Normale locale di una faccia scelta come faccia aperta: il versore dell'asse più vicino, o null se la faccia è obliqua. */
+export function snapOpenDirection(normal: Vec3): Vec3 | null {
+  const length = Math.hypot(...normal);
+  if (!(length > 0)) return null;
+  const side = openSide(normal);
+  return Math.abs(normal[side.axis]) / length >= AXIS_ALIGNED ? openNormal(side) : null;
+}
+
+/** Nome della faccia aperta per i pannelli (cima e fondo, poi gli assi locali). */
+export function openName(open?: Vec3): string {
+  const { axis, sign } = openSide(open);
+  if (axis === 2) return sign > 0 ? 'cima (+Z)' : 'fondo (−Z)';
+  return `lato ${sign > 0 ? '+' : '−'}${axis === 0 ? 'X' : 'Y'}`;
+}
+
 /** Cavità del guscio, nel sistema locale del figlio (lo stesso in cui il figlio ha posizione e rotazione proprie). */
 export type Cavity =
-  /** Forma derivata (posizione e rotazione nulle) da spostare di `offset` lungo Z locale. */
+  /** Forma derivata (posizione e rotazione nulle) da spostare di `offset` (lungo l'asse della faccia aperta). */
   | { kind: 'exact'; node: PrimitiveNode | Shape2DNode; offset: Vec3 }
-  /** Il figlio centrato nell'origine: si sposta il perno nell'origine, si scala, si riporta il perno e si alza di `lift`. */
-  | { kind: 'scaled'; scale: Vec3; pivot: Vec3; lift: number }
+  /** Il figlio centrato nell'origine: si sposta il perno nell'origine, si scala, si riporta il perno e si sposta di `lift`. */
+  | { kind: 'scaled'; scale: Vec3; pivot: Vec3; lift: Vec3 }
   /**
    * Prisma: sezione del solido alla quota `zMid` (sistema del guscio), ristretta di `wall` ed estrusa da `z0 + fondo`
    * a `z1` più il margine di apertura. `z0` e `z1` sono la base e la cima comuni a tutti i solidi.
@@ -59,7 +104,7 @@ export interface ShellPart {
 
 const fail = (error: string): Cavity => ({ kind: 'error', error });
 const TOO_THICK = 'Le pareti sono troppo spesse per questo oggetto.';
-const BOTTOM_TOO_THICK = 'Lo spessore inferiore supera l\'altezza dell\'oggetto.';
+const BOTTOM_TOO_THICK = 'Lo spessore del fondo supera la misura dell\'oggetto.';
 
 /** Forma derivata: stessi parametri del solido, origine e orientamento azzerati (li rimette chi la usa) e senza formule (i valori non sono più quelli del campo). */
 const derived = <T extends PrimitiveNode | Shape2DNode>(node: T, patch: Record<string, unknown>): T =>
@@ -142,8 +187,11 @@ type Plan =
 /** Tolleranza (mm) per dire che due quote coincidono. */
 const SAME_LEVEL = 1e-3;
 
-function planOf(scene: Scene, child: SceneNode): Plan {
-  if (isExactShape(child)) return { quality: 'exact' };
+function planOf(scene: Scene, child: SceneNode, side: OpenSide): Plan {
+  // Cubo: la cavità esatta vale su ogni faccia; le forme estruse lungo Z solo aperte in cima o sul fondo
+  if (isExactShape(child) && (side.axis === 2 || (child.type === 'primitive' && child.kind === 'box'))) return { quality: 'exact' };
+  // Prisma e per figlio sono costruite per la cima aperta: con un'altra faccia si ripiega sulla cavità scalata
+  if (side.axis !== 2 || side.sign < 0) return { quality: 'scaled' };
   const leaves = { solids: [] as Leaf[], holes: [] as Leaf[] };
   const identity: Frame = { position: [0, 0, 0], rotation: [0, 0, 0] };
   // `child.id` è nella scena: la trasformazione del figlio entra nella composizione
@@ -165,9 +213,9 @@ function planOf(scene: Scene, child: SceneNode): Plan {
   return { quality: 'scaled' };
 }
 
-/** Quanto è precisa la cavità del figlio (per il messaggio nel pannello): esatta, a prisma, per figlio o scalata. */
-export function shellQuality(scene: Scene, child: SceneNode): ShellQuality {
-  return planOf(scene, child).quality;
+/** Quanto è precisa la cavità del figlio con la faccia `open` aperta (per il messaggio nel pannello): esatta, a prisma, per figlio o scalata. */
+export function shellQuality(scene: Scene, child: SceneNode, open?: Vec3): ShellQuality {
+  return planOf(scene, child, openSide(open)).quality;
 }
 
 /**
@@ -177,10 +225,11 @@ export function shellQuality(scene: Scene, child: SceneNode): ShellQuality {
 export function cavityOf(scene: Scene, child: SceneNode, shell: ShellParams): Cavity {
   const { wall, bottom } = shell;
   if (!(wall > 0)) return fail('Lo spessore laterale deve essere maggiore di zero.');
-  if (!(bottom >= 0)) return fail('Lo spessore inferiore non può essere negativo.');
-  const plan = planOf(scene, child);
+  if (!(bottom >= 0)) return fail('Lo spessore del fondo non può essere negativo.');
+  const side = openSide(shell.open);
+  const plan = planOf(scene, child, side);
 
-  if (plan.quality === 'exact') return exactCavity(child as PrimitiveNode | Shape2DNode, wall, bottom) ?? scaledCavity(shell);
+  if (plan.quality === 'exact') return exactCavity(child as PrimitiveNode | Shape2DNode, wall, bottom, side) ?? scaledCavity(shell);
 
   if (plan.quality === 'prism') {
     // Sezione ristretta di w su ogni lato e fondo a `bottom` dalla base: servono almeno w sul lato minore dell'ingombro
@@ -194,7 +243,7 @@ export function cavityOf(scene: Scene, child: SceneNode, shell: ShellParams): Ca
     const parts: ShellPart[] = [];
     for (const { node, frame } of plan.leaves) {
       // Ogni solido ha la sua cavità esatta, con spessori misurati dalla sua base e dalle sue pareti
-      const cavity = exactCavity(node, wall, bottom);
+      const cavity = exactCavity(node, wall, bottom, TOP);
       if (!cavity || cavity.kind === 'error') return cavity ?? scaledCavity(shell);
       if (cavity.kind !== 'exact') return fail(TOO_THICK);
       parts.push({ node: cavity.node, offset: cavity.offset, position: frame.position, rotation: frame.rotation, mirror: frame.mirror });
@@ -204,16 +253,21 @@ export function cavityOf(scene: Scene, child: SceneNode, shell: ShellParams): Ca
   return scaledCavity(shell);
 }
 
-/** Cavità esatta per cubo, cilindro, cono e forme 2D estruse dritte; null per tutte le altre forme. */
-function exactCavity(p: PrimitiveNode | Shape2DNode, w: number, b: number): Cavity | null {
+/**
+ * Cavità esatta per cubo, cilindro, cono e forme 2D estruse dritte; null per tutte le altre forme.
+ * `side` è la faccia aperta: il cubo la accetta su ogni asse, le altre forme solo in cima o sul fondo (±Z), dove
+ * la cavità è la stessa della cima specchiata (offset cambiato di segno, nel cono raggi scambiati).
+ */
+function exactCavity(p: PrimitiveNode | Shape2DNode, w: number, b: number, side: OpenSide): Cavity | null {
   const margin = SHELL_OPEN_MARGIN;
+  const { sign } = side;
 
   if (p.type === 'shape2d') {
     // Con torsione o scala della cima le pareti non sono più parallele all'asse: si usa il ripiego
     if (p.twist !== 0 || p.scaleTop !== 1 || p.extrusion === 'rotate' || p.offset) return null;
     const span = verticalSpan(p.height, b, margin);
     if (!span) return fail(BOTTOM_TOO_THICK);
-    const offset: Vec3 = [0, 0, span.centerZ];
+    const offset: Vec3 = [0, 0, sign * span.centerZ];
     if (p.kind === 'square') {
       const [iw, id] = [p.width - 2 * w, p.depth - 2 * w];
       if (iw < MIN_SIZE || id < MIN_SIZE) return fail(TOO_THICK);
@@ -240,14 +294,17 @@ function exactCavity(p: PrimitiveNode | Shape2DNode, w: number, b: number): Cavi
 
   switch (p.kind) {
     case 'box': {
-      const [sx, sy, sz] = p.size;
-      const span = verticalSpan(sz, b, margin);
+      // L'asse della faccia aperta prende fondo e margine di apertura, gli altri due si restringono di 2w per lato
+      const { axis } = side;
+      const span = verticalSpan(p.size[axis], b, margin);
       if (!span) return fail(BOTTOM_TOO_THICK);
-      const [ix, iy] = [sx - 2 * w, sy - 2 * w];
-      if (ix < MIN_SIZE || iy < MIN_SIZE) return fail(TOO_THICK);
+      const inner = p.size.map((s, i) => (i === axis ? span.height : s - 2 * w)) as Vec3;
+      if (inner.some((s, i) => i !== axis && s < MIN_SIZE)) return fail(TOO_THICK);
       // Spigoli arrotondati: il raggio interno è quello esterno meno lo spessore (pareti di spessore costante)
-      const outer = Math.min(Math.max(0, p.cornerRadius ?? 0), (Math.min(sx, sy, sz) - 0.01) / 2);
-      return { kind: 'exact', offset: [0, 0, span.centerZ], node: derived(p, { size: [ix, iy, span.height], cornerRadius: Math.max(0, outer - w) }) };
+      const outer = Math.min(Math.max(0, p.cornerRadius ?? 0), (Math.min(...p.size) - 0.01) / 2);
+      const offset: Vec3 = [0, 0, 0];
+      offset[axis] = sign * span.centerZ;
+      return { kind: 'exact', offset, node: derived(p, { size: inner, cornerRadius: Math.max(0, outer - w) }) };
     }
     case 'cylinder': {
       const span = verticalSpan(p.height, b, margin);
@@ -256,21 +313,29 @@ function exactCavity(p: PrimitiveNode | Shape2DNode, w: number, b: number): Cavi
       const radius = p.radius - k;
       const radiusY = p.radiusY === undefined ? undefined : p.radiusY - k;
       if (radius < MIN_SIZE || (radiusY !== undefined && radiusY < MIN_SIZE)) return fail(TOO_THICK);
-      return { kind: 'exact', offset: [0, 0, span.centerZ], node: derived(p, { radius, radiusY, height: span.height }) };
+      return { kind: 'exact', offset: [0, 0, sign * span.centerZ], node: derived(p, { radius, radiusY, height: span.height }) };
     }
     case 'cone': {
       const h = p.height;
       if (h - b <= MIN_SIZE) return fail(BOTTOM_TOO_THICK);
+      // Aperto sul fondo: si calcola la cavità del cono capovolto (aperto in cima) e poi si ribalta il risultato
+      const [radiusBottom, radiusTop] = sign > 0 ? [p.radiusBottom, p.radiusTop] : [p.radiusTop, p.radiusBottom];
       // Parete inclinata: lo spessore w è perpendicolare alla parete, quindi in orizzontale vale w·√(1 + pendenza²)
-      const slope = (p.radiusBottom - p.radiusTop) / h;
+      const slope = (radiusBottom - radiusTop) / h;
       const dr = (w * Math.sqrt(1 + slope * slope)) / Math.cos(Math.PI / Math.max(3, p.segments));
       // Raggio della parete esterna alla quota z (anche oltre la cima, per estrapolazione)
-      const radiusAt = (z: number) => p.radiusBottom + ((p.radiusTop - p.radiusBottom) * (z + h / 2)) / h;
-      const low = -h / 2 + b;
+      const radiusAt = (z: number) => radiusBottom + ((radiusTop - radiusBottom) * (z + h / 2)) / h;
+      let low = -h / 2 + b;
       let high = h / 2 + margin;
-      const radiusLow = radiusAt(low) - dr;
+      let radiusLow = radiusAt(low) - dr;
       let radiusHigh = radiusAt(high) - dr;
-      if (radiusLow < MIN_SIZE) return fail(TOO_THICK);
+      if (radiusLow < MIN_SIZE) {
+        // Estremità chiusa troppo stretta: se il cono si allarga verso l'apertura (punta dal lato chiuso, per esempio
+        // la base aperta di un cono a punta) la cavità comincia dove il suo raggio si annulla e la punta resta piena
+        if (radiusHigh <= MIN_SIZE) return fail(TOO_THICK);
+        low += ((high - low) * Math.max(0, -radiusLow)) / (radiusHigh - radiusLow);
+        radiusLow = 0;
+      }
       if (radiusHigh < 0) {
         // Cono che si stringe fino alla punta: la cavità finisce dove il suo raggio si annulla, la punta resta chiusa
         high = low + ((high - low) * radiusLow) / (radiusLow - radiusHigh);
@@ -279,10 +344,12 @@ function exactCavity(p: PrimitiveNode | Shape2DNode, w: number, b: number): Cavi
       // Cono ellittico: l'estremità più larga mantiene il rapporto Y/X dell'originale
       const wide = Math.max(p.radiusBottom, p.radiusTop);
       const radiusY = p.radiusY !== undefined && wide > 0 ? (p.radiusY / wide) * Math.max(radiusLow, radiusHigh) : undefined;
+      // Capovolto: l'estremità chiusa (radiusLow) è la cima del cono vero e quella aperta (radiusHigh) il suo fondo
+      const [cavityBottom, cavityTop] = sign > 0 ? [radiusLow, radiusHigh] : [radiusHigh, radiusLow];
       return {
         kind: 'exact',
-        offset: [0, 0, (low + high) / 2],
-        node: derived(p, { radiusBottom: radiusLow, radiusTop: radiusHigh, radiusY, height: high - low }),
+        offset: [0, 0, (sign * (low + high)) / 2],
+        node: derived(p, { radiusBottom: cavityBottom, radiusTop: cavityTop, radiusY, height: high - low }),
       };
     }
     default:
@@ -311,21 +378,26 @@ function profileCavity(p: ProfileShape, w: number): Record<string, number> | nul
   return { width, depth, flange, web, rootRadius: (p.rootRadius ?? 0) + w, tipSize: Math.max(0, (p.tipSize ?? 0) - w) };
 }
 
-/** Ripiego: il solido stesso rimpicciolito attorno al centro della base (serve l'ingombro locale in `shell.bounds`). */
+/**
+ * Ripiego: il solido stesso rimpicciolito attorno al centro della faccia opposta a quella aperta (serve l'ingombro
+ * locale in `shell.bounds`). Con la cima aperta la faccia opposta è la base.
+ */
 function scaledCavity(shell: ShellParams): Cavity {
   const { wall: w, bottom: b, bounds } = shell;
   if (!bounds) return fail('Mancano le misure d\'ingombro dell\'oggetto: ricrea il guscio.');
-  const [ex, ey, ez] = [0, 1, 2].map((i) => bounds.max[i] - bounds.min[i]);
-  if (ex - 2 * w < MIN_SIZE || ey - 2 * w < MIN_SIZE) return fail(TOO_THICK);
-  // La cavità sale dal fondo (base + b) fino a SHELL_OPEN_MARGIN oltre la cima
-  const heightLeft = ez - b + SHELL_OPEN_MARGIN;
-  if (ez - b <= MIN_SIZE) return fail(BOTTOM_TOO_THICK);
+  const { axis, sign } = openSide(shell.open);
+  const extent = [0, 1, 2].map((i) => bounds.max[i] - bounds.min[i]);
+  if (extent.some((e, i) => i !== axis && e - 2 * w < MIN_SIZE)) return fail(TOO_THICK);
+  // Lungo l'asse aperto la cavità parte dal fondo (faccia opposta + b) e sporge di SHELL_OPEN_MARGIN oltre la faccia aperta
+  if (extent[axis] - b <= MIN_SIZE) return fail(BOTTOM_TOO_THICK);
+  const lift: Vec3 = [0, 0, 0];
+  lift[axis] = sign * b;
   return {
     kind: 'scaled',
-    scale: [(ex - 2 * w) / ex, (ey - 2 * w) / ey, heightLeft / ez],
-    // Perno al centro della base: la scala lascia la base ferma, poi `lift` la alza dello spessore del fondo
-    pivot: [(bounds.min[0] + bounds.max[0]) / 2, (bounds.min[1] + bounds.max[1]) / 2, bounds.min[2]],
-    lift: b,
+    scale: extent.map((e, i) => (i === axis ? e - b + SHELL_OPEN_MARGIN : e - 2 * w) / e) as Vec3,
+    // Perno al centro della faccia opposta a quella aperta: la scala la lascia ferma, poi `lift` la sposta dello spessore del fondo
+    pivot: [0, 1, 2].map((i) => (i === axis ? (sign > 0 ? bounds.min[i] : bounds.max[i]) : (bounds.min[i] + bounds.max[i]) / 2)) as Vec3,
+    lift,
   };
 }
 

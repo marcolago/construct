@@ -30,10 +30,10 @@ export function useShortcuts(): void {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (isTyping(e.target)) return;
-      // Guscio aperto: Esc annulla, Invio conferma, tutto il resto è ignorato
+      // Guscio aperto: Esc annulla (con la scelta della faccia in corso la interrompe), Invio conferma, tutto il resto è ignorato
       const shell = useShellTool.getState();
       if (shell.active) {
-        if (e.key === 'Escape') shell.cancel();
+        if (e.key === 'Escape') (shell.picking ? shell.setPicking(false) : shell.cancel());
         else if (e.key === 'Enter') shell.commit();
         return;
       }

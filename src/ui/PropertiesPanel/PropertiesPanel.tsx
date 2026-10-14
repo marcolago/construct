@@ -16,7 +16,7 @@ import { isScaled, normalizeScale, scaleOf, setGroupScale } from '../../scene/gr
 import { round } from '../../scene/math';
 import { bedReach, useBedReach, useUiStore } from '../uiStore';
 import type { CornerNode, EdgeNode, GroupNode, MeshNode, PrimitiveNode, SceneNode, Shape2DNode, ShellParams, Vec3 } from '../../scene/types';
-import { shellQuality } from '../../scene/shell';
+import { openName, shellQuality } from '../../scene/shell';
 import { NumberField } from '../NumberField/NumberField';
 import { FormulaContext, type FormulaApi } from '../NumberField/formulaContext';
 import { resolveParams } from '../../scene/params';
@@ -262,9 +262,10 @@ function ShellFields({ node, shell, patch, locked }: { node: GroupNode; shell: S
   const reach = useBedReach();
   const child = useSceneStore((s) => s.scene.nodes[node.children[0]]);
   // Senza cavità esatta (sfera, toro, mesh...) le pareti sono approssimate: lo si dice
-  const quality = useSceneStore((s) => (child ? shellQuality(s.scene, child) : undefined));
+  const quality = useSceneStore((s) => (child ? shellQuality(s.scene, child, shell.open) : undefined));
   return (
     <Section title="Guscio">
+      <p className="properties__note">Faccia aperta: {openName(shell.open)}.</p>
       {quality === 'scaled' && <p className="properties__note">Pareti approssimate: la cavità è l'oggetto rimpicciolito, lo spessore è esatto solo nei punti estremi.</p>}
       {quality === 'parts' && <p className="properties__note">Ogni solido ha la sua cavità: tra un solido e l'altro resta una parete interna.</p>}
       <SliderField
@@ -282,14 +283,14 @@ function ShellFields({ node, shell, patch, locked }: { node: GroupNode; shell: S
         onCommit={(v) => patch({ shell: { ...shell, wall: v } })}
       />
       <SliderField
-        label="Inferiore"
+        label="Fondo"
         unit="mm"
         min={0}
         max={20}
         step={0.1}
         hardMin={0}
         hardMax={reach}
-        tooltip="Spessore del fondo, in mm. La cima resta sempre aperta."
+        tooltip="Spessore del fondo, in mm: la parete opposta alla faccia aperta."
         disabled={locked}
         value={bottom}
         path="shell.bottom"

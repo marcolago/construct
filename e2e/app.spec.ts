@@ -1128,6 +1128,38 @@ test('Guscio: Esc non lascia tracce e le pareti troppo spesse sono segnalate', a
   expect(await sceneState(page)).toEqual(before);
 });
 
+test('Guscio: la faccia aperta si sceglie con un clic, Esc interrompe la scelta senza chiudere lo strumento', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  await page.keyboard.press('g');
+  const panel = page.getByRole('region', { name: 'Guscio' });
+  await expect(panel).toContainText('cima (+Z)');
+  await settled(page);
+
+  // Scelta della faccia: Esc la interrompe e lo strumento resta aperto sulla cima
+  await panel.getByRole('button', { name: 'Scegli faccia' }).click();
+  await expect(panel.getByRole('button', { name: 'Fine scelta' })).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'OK' })).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await expect(panel).toContainText('cima (+Z)');
+  await expect(panel.getByRole('button', { name: 'Scegli faccia' })).toBeVisible();
+  await settled(page);
+
+  // Clic sulla faccia +X: la cavità si apre da quel lato (il volume resta quello di un cubo con cavità 18 × 16 × 16)
+  await panel.getByRole('button', { name: 'Scegli faccia' }).click();
+  const at = await project(page, [10, 0, 10]);
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.click(at.x, at.y);
+  await settled(page);
+  await expect(panel).toContainText('lato +X');
+  await expect.poll(() => page.evaluate(() => window.__construct!.results.getState().meshes[0].volume)).toBeCloseTo(8000 - 18 * 16 * 16, 2);
+
+  await page.getByRole('region', { name: 'Guscio' }).getByRole('button', { name: 'OK' }).click();
+  await settled(page);
+  const scene = await sceneState(page);
+  expect(scene.nodes[scene.rootIds[0]].shell.open).toEqual([1, 0, 0]);
+  expect(await readCode(page)).toContain('aperto su lato +X');
+});
+
 test('due smussi su spigoli adiacenti della faccia superiore: il risultato coincide con due piani di taglio', async ({ page }) => {
   await addShape(page, 'Cubo');
   /** Sceglie due facce con il mouse, regola la distanza e conferma. */

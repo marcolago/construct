@@ -1,5 +1,5 @@
 import { Check, X } from 'lucide-react';
-import { shellQuality } from '../../scene/shell';
+import { openName, shellQuality } from '../../scene/shell';
 import { useSceneStore } from '../../scene/store';
 import { GROUP_ICONS } from '../groupIcons';
 import { SliderField } from '../SliderField/SliderField';
@@ -8,15 +8,15 @@ import { useShellTool } from './shellToolStore';
 import '../EdgeTool/EdgeToolPanel.scss';
 
 /**
- * Pannello del Guscio: spessore laterale e inferiore con anteprima dal vivo, OK e Annulla.
+ * Pannello del Guscio: faccia aperta, spessore laterale e del fondo con anteprima dal vivo, OK e Annulla.
  * Flottante e non modale: la vista 3D resta utilizzabile.
  */
 export function ShellPanel() {
-  const { active, targetId, wall, bottom, error, groupId, cancel, commit, setOption } = useShellTool();
+  const { active, targetId, wall, bottom, open, picking, error, groupId, cancel, commit, setOption, setPicking } = useShellTool();
   // Il solido da svuotare: con la cavità scalata le pareti sono approssimate e il pannello lo dice
   const quality = useSceneStore((s) => {
     const node = targetId ? s.scene.nodes[targetId] : undefined;
-    return node ? shellQuality(s.scene, node) : undefined;
+    return node ? shellQuality(s.scene, node, open) : undefined;
   });
 
   if (!active) return null;
@@ -30,6 +30,14 @@ export function ShellPanel() {
       </h2>
 
       <div className="edge-panel__section">
+        <div className="edge-panel__actions" title="Poi clicca una faccia piana dell'oggetto: quella faccia resta aperta.">
+          <span>Faccia aperta: {openName(open)}</span>
+          <span className="edge-panel__spacer" />
+          <button type="button" className="edge-panel__button" aria-pressed={picking} onClick={() => setPicking(!picking)}>
+            {picking ? 'Fine scelta' : 'Scegli faccia'}
+          </button>
+        </div>
+        {picking && <p className="edge-panel__hint">Clicca la faccia da lasciare aperta (Esc per finire).</p>}
         <SliderField
           label="Laterale"
           unit="mm"
@@ -44,19 +52,19 @@ export function ShellPanel() {
           onCommit={(v) => setOption({ wall: v })}
         />
         <SliderField
-          label="Inferiore"
+          label="Fondo"
           unit="mm"
           min={0}
           max={20}
           step={0.1}
           hardMin={0}
           hardMax={256}
-          tooltip="Spessore del fondo, in mm."
+          tooltip="Spessore del fondo, in mm: la parete opposta alla faccia aperta."
           history={false}
           value={bottom}
           onCommit={(v) => setOption({ bottom: v })}
         />
-        <p className="edge-panel__hint">La cima resta aperta. Lo spessore laterale vale per tutte le pareti.</p>
+        <p className="edge-panel__hint">La faccia aperta resta senza parete. Lo spessore laterale vale per tutte le altre pareti.</p>
         {quality === 'prism' && <p className="edge-panel__hint">Solidi uniti con pareti verticali: le pareti sono uniformi anche ai giunti e non resta nessuna parete interna.</p>}
         {quality === 'parts' && (
           <p className="edge-panel__hint">Solidi uniti: ogni solido ha la sua cavità, quindi tra un solido e l'altro resta una parete interna.</p>

@@ -5,7 +5,7 @@ import { Evaluator } from '../kernel/evaluate';
 import { sceneToOpenScad } from '../codegen/openscad';
 import { primitiveDefaults, shape2dDefaults } from './defaults';
 import { edgeProfile } from './edgeProfile';
-import { cavityOf, localBounds, SHELL_OPEN_MARGIN, shellQuality } from './shell';
+import { cavityOf, localBounds, openName, openSide, SHELL_OPEN_MARGIN, shellQuality, snapOpenDirection } from './shell';
 import { buildShell } from './shellTool';
 import type { GroupNode, PrimitiveNode, ProfileKind, Scene, SceneNode, Shape2DNode, Vec3 } from './types';
 import { PROFILE_KINDS, profileArea, type ProfileShape } from './profiles';
@@ -172,7 +172,7 @@ describe('cavità scalata e limiti', () => {
 
   it('pareti troppo spesse e fondo troppo alto sono rifiutati con un messaggio', () => {
     expect(buildShell(sceneOf([prim('box')], ['p']), 'p', { wall: 10, bottom: 1 })).toMatchObject({ ok: false, error: expect.stringContaining('troppo spesse') });
-    expect(buildShell(sceneOf([prim('box')], ['p']), 'p', { wall: 1, bottom: 20 })).toMatchObject({ ok: false, error: expect.stringContaining('inferiore') });
+    expect(buildShell(sceneOf([prim('box')], ['p']), 'p', { wall: 1, bottom: 20 })).toMatchObject({ ok: false, error: expect.stringContaining('fondo') });
   });
 
   it('un foro e un oggetto bloccato non si svuotano', () => {
@@ -187,6 +187,128 @@ describe('cavità scalata e limiti', () => {
     expect(b.min[1]).toBeCloseTo(-10, 6);
     expect(b.max[1]).toBeCloseTo(0, 6);
     expect(b.max[0] - b.min[0]).toBeCloseTo(0, 6);
+  });
+});
+
+describe('faccia aperta scelta dall\'utente', () => {
+  const X: Vec3 = [1, 0, 0];
+  const NEG_X: Vec3 = [-1, 0, 0];
+  const NEG_Y: Vec3 = [0, -1, 0];
+  const NEG_Z: Vec3 = [0, 0, -1];
+
+  /** Applica il Guscio con la faccia `open` aperta e restituisce la scena risultante. */
+  function shelledOpen(node: SceneNode, wall: number, bottom: number, open: Vec3, bounds?: { min: Vec3; max: Vec3 }): Scene {
+    const result = buildShell(sceneOf([node], [node.id]), node.id, { wall, bottom, open, ...(bounds ? { bounds } : {}) });
+    if (!result.ok) throw new Error(result.error);
+    return result.scene;
+  }
+
+  it('senza scelta la faccia aperta è la cima', () => {
+    expect(openSide()).toEqual({ axis: 2, sign: 1 });
+    expect(openSide([0, 0, 1])).toEqual({ axis: 2, sign: 1 });
+    expect(openName()).toBe('cima (+Z)');
+    expect(openName(NEG_Z)).toBe('fondo (−Z)');
+    expect(openName(NEG_Y)).toBe('lato −Y');
+  });
+
+  it('la normale scelta si aggancia all\'asse più vicino e le facce oblique sono rifiutate', () => {
+    expect(snapOpenDirection([0.9999, 0.001, -0.001])).toEqual([1, 0, 0]);
+    expect(snapOpenDirection([0, -2, 0])).toEqual([0, -1, 0]);
+    expect(snapOpenDirection([Math.SQRT1_2, 0, Math.SQRT1_2])).toBeNull();
+    expect(snapOpenDirection([0, 0, 0])).toBeNull();
+  });
+
+  it('cubo aperto su un lato: stessa cavità della cima, ruotata sull\'asse scelto', () => {
+    // Cubo 20 mm, pareti 2, fondo 3: la cavità è lunga 17 lungo X e 16 × 16 nel resto
+    expect(shellQuality(sceneOf([prim('box')], ['p']), prim('box'), X)).toBe('exact');
+    expect(volumeOf(shelledOpen(prim('box'), 2, 3, X))).toBeCloseTo(20 ** 3 - 17 * 16 * 16, 3);
+    expect(volumeOf(shelledOpen(prim('box'), 2, 3, NEG_X))).toBeCloseTo(20 ** 3 - 17 * 16 * 16, 3);
+    // Il centro della cavità è verso la faccia aperta: (−7 + 11) / 2 = 2 mm dal centro, con il segno della faccia
+    const offsetX = (open: Vec3) => {
+      const cavity = cavityFor(prim('box'), { wall: 2, bottom: 3, open });
+      return cavity.kind === 'exact' ? cavity.offset : null;
+    };
+    expect(offsetX(X)).toEqual([2, 0, 0]);
+    expect(offsetX(NEG_X)).toEqual([-2, 0, 0]);
+  });
+
+  it('cubo non cubico aperto su Y: le misure si distribuiscono sugli assi giusti', () => {
+    const box = prim('box', { size: [30, 20, 10] });
+    const cavity = cavityFor(box, { wall: 2, bottom: 4, open: NEG_Y });
+    expect(cavity.kind).toBe('exact');
+    if (cavity.kind !== 'exact') return;
+    // X e Z ridotti di 2·2; lungo Y da 4 mm dal lato opposto fino a 1 mm oltre la faccia aperta: 20 − 4 + 1
+    expect((cavity.node as Extract<PrimitiveNode, { kind: 'box' }>).size).toEqual([26, 17, 6]);
+    expect(volumeOf(shelledOpen(box, 2, 4, NEG_Y))).toBeCloseTo(30 * 20 * 10 - 26 * 16 * 6, 3);
+  });
+
+  it('cilindro aperto sul fondo: stessa cavità della cima, specchiata', () => {
+    const cyl = prim('cylinder', { radius: 10, height: 20, segments: 256 });
+    const up = cavityFor(cyl, { wall: 2, bottom: 2 });
+    const down = cavityFor(cyl, { wall: 2, bottom: 2, open: NEG_Z });
+    expect(up.kind === 'exact' && down.kind === 'exact').toBe(true);
+    if (up.kind !== 'exact' || down.kind !== 'exact') return;
+    expect(down.offset).toEqual([0, 0, -up.offset[2]]);
+    expect(volumeOf(shelledOpen(cyl, 2, 2, NEG_Z))).toBeCloseTo(volumeOf(shelled(cyl, 2, 2)), 6);
+  });
+
+  it('cono aperto sul fondo: stesso volume del cono capovolto aperto in cima', () => {
+    const cone = prim('cone', { radiusBottom: 10, radiusTop: 5, height: 20, segments: 128 });
+    const flipped = prim('cone', { radiusBottom: 5, radiusTop: 10, height: 20, segments: 128 });
+    expect(volumeOf(shelledOpen(cone, 1, 2, NEG_Z))).toBeCloseTo(volumeOf(shelled(flipped, 1, 2)), 6);
+    // Cono a punta aperto dalla base: la cavità finisce dove si annulla e la mesh resta valida
+    const spike = prim('cone', { radiusBottom: 10, radiusTop: 0, height: 20, segments: 64 });
+    const mesh = new Evaluator(wasm).evaluate(shelledOpen(spike, 1, 1, NEG_Z)).meshes[0];
+    expect(mesh.status).toBe('NoError');
+    expect(mesh.volume).toBeLessThan((Math.PI * 100 * 20) / 3);
+  });
+
+  it('forme senza cavità esatta sul lato scelto: ripiego scalato attorno alla faccia opposta', () => {
+    // Un cilindro aperto di lato non ha cavità esatta
+    const cyl = prim('cylinder', { radius: 10, height: 20 });
+    expect(shellQuality(sceneOf([cyl], ['p']), cyl, X)).toBe('scaled');
+    const bounds = { min: [-10, -10, -10] as Vec3, max: [10, 10, 10] as Vec3 };
+    const sphere = prim('sphere', { radius: 10, segments: 64 });
+    const cavity = cavityFor(sphere, { wall: 1, bottom: 2, open: NEG_Y, bounds });
+    expect(cavity.kind).toBe('scaled');
+    if (cavity.kind !== 'scaled') return;
+    // Perno al centro della faccia opposta (+Y); la cavità si estende verso −Y, oltre la faccia aperta di 1 mm
+    expect(cavity.pivot).toEqual([0, 10, 0]);
+    expect(cavity.lift).toEqual([0, -2, 0]);
+    expect(cavity.scale[0]).toBeCloseTo(0.9, 9);
+    expect(cavity.scale[1]).toBeCloseTo((20 - 2 + SHELL_OPEN_MARGIN) / 20, 9);
+    const mesh = new Evaluator(wasm).evaluate(shelledOpen(sphere, 1, 2, NEG_Y, bounds)).meshes[0];
+    expect(mesh.status).toBe('NoError');
+    expect(mesh.volume).toBeGreaterThan(0);
+    expect(mesh.volume).toBeLessThan((4 / 3) * Math.PI * 1000);
+  });
+
+  it('un\'unione con una faccia diversa dalla cima ripiega sulla cavità scalata', () => {
+    const a = prim('box', { id: 'a', name: 'a', position: [-10, 0, 0] });
+    const b = prim('box', { id: 'b', name: 'b', position: [10, 0, 0] });
+    const union: GroupNode = { id: 'u', name: 'u', type: 'group', op: 'union', children: ['a', 'b'], position: [0, 0, 0], rotation: [0, 0, 0], mode: 'solid', color: '#ffffff' };
+    const scene = sceneOf([a, b, union], ['u']);
+    expect(shellQuality(scene, scene.nodes.u)).toBe('prism');
+    expect(shellQuality(scene, scene.nodes.u, [0, 0, -1])).toBe('scaled');
+    expect(shellQuality(scene, scene.nodes.u, [1, 0, 0])).toBe('scaled');
+  });
+
+  it('i limiti si misurano sull\'asse aperto: fondo troppo spesso e pareti troppo spesse', () => {
+    const box = prim('box', { size: [40, 40, 10] });
+    // Aperto su X il fondo può essere spesso fino a 40 mm, ma le pareti non possono superare metà di Z (10 mm)
+    expect(buildShell(sceneOf([box], ['p']), 'p', { wall: 2, bottom: 30, open: X }).ok).toBe(true);
+    expect(buildShell(sceneOf([box], ['p']), 'p', { wall: 6, bottom: 1, open: X })).toMatchObject({ ok: false, error: expect.stringContaining('troppo spesse') });
+    expect(buildShell(sceneOf([box], ['p']), 'p', { wall: 2, bottom: 45, open: X })).toMatchObject({ ok: false, error: expect.stringContaining('fondo') });
+  });
+
+  it('il codice OpenSCAD dichiara la faccia aperta e coincide con il kernel', () => {
+    const scene = shelledOpen(prim('box'), 2, 3, X);
+    const code = sceneToOpenScad(scene);
+    expect(code).toContain('aperto su lato +X');
+    // Cavità 18 × 16 × 16 (17 mm dentro il cubo più il margine di apertura) spostata di 2 mm lungo X
+    expect(code).toContain('cube([18, 16, 16], center = true);');
+    expect(code).toContain('translate([2, 0, 0])');
+    expect(sceneToOpenScad(shelled(prim('box'), 2, 3))).toContain('aperto su cima (+Z)');
   });
 });
 

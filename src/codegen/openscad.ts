@@ -1,5 +1,5 @@
 import type { ArrayParams, Binding, CornerNode, EdgeNode, GroupNode, MeshNode, PatternParams, PrimitiveNode, Scene, SceneNode, Shape2DNode, ShellParams, Vec3 } from '../scene/types';
-import { cavityOf, SHELL_OPEN_MARGIN } from '../scene/shell';
+import { cavityOf, openName, SHELL_OPEN_MARGIN } from '../scene/shell';
 import { cornerCutter } from '../scene/cornerProfile';
 import { isCutter } from '../scene/treatment';
 import { composeTransform, round } from '../scene/math';
@@ -331,7 +331,7 @@ function shellCavityLines(scene: Scene, child: SceneNode, shell: ShellParams, de
     ...(child.rotation.some((v) => v !== 0) ? [`${pad}rotate(${vec(child.rotation)})`] : []),
     ...mirrorLines(child.mirror).map((l) => `${pad}${l}`),
   ];
-  const label = `${pad}// cavità del guscio (laterale ${n(shell.wall)} mm, inferiore ${n(shell.bottom)} mm, cima aperta)`;
+  const label = `${pad}// cavità del guscio (laterale ${n(shell.wall)} mm, fondo ${n(shell.bottom)} mm, aperto su ${openName(shell.open)})`;
 
   if (cavity.kind === 'exact') {
     // Forma ridotta, alzata dello `offset` lungo Z locale
@@ -367,13 +367,14 @@ function shellCavityLines(scene: Scene, child: SceneNode, shell: ShellParams, de
   }
 
   // Cavità scalata (le trasformazioni si leggono dal basso verso l'alto): il figlio senza posizione né rotazione,
-  // spostato col perno nell'origine, scalato, riportato al perno e alzato dello spessore del fondo
+  // spostato col perno nell'origine, scalato, riportato al perno e spostato dello spessore del fondo
   const [px, py, pz] = cavity.pivot;
+  const [lx, ly, lz] = cavity.lift;
   const bare = { ...child, position: [0, 0, 0], rotation: [0, 0, 0], mirror: undefined, exprs: undefined } as SceneNode;
   return [
     label + ' (approssimata: oggetto scalato)',
     ...place,
-    `${pad}translate(${vec([px, py, pz + cavity.lift])})`,
+    `${pad}translate(${vec([px + lx, py + ly, pz + lz])})`,
     `${pad}scale(${vec(cavity.scale)})`,
     `${pad}translate(${vec([-px, -py, -pz])})`,
     ...nodeLines(scene, bare, depth, NO_TRANSFORM, false),

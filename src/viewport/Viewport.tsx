@@ -24,6 +24,7 @@ import { useLayFlat } from '../ui/LayFlat/layFlatStore';
 import { useArrayTool } from '../ui/Array/arrayToolStore';
 import { usePatternTool } from '../ui/Pattern/patternToolStore';
 import { PatternOverlay } from './PatternOverlay';
+import { ShellOverlay } from './ShellOverlay';
 import { PlacementPreview } from './PlacementPreview';
 import { useUiStore } from '../ui/uiStore';
 import { round } from '../scene/math';
@@ -157,6 +158,7 @@ export function Viewport() {
         <MeasureOverlay />
         <LayFlatOverlay />
         <PatternOverlay />
+        <ShellOverlay />
         <DimensionOverlay />
         <PlacementPreview />
         <SplitOverlay />
