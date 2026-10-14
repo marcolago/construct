@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useSceneStore } from '../scene/store';
+import type { Scene } from '../scene/types';
 import { getKernel } from './client';
 import { applyPlacement } from './placement';
 import type { NodeMesh } from './evaluate';
@@ -7,6 +8,8 @@ import type { NodeMesh } from './evaluate';
 interface ResultState {
   /** Mesh calcolate per gli oggetti alla radice, in coordinate mondo. */
   meshes: NodeMesh[];
+  /** La scena a cui appartengono le mesh (serve a fotografarle per la timeline solo se sono quelle della scena corrente). */
+  scene?: Scene;
   /** Durata dell'ultimo calcolo (ms). */
   ms: number;
   busy: boolean;
@@ -33,10 +36,11 @@ export function startKernelSync(): void {
     try {
       do {
         dirty = false;
-        const result = await getKernel().evaluate(useSceneStore.getState().scene);
+        const scene = useSceneStore.getState().scene;
+        const result = await getKernel().evaluate(scene);
         // Anche se nel frattempo la scena è cambiata si pubblica il risultato: durante il trascinamento di uno
         // slider l'anteprima si aggiorna dal vivo. Il giro successivo (se dirty) arriva subito dopo con l'ultima scena.
-        useResultStore.setState({ meshes: result.meshes, ms: result.ms, error: undefined });
+        useResultStore.setState({ meshes: result.meshes, scene, ms: result.ms, error: undefined });
         // Con l'ingombro aggiornato si appoggiano sul piatto gli oggetti in attesa; la correzione cambia la scena e
         // rimette `dirty`, quindi il giro successivo ricalcola con la posizione corretta
         if (!dirty) applyPlacement();

@@ -2835,7 +2835,7 @@ test('Pattern: Esc annulla senza lasciare tracce, e il pulsante è spento senza 
   await expect(page.getByRole('region', { name: 'Pattern' })).toHaveCount(0);
 });
 
-test('Pattern: seme, tipo, profondità, rombi, triangoli e facce si modificano dalle proprietà del gruppo', async ({ page }) => {
+test('Pattern: seme, tipo, profondità, rombi, triangoli e faccia si leggono e si modificano dalle proprietà del gruppo', async ({ page }) => {
   await addShape(page, 'Cubo');
   await page.keyboard.press('z');
   await page.getByRole('region', { name: 'Pattern' }).getByRole('button', { name: 'OK' }).click();
@@ -2881,11 +2881,11 @@ test('Pattern: seme, tipo, profondità, rombi, triangoli e facce si modificano d
   expect((await pattern()).kind).toBe('triangle');
   await expect(page.locator('.status-bar')).toContainText('Mesh valida');
 
-  // Una seconda faccia (+X) si attiva dai pulsanti dei lati: due elenchi di celle nel codice
-  await page.getByRole('group', { name: 'Facce' }).getByRole('button', { name: '+X', exact: true }).click();
-  await settled(page);
-  expect((await pattern()).faces).toHaveLength(2);
-  expect(await readCode(page)).toContain('cells_2 = [');
+  // Una sola faccia: niente pulsanti dei lati, la riga Faccia dice da dove parte il taglio
+  await expect(page.getByRole('group', { name: 'Facce' })).toHaveCount(0);
+  // (il selettore "Lati" della tasca contiene la parola "faccia": si cerca l'etichetta esatta)
+  await expect(page.locator('.array-fields__row').filter({ has: page.getByText('Faccia', { exact: true }) })).toContainText('+Z');
+  expect((await pattern()).faces).toHaveLength(1);
 });
 
 test('Tooltip dettagliati: il pulsante Pattern mostra cosa fa, come si applica, la scorciatoia e un\'immagine', async ({ page }) => {
@@ -2894,7 +2894,7 @@ test('Tooltip dettagliati: il pulsante Pattern mostra cosa fa, come si applica, 
   const tip = page.getByRole('tooltip');
   await expect(tip).toBeVisible();
   await expect(tip).toContainText('Fora l\'oggetto');
-  await expect(tip).toContainText('Scegli facce');
+  await expect(tip).toContainText('Scegli faccia');
   await expect(tip.locator('kbd')).toHaveText('Z');
   await expect(tip.locator('img')).toHaveAttribute('src', /help\/pattern\.webp$/);
   // Esc lo chiude e non lascia traccia
@@ -2910,41 +2910,81 @@ test('Tooltip dettagliati: il pulsante Pattern mostra cosa fa, come si applica, 
   await expect(page.getByRole('tooltip')).toContainText('Ora: visibile');
 });
 
-test('Pattern: Scegli facce aggiunge e toglie facce con il clic e mostra il pezzo intero durante la scelta', async ({ page }) => {
+test('Pattern: Scegli faccia sostituisce la faccia con un clic, chiude la scelta e mostra il pezzo intero durante la scelta', async ({ page }) => {
   await addShape(page, 'Cubo');
   await page.keyboard.press('z');
   const panel = page.getByRole('region', { name: 'Pattern' });
   await settled(page);
   const volume = () => page.evaluate(() => window.__construct!.results.getState().meshes[0].volume);
   await expect.poll(volume).toBeLessThan(7500);
+  // Parte dalla cima, e non ci sono più i pulsanti dei lati
+  await expect(panel.getByRole('group', { name: 'Facce' })).toHaveCount(0);
+  await expect(panel.locator('.array-fields__row', { hasText: 'Faccia' })).toContainText('+Z');
 
   // Durante la scelta la vista mostra il cubo intero (si cliccano le facce del pezzo, non le pareti delle celle)
-  await panel.getByRole('button', { name: 'Scegli facce' }).click();
+  await panel.getByRole('button', { name: 'Scegli faccia' }).click();
   await settled(page);
   await expect.poll(volume).toBeCloseTo(8000, 0);
-  await expect(panel).toContainText('Clicca le facce');
+  await expect(panel).toContainText('Clicca la faccia');
 
-  // Un clic sulla faccia anteriore l'aggiunge (due facce), un secondo clic la toglie
+  // Un clic sulla faccia anteriore la sceglie al posto della cima e chiude la scelta: l'anteprima torna con il pattern
   const front = await project(page, [0, -10, 10]);
   await page.mouse.move(front.x, front.y);
   await page.mouse.click(front.x, front.y);
-  await expect(panel).toContainText('2 facce');
-  // Il lato anteriore è uno dei sei lati dell'ingombro: il suo pulsante si accende
-  await expect(panel.getByRole('group', { name: 'Facce' }).getByRole('button', { name: '-Y', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await page.mouse.click(front.x, front.y);
-  await expect(panel).toContainText('1 faccia');
-
-  // Si sceglie di nuovo e si chiude la scelta con il pulsante: l'anteprima torna con il pattern su due facce
-  await page.mouse.click(front.x, front.y);
-  await panel.getByRole('button', { name: 'Fine scelta' }).click();
+  await expect(panel.locator('.array-fields__row', { hasText: 'Faccia' })).toContainText('−Y');
+  await expect(panel.getByRole('button', { name: 'Scegli faccia' })).toHaveAttribute('aria-pressed', 'false');
   await settled(page);
   await expect.poll(volume).toBeLessThan(7500);
   await panel.getByRole('button', { name: 'OK' }).click();
   await settled(page);
   const scene = await sceneState(page);
-  expect(scene.nodes[scene.rootIds[0]].pattern.faces).toHaveLength(2);
-  expect(scene.nodes[scene.rootIds[0]].pattern.preview).toBeUndefined();
-  expect(await readCode(page)).toContain('cells_2 = [');
+  const pattern = scene.nodes[scene.rootIds[0]].pattern;
+  expect(pattern.faces).toHaveLength(1);
+  expect(pattern.faces[0].normal).toEqual([0, -1, 0]);
+  expect(pattern.preview).toBeUndefined();
+  expect(await readCode(page)).toContain('cells = [');
+});
+
+test('Pattern: una faccia inclinata si sceglie con il clic, e un secondo Pattern si applica sul gruppo', async ({ page }) => {
+  await addShape(page, 'Cono');
+  // Piramide a base quadrata ruotata di 45°: la faccia anteriore ha la normale inclinata verso -Y
+  const id = (await sceneState(page)).rootIds[0];
+  await page.evaluate((nodeId) => window.__construct!.store.getState().updateNode(nodeId, { radiusBottom: 20, radiusTop: 0, height: 20, segments: 4, rotation: [0, 0, 45] }), id);
+  await settled(page);
+  const volume = () => page.evaluate(() => window.__construct!.results.getState().meshes[0].volume);
+  await expect.poll(volume).toBeCloseTo((800 * 20) / 3, 0);
+  const box = await page.evaluate(() => window.__construct!.results.getState().meshes[0].bbox);
+  const center = [0, 1, 2].map((i) => (box.min[i] + box.max[i]) / 2);
+
+  await page.keyboard.press('z');
+  const panel = page.getByRole('region', { name: 'Pattern' });
+  await settled(page);
+  await panel.getByRole('button', { name: 'Scegli faccia' }).click();
+  await settled(page);
+  // Il baricentro della faccia anteriore sta a 9,43 mm davanti al centro e 3,33 mm sotto
+  const face = await project(page, [center[0], center[1] - 9.43, center[2] - 3.33]);
+  await page.mouse.move(face.x, face.y);
+  await page.mouse.click(face.x, face.y);
+  await expect(panel.locator('.array-fields__row', { hasText: 'Faccia' })).toContainText(/inclinata \(55° da \+Z\)/);
+  await settled(page);
+  await expect.poll(volume).toBeLessThan((800 * 20) / 3);
+  await panel.getByRole('button', { name: 'OK' }).click();
+  await settled(page);
+  await expect(page.locator('.status-bar')).toContainText('Mesh valida');
+  const first = (await sceneState(page)).rootIds[0];
+
+  // Secondo Pattern sul gruppo appena creato (dalla cima): un gruppo dentro l'altro, ognuno con la sua faccia
+  await page.keyboard.press('z');
+  await expect(panel).toBeVisible();
+  await settled(page);
+  await panel.getByRole('button', { name: 'OK' }).click();
+  await settled(page);
+  const scene = await sceneState(page);
+  const outer = scene.nodes[scene.rootIds[0]];
+  expect(outer.op).toBe('pattern');
+  expect(outer.children).toEqual([first]);
+  expect(scene.nodes[first].op).toBe('pattern');
+  await expect(page.locator('.status-bar')).toContainText('Mesh valida');
 });
 
 test('Pattern: avviso se i calcoli sono pesanti e anteprima semplificata, che non resta nel risultato', async ({ page }) => {
@@ -3691,9 +3731,9 @@ test('Timeline: indicatori con tooltip del tipo di operazione e icona per svuota
   expect(await steps.nth(1).innerText()).toBe('');
   await steps.nth(1).hover();
   const tip = page.getByRole('tooltip');
-  await expect(tip).toHaveText('2 · Aggiungi Cubo');
+  await expect(tip).toContainText('2 · Aggiungi Cubo');
   await steps.nth(2).hover();
-  await expect(tip).toHaveText('3 · Aggiungi Sfera (stato corrente)');
+  await expect(tip).toContainText('3 · Aggiungi Sfera (stato corrente)');
 
   // Svuotare la cronologia chiede conferma, lascia la scena e riparte da un solo passo
   await page.getByRole('button', { name: 'Svuota la cronologia' }).click();
@@ -3701,6 +3741,32 @@ test('Timeline: indicatori con tooltip del tipo di operazione e icona per svuota
   await expect(steps).toHaveCount(1);
   expect((await sceneState(page)).rootIds).toHaveLength(2);
   await expect(page.getByRole('button', { name: 'Svuota la cronologia' })).toBeDisabled();
+});
+
+test('Timeline: il tooltip mostra la miniatura isometrica del passo, e la ricalcola se manca', async ({ page }) => {
+  await addShape(page, 'Cubo');
+  await addShape(page, 'Sfera');
+  const steps = page.locator('.timeline__step');
+  const tip = page.getByRole('tooltip');
+  const thumb = tip.locator('.tooltip__thumb');
+
+  // Il passo con il solo cubo ha una miniatura (immagine), quello iniziale è vuoto
+  await steps.nth(1).hover();
+  await expect(thumb.locator('img')).toHaveAttribute('src', /^data:image\//);
+  await steps.nth(0).hover();
+  await expect(thumb).toContainText('Scena vuota');
+  await expect(thumb.locator('img')).toHaveCount(0);
+
+  // Dimenticate tutte le miniature, quella di un passo passato si ricalcola al passaggio del mouse nel worker
+  // senza toccare la scena in vista
+  await page.evaluate(() => window.__construct!.thumbnails.reset());
+  const before = await page.evaluate(() => window.__construct!.results.getState().meshes.map((m) => m.volume));
+  await page.mouse.move(0, 0);
+  await steps.nth(1).hover();
+  await expect(thumb.locator('img')).toHaveAttribute('src', /^data:image\//);
+  await settled(page);
+  expect(await page.evaluate(() => window.__construct!.results.getState().meshes.map((m) => m.volume))).toEqual(before);
+  expect((await sceneState(page)).rootIds).toHaveLength(2);
 });
 
 test('Novità: modale grande come il codice, elenco che scorre e nessuna data accanto alle versioni', async ({ page }) => {

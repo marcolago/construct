@@ -610,6 +610,31 @@ export class Evaluator {
   }
 
   /**
+   * Valuta una scena che non è quella corrente (la miniatura di un passo della timeline) senza toccare la cache della
+   * scena in vista: niente mark and sweep e, alla fine, si liberano solo i Manifold che questa valutazione ha aggiunto.
+   * Le voci già presenti si riusano (costano poco) ma restano della cache.
+   */
+  evaluateDetached(scene: Scene): EvalResult {
+    const before = new Set(this.cache.keys());
+    const t0 = performance.now();
+    const meshes: NodeMesh[] = [];
+    try {
+      for (const id of scene.rootIds) {
+        this.visit(scene, scene.nodes[id], [], (node, m, path) => meshes.push(toMesh(node, m, id, path)));
+      }
+    } finally {
+      // Le mesh sono già copiate in buffer propri: i Manifold nuovi non servono più
+      for (const [key, handle] of this.cache) {
+        if (!before.has(key)) {
+          handle.delete();
+          this.cache.delete(key);
+        }
+      }
+    }
+    return { meshes, ms: performance.now() - t0 };
+  }
+
+  /**
    * Operandi "fantasma" degli oggetti indicati, come il modificatore # di OpenSCAD: i pezzi che una booleana usa ma che
    * non compaiono nel risultato (i sottratti di una differenza, i fori, la cavità del guscio) e, in un'intersezione,
    * tutti gli operandi. Le mesh sono in coordinate mondo. Usa i sottoalberi già in cache, quindi costa poco.

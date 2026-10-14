@@ -7,6 +7,8 @@ interface Props {
   text: string;
   /** Ritardo prima che compaia (ms). */
   delay?: number;
+  /** Contenuto sotto il testo (per esempio una miniatura): si monta solo mentre il tooltip è visibile. */
+  media?: ReactNode;
   /** Il controllo a cui il tooltip è collegato; riceve l'id per `aria-describedby`. */
   children: (describedBy: string) => ReactNode;
 }
@@ -16,7 +18,7 @@ interface Props {
  * Stessa logica di `ToolTip` (ritardo, mouse e tastiera, Esc, funziona anche sui pulsanti disabilitati) ma senza la scheda
  * di aiuto della barra strumenti.
  */
-export function HoverTip({ text, delay = 150, children }: Props) {
+export function HoverTip({ text, delay = 150, media, children }: Props) {
   const id = useId();
   const box = useRef<HTMLSpanElement>(null);
   const timer = useRef<number | undefined>(undefined);
@@ -32,7 +34,7 @@ export function HoverTip({ text, delay = 150, children }: Props) {
       const rect = box.current?.getBoundingClientRect();
       if (!rect) return;
       // Centrato sopra il controllo, senza uscire dai lati della finestra (il testo è centrato con una traslazione)
-      const half = Math.min(150, window.innerWidth / 2 - 8);
+      const half = Math.min(media ? 110 : 150, window.innerWidth / 2 - 8);
       setPos({ left: Math.min(Math.max(half + 8, rect.left + rect.width / 2), window.innerWidth - half - 8), top: rect.top - 8 });
     }, delay);
   };
@@ -50,8 +52,9 @@ export function HoverTip({ text, delay = 150, children }: Props) {
     <span className="tooltip-host" ref={box} onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide} onPointerDown={hide}>
       {children(id)}
       {pos && (
-        <span id={id} role="tooltip" className="tooltip tooltip--compact" style={{ left: pos.left, top: pos.top }}>
+        <span id={id} role="tooltip" className={`tooltip tooltip--compact${media ? ' tooltip--media' : ''}`} style={{ left: pos.left, top: pos.top }}>
           {text}
+          {media}
         </span>
       )}
     </span>

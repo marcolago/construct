@@ -34,6 +34,25 @@ export function faceFromBounds(bounds: Bounds, direction: FaceDirection): Patter
   return { origin: origin.map((v) => round(v, 3)) as Vec3, normal, thickness: round(sizeOf(bounds)[axis], 3) };
 }
 
+/** Quanto una normale può scostarsi da un asse per contare come allineata (cos ≈ 1,8°, come per la faccia aperta del Guscio). */
+const AXIS_ALIGNED = 0.9995;
+
+/** Vero se la normale della faccia è parallela a un asse del pezzo (cima, fondo o uno dei lati); falso per le facce inclinate. */
+export function isAxisFace(face: PatternFace): boolean {
+  const length = Math.hypot(...face.normal);
+  return length > 0 && Math.max(...face.normal.map(Math.abs)) / length >= AXIS_ALIGNED;
+}
+
+/** Nome della faccia per i pannelli: l'asse con il verso (+Z, −X...) oppure l'inclinazione rispetto a +Z. */
+export function faceName(face: PatternFace): string {
+  const length = Math.hypot(...face.normal) || 1;
+  if (isAxisFace(face)) {
+    const axis = face.normal.reduce((best, v, i) => (Math.abs(v) > Math.abs(face.normal[best]) ? i : best), 0);
+    return `${face.normal[axis] < 0 ? '−' : '+'}${'XYZ'[axis]}`;
+  }
+  return `inclinata (${Math.round((Math.acos(Math.min(1, Math.max(-1, face.normal[2] / length))) * 180) / Math.PI)}° da +Z)`;
+}
+
 /** Lo spessore del pezzo lungo la normale di una faccia: la differenza tra gli estremi dell'ingombro proiettati sulla normale. */
 export function thicknessAlong(bounds: Bounds, normal: Vec3): number {
   const projections = [0, 1].flatMap((a) => [0, 1].flatMap((b) => [0, 1].map((c) => normal[0] * bounds[a ? 'max' : 'min'][0] + normal[1] * bounds[b ? 'max' : 'min'][1] + normal[2] * bounds[c ? 'max' : 'min'][2])));

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { apply, eulerToMatrix } from './math';
 import { localToWorld, worldToLocal } from './patternTool';
-import { FACE_DIRECTIONS, defaultPatternParams, faceFrame, faceFromBounds, frameRect, normalizePattern, patternCells, PATTERN_MAX_CELLS, sameFace, thicknessAlong } from './pattern';
+import { FACE_DIRECTIONS, defaultPatternParams, faceFrame, faceFromBounds, faceName, isAxisFace, frameRect, normalizePattern, patternCells, PATTERN_MAX_CELLS, sameFace, thicknessAlong } from './pattern';
 import { PATTERN_ALGORITHM } from './voronoi';
 import type { PatternParams, Vec3 } from './types';
 
@@ -14,6 +14,19 @@ describe('facce e riferimento', () => {
     expect(faceFromBounds(bounds, 'z+')).toEqual({ origin: [0, 0, 2.5], normal: [0, 0, 1], thickness: 5 });
     expect(faceFromBounds(bounds, 'x-')).toEqual({ origin: [-40, 0, 0], normal: [-1, 0, 0], thickness: 80 });
     expect(faceFromBounds(bounds, 'y+').normal).toEqual([0, 1, 0]);
+  });
+
+  it('faceName e isAxisFace: gli assi con il verso, le facce inclinate con l\'angolo da +Z', () => {
+    expect(faceName(faceFromBounds(bounds, 'z+'))).toBe('+Z');
+    expect(faceName(faceFromBounds(bounds, 'x-'))).toBe('−X');
+    expect(faceName(faceFromBounds(bounds, 'y+'))).toBe('+Y');
+    expect(isAxisFace(faceFromBounds(bounds, 'y-'))).toBe(true);
+    const diag = Math.SQRT1_2;
+    const tilted = { origin: [0, 0, 0] as Vec3, normal: [diag, 0, diag] as Vec3, thickness: 1 };
+    expect(isAxisFace(tilted)).toBe(false);
+    expect(faceName(tilted)).toBe('inclinata (45° da +Z)');
+    // Poche decimi di grado di scarto contano ancora come allineata
+    expect(isAxisFace({ ...tilted, normal: [0.001, 0, 1] })).toBe(true);
   });
 
   it('thicknessAlong dà lo spessore anche per una normale obliqua', () => {

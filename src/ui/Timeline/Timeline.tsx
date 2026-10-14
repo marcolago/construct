@@ -1,21 +1,40 @@
 import { useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Eraser } from 'lucide-react';
 import { useStore } from 'zustand';
+import { useResultStore } from '../../kernel/useKernel';
 import { useSceneStore } from '../../scene/store';
+import type { Scene } from '../../scene/types';
 import { useArrayTool } from '../Array/arrayToolStore';
 import { useEdgeTool } from '../EdgeTool/edgeToolStore';
 import { usePatternTool } from '../Pattern/patternToolStore';
 import { useShellTool } from '../Shell/shellToolStore';
 import { confirmDialog } from '../notify/notifyStore';
 import { HoverTip } from '../Toolbar/HoverTip';
+import { requestThumbnail, thumbnailOf, useThumbnails } from './thumbnails';
 import './Timeline.scss';
 
 /**
  * Timeline delle operazioni: un indicatore per ogni stato della cronologia di Annulla/Ripeti (passati, corrente, futuri).
  * Il nome dell'operazione che ha prodotto il passo sta nel tooltip. Un clic su un indicatore ci salta direttamente (undo o
- * redo di più passi); i passi futuri restano disponibili finché non si fa una nuova modifica. L'icona in fondo svuota la
- * cronologia.
+ * redo di più passi); i passi futuri restano disponibili finché non si fa una nuova modifica. Il tooltip mostra anche una
+ * miniatura isometrica della scena in quel punto. L'icona in fondo svuota la cronologia.
  */
+
+/** Miniatura isometrica di un passo, dentro il tooltip: si monta solo quando il tooltip compare e la chiede al momento. */
+function StepThumb({ scene, label }: { scene: Scene; label: string }) {
+  // Si ridisegna a ogni miniatura nuova e quando il kernel torna libero (le richieste non partono con il kernel occupato)
+  const version = useThumbnails((s) => s.version);
+  const busy = useResultStore((s) => s.busy);
+  useEffect(() => {
+    void requestThumbnail(scene);
+  }, [scene, busy, version]);
+  const state = thumbnailOf(scene);
+  return (
+    <span className="tooltip__thumb">
+      {state.status === 'ready' && state.url ? <img src={state.url} alt={`Vista isometrica: ${label}`} /> : state.status === 'ready' ? 'Scena vuota' : state.status === 'failed' ? 'Anteprima non disponibile' : 'Anteprima…'}
+    </span>
+  );
+}
 export function Timeline() {
   // Si legge l'intero stato della cronologia: zundo modifica gli elenchi sul posto, quindi un selettore sull'array
   // non vedrebbe il cambiamento
@@ -31,6 +50,9 @@ export function Timeline() {
 
   // Passi in ordine di tempo: i futuri sono salvati dal più lontano al più vicino, quindi si invertono
   const steps = [...history.pastStates.map((p) => p.op), current, ...[...history.futureStates].reverse().map((f) => f.op)];
+  // La scena di ogni passo, nello stesso ordine: da qui si ricava la miniatura
+  const scene = useSceneStore((s) => s.scene);
+  const scenes = [...history.pastStates.map((p) => p.scene), scene, ...[...history.futureStates].reverse().map((f) => f.scene)];
   const at = history.pastStates.length;
 
   /** Porta lo stato al passo `index`. */
@@ -67,7 +89,7 @@ export function Timeline() {
           const text = `${i + 1} · ${label}${i === at ? ' (stato corrente)' : ''}`;
           return (
             <li key={i}>
-              <HoverTip text={text}>
+              <HoverTip text={text} media={busy || !scenes[i] ? undefined : <StepThumb scene={scenes[i]} label={label ?? ''} />}>
                 {(describedBy) => (
                   <button
                     type="button"

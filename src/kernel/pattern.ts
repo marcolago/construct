@@ -1,5 +1,5 @@
 import type { CrossSection, Manifold, ManifoldToplevel } from 'manifold-3d';
-import { cutReach, faceFrame, frameRect, normalizePattern, patternCells } from '../scene/pattern';
+import { cutReach, faceFrame, frameRect, isAxisFace, normalizePattern, patternCells } from '../scene/pattern';
 import type { PatternFace, PatternParams, Vec3 } from '../scene/types';
 
 /** Segmenti del cerchio nelle giunzioni arrotondate (gli stessi degli angoli arrotondati delle forme 2D). */
@@ -41,8 +41,11 @@ function cutterFor(wasm: ManifoldToplevel, child: Manifold, p: PatternParams, fa
   const inFrame = shifted.rotate(frame.euler);
   shifted.delete();
   const through = p.depth <= 0;
-  // Passante: silhouette di tutto il pezzo; con profondità: sezione appena sotto la faccia (il contorno della faccia)
-  let region: CrossSection = through ? inFrame.project() : inFrame.slice(-0.01);
+  // Faccia inclinata: la silhouette del pezzo lungo la normale invaderebbe le facce vicine, quindi la regione è sempre il
+  // contorno della faccia e il taglio parte solo da lì (niente faccia opposta)
+  const axisFace = isAxisFace(face);
+  // Passante su una faccia sugli assi: silhouette di tutto il pezzo; altrimenti sezione appena sotto la faccia (il contorno della faccia)
+  let region: CrossSection = through && axisFace ? inFrame.project() : inFrame.slice(-0.01);
   inFrame.delete();
   if (p.margin > 0) {
     const inset = region.offset(-p.margin, 'Miter', 2, segments);
@@ -75,7 +78,7 @@ function cutterFor(wasm: ManifoldToplevel, child: Manifold, p: PatternParams, fa
     const slab = Manifold.extrude(cut, p.depth + 1, 0, 0, [1, 1], false);
     prisms.push(slab.translate([0, 0, -p.depth]));
     // Dalla faccia opposta (a `thickness` sotto): stessa profondità verso l'alto
-    if (p.sides === 'both') prisms.push(slab.translate([0, 0, -face.thickness - 1]));
+    if (p.sides === 'both' && axisFace) prisms.push(slab.translate([0, 0, -face.thickness - 1]));
     slab.delete();
   }
   cut.delete();

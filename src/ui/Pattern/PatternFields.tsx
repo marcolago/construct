@@ -1,6 +1,5 @@
 import { useResultStore } from '../../kernel/useKernel';
-import { FACE_DIRECTIONS, PATTERN_MAX_CELLS, faceFromBounds, sameFace } from '../../scene/pattern';
-import type { FaceDirection } from '../../scene/pattern';
+import { PATTERN_MAX_CELLS, faceName, isAxisFace } from '../../scene/pattern';
 import type { PatternParams } from '../../scene/types';
 import { NumberField } from '../NumberField/NumberField';
 import { SliderField } from '../SliderField/SliderField';
@@ -15,7 +14,7 @@ interface Props {
   disabled?: boolean;
   /** Falso quando la cronologia è già gestita da chi usa i campi (anteprima dello strumento, in pausa). */
   history?: boolean;
-  /** Se presente compare "Scegli facce": si cliccano le facce sull'oggetto (solo nel pannello dello strumento). */
+  /** Se presente compare "Scegli faccia": si clicca la faccia sull'oggetto (solo nel pannello dello strumento). */
   onPickFace?: () => void;
   picking?: boolean;
   /** Se presente compare la casella "Anteprima semplificata" (solo nel pannello dello strumento). */
@@ -26,12 +25,11 @@ interface Props {
 }
 
 const KIND_LABELS: Record<PatternParams['kind'], string> = { voronoi: 'Voronoi', hexagon: 'Esagoni', circle: 'Cerchi', diamond: 'Rombi', triangle: 'Triangoli' };
-const FACE_LABELS: Record<FaceDirection, string> = { 'z+': '+Z', 'z-': '-Z', 'x+': '+X', 'x-': '-X', 'y+': '+Y', 'y-': '-Y' };
 /** Sotto questa parete (circa due passate di un ugello da 0,4 mm) la stampa è inaffidabile. */
 const MIN_PRINTABLE_WALL = 0.8;
 
 /**
- * Campi di un Pattern: tipo, seme, celle, parete, margine, facce e profondità. Li usano il pannello dello strumento
+ * Campi di un Pattern: tipo, seme, celle, parete, margine, faccia e profondità. Li usano il pannello dello strumento
  * Pattern (con anteprima dal vivo) e il pannello delle proprietà del gruppo "Pattern" già creato.
  */
 export function PatternFields({ params: p, onChange, disabled, history = true, onPickFace, picking, onSimplified, simplified, onRefreshBounds }: Props) {
@@ -54,16 +52,10 @@ export function PatternFields({ params: p, onChange, disabled, history = true, o
   );
 
   const partial = p.depth > 0;
-  /** I sei lati dell'ingombro sono interruttori: ogni lato attivo è una faccia da cui parte il taglio. */
-  const sides = FACE_DIRECTIONS.map((d) => ({ d, face: faceFromBounds(p.bounds, d) }));
-  const isOn = (face: ReturnType<typeof faceFromBounds>) => p.faces.some((f) => sameFace(f, face));
-  const toggleSide = (face: ReturnType<typeof faceFromBounds>) => {
-    if (!isOn(face)) return onChange({ faces: [...p.faces, face] });
-    // Si toglie solo se resta almeno una faccia
-    const rest = p.faces.filter((f) => !sameFace(f, face));
-    if (rest.length) onChange({ faces: rest });
-  };
-  const custom = p.faces.filter((f) => !sides.some((s) => sameFace(s.face, f))).length;
+  // Il taglio parte da una sola faccia (i progetti vecchi possono averne più di una)
+  const faceLabel = p.faces.length === 1 ? faceName(p.faces[0]) : `${p.faces.length} facce`;
+  // Con una faccia inclinata il taglio parte solo da quella (niente faccia opposta)
+  const bothSides = p.faces.every(isAxisFace);
   const slow = ms > SLOW_PREVIEW_MS || estimatedCells(p) > SLOW_PREVIEW_CELLS;
 
   return (
@@ -96,32 +88,23 @@ export function PatternFields({ params: p, onChange, disabled, history = true, o
       {slider('Arrotondamento', 'Raggio degli angoli delle celle, in mm.', 'rounding', { min: 0, max: 5, step: 0.1, hardMin: 0, unit: 'mm' })}
       {slider('Margine', 'Cornice piena che resta attorno al disegno, in mm.', 'margin', { min: 0, max: 20, step: 0.5, hardMin: 0, unit: 'mm' })}
 
-      <div className="array-fields__row" title="Lati da cui parte il taglio: se ne possono attivare più di uno, ognuno con il proprio disegno.">
-        <span className="array-fields__label">Facce</span>
-        <div className="array-fields__segmented" role="group" aria-label="Facce">
-          {sides.map(({ d, face }) => (
-            <button key={d} type="button" className={isOn(face) ? 'is-active' : undefined} aria-pressed={isOn(face)} disabled={disabled} onClick={() => toggleSide(face)}>
-              {FACE_LABELS[d]}
-            </button>
-          ))}
-        </div>
-      </div>
-      {onPickFace && (
-        <div className="array-fields__row" title="Poi clicca le facce piane dell'oggetto: un clic aggiunge una faccia, un secondo clic la toglie.">
-          <span className="array-fields__label" />
-          <button type="button" className={`array-fields__button${picking ? ' is-active' : ''}`} aria-pressed={picking} disabled={disabled} onClick={onPickFace}>
-            {picking ? 'Fine scelta' : 'Scegli facce'}
+      <div className="array-fields__row" title="Faccia da cui parte il taglio. Per forare altre facce applica di nuovo il Pattern.">
+        <span className="array-fields__label">Faccia</span>
+        <span>{faceLabel}</span>
+        {onPickFace && (
+          <button type="button" className={`array-fields__button${picking ? ' is-active' : ''}`} aria-pressed={picking} disabled={disabled} onClick={onPickFace} title="Poi clicca una faccia piana dell'oggetto, anche inclinata.">
+            {picking ? 'Fine scelta' : 'Scegli faccia'}
           </button>
-        </div>
+        )}
+      </div>
+      {picking && (
+        <p className="array-fields__total" role="status">
+          Clicca la faccia da forare (Esc per finire).
+        </p>
       )}
-      <p className="array-fields__total" role="status">
-        {picking ? 'Clicca le facce da forare (Esc per finire). ' : ''}
-        {p.faces.length === 1 ? '1 faccia' : `${p.faces.length} facce`}
-        {custom > 0 ? `, di cui ${custom} scelte con il clic` : ''}
-      </p>
 
       {slider('Profondità', 'Quanto entra il taglio dalla faccia, in mm. 0 = passante.', 'depth', { min: 0, max: Math.max(1, Math.round(Math.max(...p.faces.map((f) => f.thickness)))), step: 0.1, hardMin: 0, unit: 'mm' })}
-      {partial && choice('Lati', 'Il taglio parte dalla sola faccia scelta oppure anche da quella opposta, con la stessa profondità.', p.sides, [['one', 'Una faccia'], ['both', 'Entrambe']], (sides) => onChange({ sides }))}
+      {partial && bothSides && choice('Lati', 'Il taglio parte dalla sola faccia scelta oppure anche da quella opposta, con la stessa profondità.', p.sides, [['one', 'Una faccia'], ['both', 'Entrambe']], (sides) => onChange({ sides }))}
       {p.wall < MIN_PRINTABLE_WALL && <p className="array-fields__total" role="status">Parete sotto {MIN_PRINTABLE_WALL} mm: difficile da stampare.</p>}
 
       {slow && (

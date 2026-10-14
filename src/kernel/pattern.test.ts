@@ -4,7 +4,7 @@ import type { ManifoldToplevel } from 'manifold-3d';
 import { Evaluator } from './evaluate';
 import { sceneToOpenScad } from '../codegen/openscad';
 import { primitiveDefaults } from '../scene/defaults';
-import { defaultPatternParams, faceFromBounds } from '../scene/pattern';
+import { defaultPatternParams, faceFromBounds, thicknessAlong } from '../scene/pattern';
 import type { GroupNode, PatternParams, PrimitiveNode, Scene, Vec3 } from '../scene/types';
 
 let wasm: ManifoldToplevel;
@@ -114,6 +114,75 @@ describe('Pattern nel kernel', () => {
   it('un margine che occupa tutto il pezzo lo lascia invariato', () => {
     const m = run(scene({ margin: 100 }));
     expect(m.volume).toBeCloseTo(FULL, 2);
+  });
+});
+
+describe('Pattern su una faccia inclinata', () => {
+  // Piramide a base quadrata (cono a 4 segmenti): le facce laterali sono inclinate, quella verso (1, 1) ha normale (1, 1, 1) / √3
+  const pyramid = (patch: Partial<PatternParams>): Scene => {
+    const cone = { ...primitiveDefaults('cone'), id: 'c', name: 'Piramide', position: [0, 0, 0], radiusBottom: 20, radiusTop: 0, height: 20, segments: 4 } as PrimitiveNode;
+    const bounds = { min: [-20, -20, -10] as Vec3, max: [20, 20, 10] as Vec3 };
+    const normal: Vec3 = [1, 1, 1].map((v) => v / Math.sqrt(3)) as Vec3;
+    const face = { origin: [10 / 3, 10 / 3, 10 / 3] as Vec3, normal, thickness: thicknessAlong(bounds, normal) };
+    const g: GroupNode = {
+      id: 'g', name: 'Pattern', type: 'group', op: 'pattern', children: ['c'], position: [0, 0, 0], rotation: [0, 0, 0], mode: 'solid', color: '#4da3ff',
+      pattern: { ...defaultPatternParams(bounds, 7), kind: 'hexagon', size: 6, wall: 1, rounding: 0, margin: 1, faces: [face], ...patch },
+    };
+    return { nodes: { c: cone, g }, rootIds: ['g'] };
+  };
+  const PYRAMID = (800 * 20) / 3;
+  /** Area della faccia inclinata: triangolo (20, 0, -10), (0, 20, -10), (0, 0, 10). */
+  const FACE_AREA = 0.5 * Math.hypot(400, 400, 400);
+
+  it('la tasca resta dentro il contorno della faccia scelta', () => {
+    const m = run(pyramid({ depth: 1 }));
+    expect(m.status).toBe('NoError');
+    const removed = PYRAMID - m.volume;
+    expect(removed).toBeGreaterThan(0);
+    // Al più la faccia per la profondità: la silhouette lungo la normale sarebbe molto più larga della faccia
+    expect(removed).toBeLessThanOrEqual(FACE_AREA * 1.001);
+  });
+
+  it('passante: il pezzo resta valido e le altre facce non sono forate più che dalla tasca', () => {
+    const m = run(pyramid({ depth: 0 }));
+    expect(m.status).toBe('NoError');
+    expect(m.volume).toBeLessThan(PYRAMID);
+    expect(m.volume).toBeGreaterThan(PYRAMID * 0.5);
+  });
+
+  it('"Entrambe" non ha effetto: il taglio parte solo dalla faccia inclinata', () => {
+    const one = run(pyramid({ depth: 1, sides: 'one' }));
+    const both = run(pyramid({ depth: 1, sides: 'both' }));
+    expect(both.volume).toBeCloseTo(one.volume, 6);
+  });
+
+  it('il codice OpenSCAD usa la sezione sotto la faccia e un solo taglio', () => {
+    const code = sceneToOpenScad(pyramid({ depth: 1, sides: 'both' }));
+    expect(code).toContain('projection(cut = true) translate([0, 0, 0.01])');
+    expect(code).not.toContain('for (z = [');
+    const through = sceneToOpenScad(pyramid({ depth: 0 }));
+    expect(through).toContain('projection(cut = true) translate([0, 0, 0.01])');
+    expect(through).not.toContain('projection() rotate(');
+  });
+});
+
+describe('Pattern applicato più volte', () => {
+  it('un Pattern dentro l\'altro fora due facce diverse e la mesh resta valida', () => {
+    const bounds = { min: [-40, -30, -2.5] as Vec3, max: [40, 30, 2.5] as Vec3 };
+    const base = scene({ kind: 'hexagon', size: 10, margin: 1, depth: 2 });
+    const inner = base.nodes.g as GroupNode;
+    // Secondo Pattern: avvolge il primo e fora il lato opposto (z-)
+    const outer: GroupNode = { ...inner, id: 'g2', children: ['g'], pattern: { ...inner.pattern!, faces: [faceFromBounds(bounds, 'z-')] } };
+    const nested: Scene = { nodes: { ...base.nodes, g2: outer }, rootIds: ['g2'] };
+    const one = run(base);
+    const two = run(nested);
+    expect(two.status).toBe('NoError');
+    expect(two.volume).toBeLessThan(one.volume);
+    expect(two.volume).toBeGreaterThan(0);
+    const code = sceneToOpenScad(nested);
+    // Un elenco di celle per ogni Pattern; il pezzo interno compare due volte (nel corpo e nella regione del taglio esterno)
+    expect(code.match(/\/\/ Pattern hexagon, seme/g)).toHaveLength(3);
+    expect(code.split('{').length).toBe(code.split('}').length);
   });
 });
 

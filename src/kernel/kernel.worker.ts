@@ -33,6 +33,14 @@ const api = {
     return Comlink.transfer(result, transfer);
   },
 
+  /** Mesh di una scena che non è quella in vista (miniatura di un passo della timeline): non tocca la cache della scena corrente. */
+  async evaluateDetached(scene: Scene): Promise<EvalResult> {
+    const ev = await getEvaluator();
+    await ensureFonts(scene);
+    const result = ev.evaluateDetached(scene);
+    return Comlink.transfer(result, result.meshes.flatMap((m) => [m.positions.buffer, m.indices.buffer]));
+  },
+
   /** Operandi "fantasma" (come # di OpenSCAD) degli oggetti indicati. */
   async ghosts(scene: Scene, rootIds: string[]): Promise<NodeMesh[]> {
     const ev = await getEvaluator();

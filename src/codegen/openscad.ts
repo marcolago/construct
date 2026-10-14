@@ -10,7 +10,7 @@ import { resolveEnds } from '../scene/edgeEnds';
 import { stretchFactors } from '../scene/ellipse';
 import { isScaled, scaleOf } from '../scene/groupScale';
 import { circularStep, linearStep, normalizeArray } from '../scene/arrayPattern';
-import { cutReach, faceFrame, frameRect, normalizePattern, patternCells } from '../scene/pattern';
+import { cutReach, faceFrame, frameRect, isAxisFace, normalizePattern, patternCells } from '../scene/pattern';
 import { isRotational, revolveParams, shapeContours, svgContours } from '../scene/shapes2d';
 import { isProfileShape, profileContours } from '../scene/profiles';
 import { fontInfo, fontsUsed, scadFontName } from '../scene/fontCatalog';
@@ -460,12 +460,14 @@ function patternLines(params: PatternParams, child: (depth: number) => string[],
   // Un taglio per faccia: dal riferimento della faccia a quello del pezzo
   p.faces.forEach((face, i) => {
     const frame = faceFrame(face);
+    // Faccia inclinata: regione = contorno della faccia e taglio da un solo lato (come nel kernel)
+    const axisFace = isAxisFace(face);
     let d = depth + 1;
     out.push(at(d, `translate(${vec(frame.origin)}) rotate(${vec(frame.inverseEuler)}) {`));
     d++;
     if (through) {
       out.push(at(d, `linear_extrude(height = ${n(2 * cutReach(p, face))}, center = true)`));
-    } else if (p.sides === 'both') {
+    } else if (p.sides === 'both' && axisFace) {
       // Dalla faccia e dalla faccia opposta (a `thickness` sotto): stessa profondità
       out.push(at(d, `for (z = [${n(-p.depth)}, ${n(-face.thickness - 1)}]) translate([0, 0, z]) linear_extrude(height = ${n(p.depth + 1)})`));
     } else {
@@ -476,7 +478,7 @@ function patternLines(params: PatternParams, child: (depth: number) => string[],
     // Disegno 2D: Fori = celle dentro la regione, Solchi = regione meno le celle
     const shrink = n(p.wall / 2 + p.rounding);
     const cellShape = `for (c = ${names[i]}) ${p.rounding > 0 ? `offset(r = ${n(p.rounding)}, $fn = 32) ` : ''}offset(delta = -${shrink}) polygon(c);`;
-    const regionHead = `${p.margin > 0 ? `offset(delta = -${n(p.margin)}) ` : ''}${through ? 'projection()' : 'projection(cut = true) translate([0, 0, 0.01])'}`;
+    const regionHead = `${p.margin > 0 ? `offset(delta = -${n(p.margin)}) ` : ''}${through && axisFace ? 'projection()' : 'projection(cut = true) translate([0, 0, 0.01])'}`;
     const region = [
       at(d + 1, `${regionHead} rotate(${vec(frame.euler)}) translate(${vec(frame.origin.map((v) => -v))}) {`),
       ...child(d + 2),

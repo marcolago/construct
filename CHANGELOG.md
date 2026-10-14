@@ -18,6 +18,17 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.59.0] - 2026-10-14
+
+### Aggiunto
+- **Timeline: miniatura isometrica nel tooltip.** Passando il mouse su un passo della timeline, sotto il nome dell'operazione compare una miniatura della scena in quel punto, ripresa con la vista isometrica (stesse luci e inquadratura dell'immagine con le 4 viste, sfondo trasparente). Le miniature si scattano da sole a ogni calcolo finito del kernel; se per un passo manca (per esempio dopo un salto di più passi) il worker calcola quella scena al volo, senza toccare la cache della scena in vista, e il tooltip mostra "Anteprima…" finché non è pronta. Con uno strumento aperto (Raccordo, Guscio, Pattern...) o con il kernel occupato il tooltip resta solo testo. La miniatura mostra il piatto attivo del passo.
+- **Pattern su facce inclinate.** "Scegli faccia" accetta qualsiasi faccia piana, anche obliqua: il disegno si genera nel riferimento di quella faccia. Il nome della faccia compare nel pannello (+Z, −X... oppure "inclinata (55° da +Z)").
+- Il Pattern si può applicare più volte: un secondo Pattern su un oggetto già forato avvolge il primo in un nuovo gruppo, ognuno con la sua faccia.
+
+### Modificato
+- **Pattern: una sola faccia, scelta con il clic.** Come nel Guscio, "Scegli faccia" mostra il pezzo intero e un clic sulla faccia la sceglie e chiude la scelta; sono stati tolti i sei pulsanti ±X, ±Y, ±Z e la scelta di più facce. Per forare altre facce si applica di nuovo il Pattern. I progetti salvati con più facce restano validi e si leggono come prima ("N facce" nel pannello).
+- Con una faccia inclinata la regione da forare è sempre il contorno della faccia (la silhouette del pezzo lungo la normale invaderebbe le facce vicine) e il taglio parte da quella faccia soltanto: "Entrambe" non vale e il selettore non compare. Il codice OpenSCAD segue la stessa regola. Le facce sugli assi restano come prima.
+
 ## [0.58.0] - 2026-10-14
 
 ### Aggiunto

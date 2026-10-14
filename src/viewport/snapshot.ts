@@ -1,9 +1,10 @@
 import * as THREE from 'three';
+import type { NodeMesh } from '../kernel/evaluate';
 import { boundsByRoot } from '../kernel/placement';
 import { useResultStore } from '../kernel/useKernel';
 import type { Bounds } from '../scene/placement';
 import { useSceneStore } from '../scene/store';
-import type { Vec3 } from '../scene/types';
+import type { Scene, Vec3 } from '../scene/types';
 import { useUiStore } from '../ui/uiStore';
 import type { BedSize, Theme } from '../ui/uiStore';
 import { boundingSphere, PRESET_DIRECTIONS, PRESET_LABELS, viewBounds } from './cameraControl';
@@ -137,6 +138,47 @@ function drawLabel(ctx: CanvasRenderingContext2D, text: string, x: number, y: nu
 }
 
 /**
+ * Mesh da fotografare: quelle delle radici visibili di `scene`, senza mesh vuote né fori sciolti (traslucidi, non si
+ * stampano). `meshes` sono le mesh calcolate per quella scena.
+ */
+export function visibleParts(scene: Scene, meshes: NodeMesh[]): NodeMesh[] {
+  const visibleRoots = scene.rootIds.filter((id) => !scene.nodes[id]?.hidden);
+  return meshes.filter((m) => !m.empty && !m.isHole && visibleRoots.includes(m.rootId));
+}
+
+/** Ingombro che contiene tutte le mesh (null se la lista è vuota). */
+export function meshBounds(parts: NodeMesh[]): Bounds | null {
+  if (parts.length === 0) return null;
+  return parts.reduce<Bounds>(
+    (b, m) => ({ min: b.min.map((v, i) => Math.min(v, m.bbox.min[i])) as Vec3, max: b.max.map((v, i) => Math.max(v, m.bbox.max[i])) as Vec3 }),
+    { min: [...parts[0].bbox.min], max: [...parts[0].bbox.max] },
+  );
+}
+
+/** Aggiunge alla scena le luci della vista 3D (le stesse in ogni immagine). */
+export function addLights(scene: THREE.Scene, palette: ViewportPalette): void {
+  scene.add(new THREE.HemisphereLight(palette.skyLight, palette.groundLight, LIGHTS.hemisphere));
+  for (const light of [LIGHTS.key, LIGHTS.fill]) {
+    const lamp = new THREE.DirectionalLight(0xffffff, light.intensity);
+    lamp.position.set(...light.position);
+    scene.add(lamp);
+  }
+}
+
+/** Aggiunge alla scena una mesh per ogni parte, con il suo colore; geometrie e materiali creati vanno in `disposables`. */
+export function addParts(scene: THREE.Scene, parts: NodeMesh[], disposables: { dispose: () => void }[]): void {
+  for (const m of parts) {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(m.positions, 3));
+    geometry.setIndex(new THREE.BufferAttribute(m.indices, 1));
+    geometry.computeVertexNormals();
+    const material = new THREE.MeshStandardMaterial({ color: m.color, flatShading: true, roughness: 0.55, metalness: 0.05 });
+    scene.add(new THREE.Mesh(geometry, material));
+    disposables.push(geometry, material);
+  }
+}
+
+/**
  * PNG con le 4 viste del piatto in vista, o `null` se non c'è nulla da fotografare. Gli oggetti nascosti e i fori sciolti
  * (traslucidi, non si stampano) non compaiono; il piano di stampa sì, se è visibile. Lo sfondo è quello del tema, bianco
  * o trasparente (`background`).
@@ -145,7 +187,7 @@ export async function captureViews(background: ImageBackground = 'theme'): Promi
   const sceneState = useSceneStore.getState().scene;
   const ui = useUiStore.getState();
   const visibleRoots = sceneState.rootIds.filter((id) => !sceneState.nodes[id]?.hidden);
-  const parts = useResultStore.getState().meshes.filter((m) => !m.empty && !m.isHole && visibleRoots.includes(m.rootId));
+  const parts = visibleParts(sceneState, useResultStore.getState().meshes);
   if (parts.length === 0) return null;
 
   // Con lo sfondo bianco i colori sono quelli del tema chiaro (piano e griglia compresi), con la base bianca
@@ -158,22 +200,9 @@ export async function captureViews(background: ImageBackground = 'theme'): Promi
   const scene = new THREE.Scene();
   // Trasparente: nessun colore di sfondo, il canvas parte con alpha 0
   scene.background = background === 'transparent' ? null : new THREE.Color(palette.background);
-  scene.add(new THREE.HemisphereLight(palette.skyLight, palette.groundLight, LIGHTS.hemisphere));
-  for (const light of [LIGHTS.key, LIGHTS.fill]) {
-    const lamp = new THREE.DirectionalLight(0xffffff, light.intensity);
-    lamp.position.set(...light.position);
-    scene.add(lamp);
-  }
+  addLights(scene, palette);
   const disposables: { dispose: () => void }[] = [];
-  for (const m of parts) {
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(m.positions, 3));
-    geometry.setIndex(new THREE.BufferAttribute(m.indices, 1));
-    geometry.computeVertexNormals();
-    const material = new THREE.MeshStandardMaterial({ color: m.color, flatShading: true, roughness: 0.55, metalness: 0.05 });
-    scene.add(new THREE.Mesh(geometry, material));
-    disposables.push(geometry, material);
-  }
+  addParts(scene, parts, disposables);
   if (ui.bedMode === 'full') addBed(scene, ui.bedSize, palette, disposables);
 
   // Renderer fuori schermo con lo stesso tone mapping e spazio colore della vista (default di R3F)

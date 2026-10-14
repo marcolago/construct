@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { NodeMesh } from '../../kernel/evaluate';
 import { useResultStore } from '../../kernel/useKernel';
 import { faceMap } from '../../scene/edgeTool';
-import { defaultPatternParams, normalizePattern, sameFace, thicknessAlong } from '../../scene/pattern';
+import { defaultPatternParams, normalizePattern, thicknessAlong } from '../../scene/pattern';
 import { applyPattern, worldToLocal } from '../../scene/patternTool';
 import { localBounds } from '../../scene/shell';
 import { isLocked, labelled, useSceneStore, worldTransform } from '../../scene/store';
@@ -34,7 +34,7 @@ interface PatternToolState {
   base: Scene | null;
   /** Gruppo Pattern creato dall'anteprima. */
   groupId: string | null;
-  /** Scelta delle facce con i clic sull'oggetto in corso (la vista mostra il pezzo intero), e faccia sotto il puntatore. */
+  /** Scelta della faccia con un clic sull'oggetto in corso (la vista mostra il pezzo intero), e faccia sotto il puntatore. */
   picking: boolean;
   hover: PatternHover | null;
   /** Anteprima con meno segmenti: più veloce, e identica nel risultato definitivo. */
@@ -47,7 +47,7 @@ interface PatternToolState {
   setPicking: (picking: boolean) => void;
   setSimplified: (simplified: boolean) => void;
   setHover: (hover: PatternHover | null) => void;
-  /** Aggiunge la faccia piana cliccata alle facce del pattern, o la toglie se c'è già (resta sempre almeno una faccia). */
+  /** Sceglie come faccia del pattern la faccia piana cliccata (anche inclinata): sostituisce la precedente e chiude la scelta. */
   pickFace: (mesh: NodeMesh, face: number) => void;
 }
 
@@ -174,16 +174,19 @@ export const usePatternTool = create<PatternToolState>()((set, get) => {
       const { params, targetId, base } = get();
       const info = faceMap(mesh).faces[face];
       if (!params || !info || !targetId || !base || !mesh.path.includes(targetId)) return;
+      if (!info.planar) {
+        set({ error: 'Scegli una faccia piana.' });
+        return;
+      }
       const world = worldTransform(base, targetId);
       // Normale e un punto del piano, dal mondo al sistema del gruppo
       const normal = worldToLocal(world, info.normal, false);
       const point = worldToLocal(world, info.normal.map((c) => c * info.offset) as Vec3, true);
       const round = (v: number) => Math.round(v * 1e4) / 1e4 + 0;
       const picked: PatternFace = { origin: point.map(round) as Vec3, normal: normal.map(round) as Vec3, thickness: round(thicknessAlong(params.bounds, normal)) };
-      // Già scelta: si toglie (ma ne resta sempre una); altrimenti si aggiunge
-      const others = params.faces.filter((f) => !sameFace(f, picked));
-      const faces = others.length < params.faces.length ? (others.length ? others : params.faces) : [...params.faces, picked];
-      set({ params: normalizePattern({ ...params, faces }) });
+      // La faccia scelta sostituisce le precedenti: per forare altre facce si applica di nuovo il Pattern
+      set({ params: normalizePattern({ ...params, faces: [picked] }), picking: false, hover: null, error: null });
+      rebuild();
     },
   };
 });
