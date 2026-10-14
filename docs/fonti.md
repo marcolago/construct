@@ -102,3 +102,5 @@ Raccolte durante la ricerca del 5 ottobre 2026, raggruppate per tema.
 - https://forum.figma.com/suggest-a-feature-11/vector-image-settings-43239
 - https://inkscape-manuals.readthedocs.io/en/1.3/node-types.html
 - https://edutechwiki.unige.ch/en/Inkscape_-_path_editing
+- https://docs.blender.org/manual/nb/2.79/modeling/curves/structure.html
+- https://docs.blender.org/manual/de/5.0/modeling/curves_new/editing/control_points.html

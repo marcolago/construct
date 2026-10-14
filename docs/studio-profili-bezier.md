@@ -36,8 +36,9 @@ strategica più grande ancora da fare.
 
 ## 2. Come lo fanno gli altri
 
-Sono stati confrontati gli strumenti che l'utente di Construct probabilmente conosce. Le affermazioni sono limitate a ciò
-che le fonti (elencate in `docs/fonti.md`) confermano.
+Sono stati confrontati gli strumenti che l'utente di Construct probabilmente conosce. Le affermazioni su Fusion, Shapr3D,
+Figma, Inkscape e Blender si appoggiano alle fonti elencate in `docs/fonti.md`; per Tinkercad la ricerca non ha trovato
+dettagli sul disegno delle curve, quindi la riga è prudente e da ricontrollare.
 
 | Programma | Come disegna le curve | Cosa prendere | Cosa evitare |
 |---|---|---|---|
@@ -45,8 +46,8 @@ che le fonti (elencate in `docs/fonti.md`) confermano.
 | **Shapr3D** | Spline interpolate modificabili dopo la creazione; un solo livello di controllo sulla tangenza, per spezzarla bisogna creare il punto come spigolo | Disegno diretto e immediato, solidi da profili chiusi | Non poter cambiare tipo di punto dopo: in Construct il tipo di nodo si cambia sempre |
 | **Figma e Illustrator (Penna)** | Bézier cubiche con maniglie. Figma ha tre modi di specchio: nessuno, solo angolo, angolo e lunghezza | Il modello a tre tipi di nodo è lo standard di fatto, comprensibile a chi usa programmi grafici | Il modo di specchio che si azzera a ogni nuovo punto (lamentela documentata sul forum di Figma) |
 | **Inkscape (Bézier)** | Quattro tipi di nodo: spigolo (cuspide), liscio, simmetrico, auto liscio; Ctrl+clic scorre i tipi | Nomi e comportamento dei tipi di nodo; il tipo "auto liscio" per chi non vuole toccare le maniglie | Il numero di scorciatoie con maiuscole: in Construct bastano pulsanti e un doppio clic |
-| **Tinkercad (Sketch)** | Disegno a mano libera e poligoni che diventano forme estrudibili | Immediatezza, forme base come partenza | Mancanza di precisione numerica |
-| **Blender (curve)** | Maniglie Bézier con tipi automatico, vettore, allineato, libero | Maniglie relative al nodo | Edit mode nella vista 3D, fuori ambito |
+| **Tinkercad (Sketch)** | Profili 2D che si estrudono (dal blog di Tinkercad); i dettagli del disegno delle curve non sono verificati | Immediatezza, forme base come partenza | Da ricontrollare provando lo strumento |
+| **Blender (curve)** | Maniglie Bézier con quattro tipi (Automatic, Vector, Aligned, Free); un'automatica diventa allineata appena la si sposta | Maniglie relative al nodo, tipo che cambia quando l'utente interviene | Edit mode nella vista 3D, fuori ambito |
 
 I gesti della Penna che si ritrovano uguali ovunque, e che quindi conviene adottare senza inventare nulla:
 
@@ -154,8 +155,9 @@ nell'editor in qualsiasi modalità.
 - **Ritorno da OpenSCAD.** Il codice contiene solo punti campionati. Per ritrovare le curve il codegen scrive, prima del
   `polygon`, un commento `// construct:path <JSON compatto dei nodi>`. `src/import/scad/toScene.ts` lo legge e crea un
   nodo `path` invece di un "Poligono" `svg`. Se il commento manca o non corrisponde ai punti (codice modificato a mano),
-  vale il comportamento attuale. **Da verificare nell'implementazione**: oggi `parse.ts` potrebbe scartare i commenti
-  prima dell'analisi; in quel caso serve un piccolo passaggio che li conservi.
+  vale il comportamento attuale. Il lexer (`src/import/scad/parse.ts:95-100`) scarta i commenti, ma ha già un
+  precedente: riconosce `// === Piatto N: nome ===` e lo conserva in `plateNames`. Si estende nello stesso modo, con una mappa
+  dalla riga del commento al JSON dei nodi, che `toScene.ts` associa al `polygon` successivo.
 - **Salvataggio.** Il kind è nuovo e i campi opzionali: i progetti già salvati restano validi e non serve incrementare
   `VERSION` di `persistence.ts`. Un progetto con `path` aperto in una versione vecchia dell'app non si legge, come
   accade con ogni nuovo tipo di nodo.
@@ -168,8 +170,10 @@ nell'editor in qualsiasi modalità.
 ### Punti di ingresso
 
 1. **Libreria forme**: nuova voce "Profilo" in `ShapeLibrary`. Crea un nodo `path` vuoto e apre subito la modale.
-2. **Menu contestuale e proprietà**: per un nodo `path`, "Modifica profilo" (con il doppio clic sull'oggetto in vista, da
-   verificare che non confligga con gli usi esistenti).
+2. **Menu contestuale e proprietà**: per un nodo `path`, "Modifica profilo" nel menu contestuale e come pulsante nelle
+   proprietà. Il doppio clic sull'oggetto in vista **non è disponibile**: oggi passa alla modalità Sposta
+   (`SceneObject.tsx:327`). La scorciatoia da tastiera si sceglie in fase di realizzazione, tra quelle libere di
+   `useShortcuts.ts`.
 3. **Converti in profilo**: per cerchio, quadrato e forme poligonali già presenti, e per gli SVG importati, "Converti in
    profilo modificabile". Il cerchio diventa quattro nodi con maniglie di cubica (costante 0,5523), il quadrato quattro
    spigoli, l'SVG i suoi punti come spigoli. Questa funzione dà un valore enorme a poco costo: ogni forma esistente diventa
@@ -339,7 +343,7 @@ parametri legati) e gli slider usano `SliderField`. I colori vengono dai token d
 |---|---|---|
 | a. Secondo `<Canvas>` R3F nella modale, alimentato dal kernel (`evaluateDetached` in debounce) | Anteprima identica al risultato finale, orbitabile | **Proposta**: un secondo contesto WebGL, montato solo con la modale aperta (`frameloop="demand"`) |
 | b. Riuso di `renderThumbnail` | Immagine statica isometrica | Utile come ripiego, ma non orbitabile |
-| c. Anteprima approssimata con `ExtrudeGeometry` e `LatheGeometry` di three | Veloce, ma diversa dal risultato (niente torsione e scala, fori da gestire) | Sconsigliata: anteprima e risultato non coinciderebbero. È ciò che fa il prototipo, dichiarato |
+| c. Anteprima approssimata con geometria propria in three.js (strati con torsione e scala, superficie di rotazione, tappi triangolati) | Veloce e senza kernel, ma è una seconda implementazione che può divergere (per esempio la parte oltre l'asse è tagliata a mano) | Sconsigliata nel prodotto: anteprima e risultato non coinciderebbero. È ciò che fa il prototipo, dichiarato |
 
 Durante il trascinamento di un nodo l'anteprima si aggiorna al massimo ogni 100 ms (il kernel è in un Web Worker, quindi
 l'interfaccia non si blocca) e subito al rilascio. Il disegno 2D mostra già il riempimento pari-dispari: il feedback sui fori
@@ -393,9 +397,8 @@ helper `openApp` e `settled` già esistenti.
 
 ## 10. Domande aperte
 
-1. Il doppio clic su un oggetto in vista è già usato per altro? In caso, "Modifica profilo" resta solo nel menu e nelle proprietà.
-2. Il profilo rotazionale deve poter attraversare l'asse e comportarsi in modo speculare (come Fusion con asse in mezzo al profilo) oppure basta l'avviso?
-3. Quale tolleranza di campionamento offrire come predefinita, 0,05 mm o 0,1 mm, tenendo conto del peso del codice OpenSCAD?
-4. La bozza in `localStorage` vale anche tra schede diverse del browser o solo nella stessa?
-5. Serve un limite al numero di nodi per contorno per proteggere l'interfaccia (per esempio 500)?
-6. Conviene mantenere il nodo `svg` così com'è, oppure far convergere l'import SVG sul nuovo `path` in una versione successiva?
+1. Il profilo rotazionale deve poter attraversare l'asse (e in quel caso la parte a sinistra va ruotata, specchiata o scartata) oppure basta l'avviso di oggi?
+2. Quale tolleranza di campionamento offrire come predefinita, 0,05 mm o 0,1 mm, tenendo conto del peso del codice OpenSCAD?
+3. La bozza in `localStorage` vale anche tra schede diverse del browser o solo nella stessa?
+4. Serve un limite al numero di nodi per contorno per proteggere l'interfaccia (per esempio 500)?
+5. Conviene mantenere il nodo `svg` così com'è, oppure far convergere l'import SVG sul nuovo `path` in una versione successiva?

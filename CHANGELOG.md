@@ -18,11 +18,17 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.59.3] - 2026-10-14
+
+### Corretto
+- Studio dei profili con curve di Bézier: tolta l'ipotesi del doppio clic in vista per "Modifica profilo" (oggi passa alla modalità Sposta, `SceneObject.tsx:327`) e sostituita da menu contestuale e pulsante nelle proprietà; il ritorno da OpenSCAD si appoggia al precedente del commento dei piatti nel lexer (`parse.ts`); la descrizione dell'anteprima approssimata corrisponde al prototipo; le righe su Tinkercad e Blender dichiarano ciò che le fonti confermano (aggiunte le fonti di Blender in `docs/fonti.md`); la domanda sul profilo oltre l'asse è neutra.
+- CHANGELOG 0.59.2: le schermate del prototipo sono cinque, non sei.
+
 ## [0.59.2] - 2026-10-14
 
 ### Aggiunto
 - Documentazione: studio di fattibilità del disegno di profili con curve di Bézier (`docs/studio-profili-bezier.md`): confronto con Fusion, Shapr3D, Figma, Inkscape e Tinkercad, modello dati del nuovo tipo di forma `path` (nodi con maniglie relative, più contorni e fori, profili aperti chiusi sull'asse), campionamento adattivo per tolleranza, coerenza con kernel e codice OpenSCAD, UX della modale (Penna, Seleziona, forme base, import SVG con curve), tre disposizioni dell'interfaccia (A consigliata), rischi, fasi e stima.
-- Prototipo interattivo `docs/prototipi/profilo-bezier.html`: modale funzionante con Penna, nodi e maniglie, fori, import SVG, annulla e ripeti e anteprima 3D approssimata (three.js, non il kernel); sei schermate in `docs/images/profilo-bezier-*.png`.
+- Prototipo interattivo `docs/prototipi/profilo-bezier.html`: modale funzionante con Penna, nodi e maniglie, fori, import SVG, annulla e ripeti e anteprima 3D approssimata (three.js, non il kernel); cinque schermate in `docs/images/profilo-bezier-*.png`.
 - `docs/fonti.md`: fonti della ricerca sugli strumenti di disegno delle curve.
 
 ### Modificato
