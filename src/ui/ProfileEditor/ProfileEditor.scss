@@ -1,0 +1,639 @@
+@use '../../styles/abstracts' as *;
+
+// La modale del Profilo usa tutto il corpo della finestra: niente margine attorno
+.modal__body:has(> .profile-editor) {
+  padding: 0;
+  overflow: hidden;
+}
+
+// Modale di disegno del Profilo: disegno 2D a sinistra, opzioni a destra, piede con avvisi e pulsanti
+.profile-editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  outline: none;
+
+  // Disegno a sinistra su tutta l'altezza; a destra l'anteprima 3D sopra le opzioni
+  &__main {
+    display: grid;
+    flex: 1;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  &__canvas {
+    grid-column: 1;
+    grid-row: 1 / -1;
+  }
+
+  // Anteprima ingrandita: occupa tutta la colonna e le opzioni si nascondono
+  &__main--preview-large {
+    grid-template-rows: minmax(0, 1fr) auto;
+
+    .profile-editor__sidebar {
+      display: none;
+    }
+  }
+
+  // Area di disegno: l'SVG sta in sovrimpressione, così la sua dimensione segue quella dell'area e non il contrario
+  &__canvas {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: color('panel');
+    outline: none;
+
+    &:focus-visible {
+      box-shadow: inset 0 0 0 2px color('accent');
+    }
+  }
+
+  &__svg {
+    position: absolute;
+    inset: 0;
+    display: block;
+    touch-action: none;
+    user-select: none;
+
+    text {
+      pointer-events: none;
+    }
+  }
+
+  &__grid {
+    fill: none;
+    stroke: color('border');
+    stroke-width: 1;
+
+    &--minor {
+      opacity: 0.45;
+    }
+  }
+
+  &__tick {
+    fill: color('text-muted');
+    font-size: 10px;
+  }
+
+  // Asse orizzontale (Y = 0) e asse verticale (X = 0, di rotazione)
+  &__axis {
+    stroke: color('profile-axis');
+
+    &--x {
+      stroke-width: 1;
+      opacity: 0.5;
+    }
+
+    &--y {
+      stroke-width: 1.5;
+    }
+  }
+
+  &__axis-label {
+    fill: color('profile-axis');
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  // Parte a sinistra dell'asse in rotazione
+  &__outside {
+    rect {
+      fill: color('profile-outside');
+    }
+
+    text {
+      fill: color('text');
+      font-size: 11px;
+    }
+  }
+
+  &__fill {
+    fill: color('profile-fill');
+  }
+
+  &__curve {
+    fill: none;
+    stroke: color('accent');
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+  }
+
+  &__handle {
+    line {
+      stroke: color('profile-handle');
+      stroke-dasharray: 3 2;
+      stroke-width: 1;
+    }
+
+    circle {
+      fill: color('panel');
+      stroke: color('profile-handle');
+      stroke-width: 1.5;
+    }
+  }
+
+  // Nodi: la forma (quadrato, cerchio, rombo) dice il tipo, il riempimento dice se è selezionato
+  &__node {
+    cursor: pointer;
+
+    rect,
+    circle,
+    polygon {
+      fill: color('panel-raised');
+      stroke: color('profile-node');
+      stroke-width: 1.5;
+    }
+
+    &--selected {
+      rect,
+      circle,
+      polygon {
+        fill: color('accent');
+        stroke: color('accent');
+      }
+    }
+
+    // Primo nodo del contorno della Penna: un clic lo chiude
+    &--first {
+      rect,
+      circle,
+      polygon {
+        stroke: color('accent');
+        stroke-width: 3;
+      }
+    }
+  }
+
+  &__canvas[data-tool='pen'] &__svg {
+    cursor: crosshair;
+  }
+
+  // Penna: anteprima del prossimo segmento e punto agganciato
+  &__preview {
+    fill: none;
+    stroke: color('accent');
+    stroke-dasharray: 5 4;
+    stroke-width: 1.5;
+    opacity: 0.8;
+  }
+
+  &__snap {
+    fill: none;
+    stroke: color('accent');
+    stroke-width: 1.5;
+    pointer-events: none;
+  }
+
+  &__crossing {
+    fill: none;
+    stroke: color('danger');
+    stroke-width: 2;
+  }
+
+  &__rubber {
+    fill: color('accent-soft');
+    stroke: color('accent');
+    stroke-dasharray: 4 3;
+  }
+
+  // Strumenti (Seleziona, Penna) in alto a sinistra del disegno
+  &__tools {
+    position: absolute;
+    top: $space-2;
+    left: $space-2;
+    display: flex;
+    gap: $space-1;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px $space-2;
+      border: 1px solid color('border');
+      border-radius: $radius-sm;
+      background: color('panel-raised');
+      color: color('text');
+      font-size: 12px;
+      @include focus-ring;
+
+      &:hover {
+        border-color: color('accent');
+      }
+
+      &[aria-pressed='true'] {
+        border-color: color('accent');
+        background: color('accent-soft');
+        color: color('accent');
+        font-weight: 600;
+      }
+    }
+  }
+
+  // Disegno vuoto: suggerimento al centro
+  &__empty {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    max-width: 80%;
+    transform: translate(-50%, -50%);
+    padding: $space-2 $space-4;
+    border: 1px dashed color('border');
+    border-radius: $radius-md;
+    background: color('panel-raised');
+    color: color('text-muted');
+    font-size: 13px;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  // Zoom e Adatta in alto a destra del disegno
+  &__zoom {
+    position: absolute;
+    top: $space-2;
+    right: $space-2;
+    display: flex;
+    gap: $space-1;
+
+    button {
+      display: inline-flex;
+      padding: 5px;
+      border: 1px solid color('border');
+      border-radius: $radius-sm;
+      background: color('panel-raised');
+      color: color('text');
+      @include focus-ring;
+
+      &:hover {
+        border-color: color('accent');
+      }
+    }
+  }
+
+  &__coords {
+    position: absolute;
+    right: $space-3;
+    bottom: $space-2;
+    font-family: $font-mono;
+    font-size: 11px;
+    color: color('text-muted');
+    pointer-events: none;
+  }
+
+  // Anteprima 3D
+  &__preview {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-left: 1px solid color('border');
+    border-bottom: 1px solid color('border');
+    background: color('panel');
+  }
+
+  &__preview-head {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding-right: $space-2;
+
+    .profile-editor__section-title {
+      flex: 1;
+      padding-left: $space-3;
+    }
+  }
+
+  &__preview-buttons {
+    display: flex;
+    gap: $space-1;
+
+    button {
+      display: inline-flex;
+      padding: 3px;
+      border: 1px solid color('border');
+      border-radius: $radius-sm;
+      background: color('panel-raised');
+      color: color('text');
+      @include focus-ring;
+
+      &:hover:not(:disabled) {
+        border-color: color('accent');
+      }
+
+      &:disabled {
+        opacity: 0.35;
+      }
+    }
+  }
+
+  // Indicatore di calcolo in corso (un anello che gira)
+  &__spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid transparent;
+    border-radius: 50%;
+
+    &--on {
+      border-color: color('border');
+      border-top-color: color('accent');
+      animation: profile-editor-spin 0.8s linear infinite;
+    }
+  }
+
+  // L'area ha un'altezza sua (220 px, o tutto lo spazio se ingrandita): il Canvas sta in sovrimpressione, così la sua
+  // dimensione intrinseca (l'ultima misura del canvas) non spinge il layout
+  &__preview-view {
+    position: relative;
+    flex: none;
+    height: 220px;
+
+    > div {
+      position: absolute;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+    }
+  }
+
+  &__preview--large &__preview-view {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+  }
+
+  &__preview-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: color('text-muted');
+    pointer-events: none;
+  }
+
+  &__sidebar {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+    overflow-y: auto;
+    border-left: 1px solid color('border');
+    background: color('panel');
+    @include thin-scrollbar;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+    padding: 0 $space-3 $space-3;
+    border-bottom: 1px solid color('border');
+  }
+
+  &__section-title {
+    @include section-title;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 12px;
+    color: color('text-muted');
+
+    &--warn {
+      color: color('warn');
+    }
+  }
+
+  // Le etichette dei campi numerici sono parole (Lung., Tolleranza): non la larghezza di una lettera
+  .number-field__label {
+    width: auto;
+    min-width: 14px;
+  }
+
+  // Maniglie di entrata e di uscita: il nome sopra, lunghezza e angolo affiancati
+  &__handle-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $space-1 $space-2;
+  }
+
+  &__handle-name {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    font-weight: 600;
+    color: color('text-muted');
+  }
+
+  &__paths {
+    display: flex;
+    flex-direction: column;
+    gap: $space-1;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__path {
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+    padding: 2px $space-1;
+    border: 1px solid transparent;
+    border-radius: $radius-sm;
+
+    &--selected {
+      border-color: color('accent');
+      background: color('accent-soft');
+    }
+  }
+
+  &__path-name {
+    flex: 1;
+    min-width: 0;
+    padding: 3px $space-1;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 12px;
+    text-align: left;
+    @include focus-ring;
+  }
+
+  &__badge {
+    padding: 0 $space-2;
+    border: 1px solid color('border');
+    border-radius: 999px;
+    font-size: 11px;
+    color: color('text-muted');
+  }
+
+  &__mini {
+    padding: 2px $space-2;
+    border: 1px solid color('border');
+    border-radius: $radius-sm;
+    background: color('panel-raised');
+    font-size: 11px;
+    @include focus-ring;
+
+    &:hover {
+      border-color: color('accent');
+    }
+  }
+
+  &__check {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    font-size: 12px;
+  }
+
+  &__details {
+    summary {
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: color('text-muted');
+      padding: $space-2 0;
+      @include focus-ring;
+    }
+  }
+
+  &__details-body {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+    padding-bottom: $space-2;
+  }
+
+  // Interruttore a più voci (estrusione, tipo di nodo): la voce attiva è evidenziata, non solo colorata
+  &__segmented {
+    display: flex;
+    gap: $space-1;
+
+    button {
+      flex: 1;
+      padding: 5px $space-2;
+      border: 1px solid color('border');
+      border-radius: $radius-sm;
+      background: color('panel-raised');
+      font-size: 12px;
+      @include focus-ring;
+
+      &:hover {
+        border-color: color('accent');
+      }
+
+      &[aria-pressed='true'] {
+        border-color: color('accent');
+        background: color('accent-soft');
+        color: color('accent');
+        font-weight: 600;
+      }
+    }
+  }
+
+  &__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-3;
+    padding: $space-3 $space-4;
+    border-top: 1px solid color('border');
+  }
+
+  &__status {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: $space-2;
+    min-width: 0;
+  }
+
+  &__chip {
+    padding: 2px $space-2;
+    border: 1px solid color('border');
+    border-radius: 999px;
+    font-size: 12px;
+
+    &--ok {
+      border-color: color('ok');
+      color: color('ok');
+    }
+
+    &--warn {
+      border-color: color('warn');
+      color: color('warn');
+    }
+
+    &--err {
+      border-color: color('danger');
+      color: color('danger');
+    }
+  }
+
+  // Pulsante dentro un chip di avviso (Chiudi il contorno)
+  &__chip-action {
+    margin-left: $space-2;
+    padding: 0 $space-2;
+    border: 1px solid currentcolor;
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    font-size: 12px;
+    @include focus-ring;
+  }
+
+  // Finestre strette: una colonna sola (anteprima, disegno, opzioni); il disegno ha almeno 320 px e il resto, piede compreso, scorre
+  @media (max-width: 900px) {
+    overflow-y: auto;
+
+    &__main {
+      display: flex;
+      flex: none;
+      flex-direction: column;
+    }
+
+    &__preview {
+      order: -1;
+      border-bottom: 1px solid color('border');
+      border-left: 0;
+    }
+
+    &__preview-view {
+      flex: none;
+      height: 160px;
+    }
+
+    &__main--preview-large &__preview-view {
+      height: 300px;
+    }
+
+    &__canvas {
+      flex: none;
+      height: 340px;
+      min-height: 320px;
+    }
+
+    &__sidebar {
+      overflow: visible;
+      border-top: 1px solid color('border');
+      border-left: 0;
+    }
+  }
+}
+
+@keyframes profile-editor-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
