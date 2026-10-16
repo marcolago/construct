@@ -485,6 +485,27 @@ describe('import di file OpenSCAD: Profilo di Bézier (andata e ritorno)', () =>
     expect(back(`scale([2, 2, 2]) {\n${codeOf(original)}\n}`)).toMatchObject({ kind: 'svg', name: 'Poligono' });
   });
 
+  it('un Profilo specchiato con Specchia torna con lo specchio in Z, lineare con scala della cima e in rotazione', () => {
+    const linear = back(codeOf(node({ height: 8, scaleTop: 0.5, mirror: [true, false, false] } as Partial<Shape2DNode>)));
+    expect(linear).toMatchObject({ kind: 'path', scaleTop: 0.5, mirror: [false, false, true] });
+    const turned = back(codeOf(node({ extrusion: 'rotate', mirror: [false, false, true], paths: [{ closed: false, nodes: [corner([25, 0]), corner([35, 0]), corner([30, 20])] }], width: 10, depth: 20 } as Partial<Shape2DNode>)));
+    expect(turned).toMatchObject({ kind: 'path', extrusion: 'rotate', mirror: [false, false, true] });
+  });
+
+  it('larghezza e profondità senza scala non si arrotondano: l\'andata e ritorno è esatta anche con più di 4 decimali', () => {
+    const result = back(codeOf(node({ width: 20.123456, depth: 18.1234567 } as Partial<Shape2DNode>)));
+    expect(result).toMatchObject({ kind: 'path', width: 20.123456, depth: 18.1234567 });
+  });
+
+  it('rotazione dentro scale(2): il Profilo diventa un Poligono nella posizione scalata', () => {
+    const turned = node({ extrusion: 'rotate', paths: [{ closed: false, nodes: [corner([25, 0]), corner([35, 0]), corner([35, 20])] }], width: 10, depth: 20 } as Partial<Shape2DNode>);
+    const result = back(`scale([2, 2, 2]) {
+${codeOf(turned)}
+}`);
+    expect(result).toMatchObject({ kind: 'svg', extrusion: 'rotate' });
+    near(result.position, [20, 40, 10]);
+  });
+
   it('un punto modificato a mano, un commento staccato o un JSON rovinato: Poligono, senza eccezioni', () => {
     const code = codeOf(node());
     expect(back(code.replace(/(polygon\(points = \[\s*\[)(-?[\d.]+)/, (_m, a, b) => `${a}${Number(b) + 0.5}`))).toMatchObject({ kind: 'svg' });
@@ -495,12 +516,14 @@ describe('import di file OpenSCAD: Profilo di Bézier (andata e ritorno)', () =>
     expect(back(code.split('\n').filter((l) => !l.includes('construct:path')).join('\n'))).toMatchObject({ kind: 'svg' });
   });
 
-  it('rotazione oltre l asse: il ritaglio resta e il Profilo torna dentro l intersezione', () => {
+  it('rotazione oltre l asse: il ritaglio di Construct si scarta e il Profilo torna come un solo nodo, senza avvisi', () => {
     const across = node({ extrusion: 'rotate', paths: [{ closed: true, nodes: [corner([-5, 0]), corner([5, 0]), corner([5, 10]), corner([-5, 10])] }], width: 10, depth: 10 } as Partial<Shape2DNode>);
     const r = importScad(codeOf(across));
-    const root = r.nodes[r.plates[0].rootIds[0]] as GroupNode;
-    expect(root).toMatchObject({ type: 'group', op: 'intersection' });
-    expect(root.children.map((id) => r.nodes[id])).toContainEqual(expect.objectContaining({ kind: 'path', extrusion: 'rotate' }));
+    // Il quadrato che tiene la parte con x >= 0 non diventa un cilindro di due metri: il kernel scarta già la parte oltre l'asse
+    expect(r.plates[0].rootIds).toHaveLength(1);
+    expect(r.count).toBe(1);
+    expect(r.nodes[r.plates[0].rootIds[0]]).toMatchObject({ kind: 'path', extrusion: 'rotate' });
+    expect(r.issues.filter((i) => /asse/.test(i.message))).toEqual([]);
   });
 
   it('600 nodi nel commento (oltre il limite): Poligono senza eccezioni, mentre con un commento valido nello stesso punto torna un Profilo', () => {
@@ -524,4 +547,64 @@ describe('import di file OpenSCAD: Profilo di Bézier (andata e ritorno)', () =>
 polygon([[0, 0], [10, 0], [0, 10]]);`;
     expect(back(code)).toMatchObject({ kind: 'svg' });
   }, 20000);
+});
+
+describe('import di file OpenSCAD: specchio, rotate_extrude, offset e scala della cima', () => {
+  const vase = 'rotate_extrude($fn = 24) polygon([[2, 0], [6, 0], [3, 10]]);';
+  const notes = (code: string) => importScad(code).issues.map((i) => i.message);
+
+  it('mirror su una forma 2D non simmetrica in Z porta il ribaltamento sul nodo', () => {
+    expect(first(vase).node.mirror).toBeUndefined();
+    expect(first(`mirror([0, 0, 1]) ${vase}`).node).toMatchObject({ kind: 'svg', extrusion: 'rotate', mirror: [false, false, true] });
+    expect(first(`mirror([1, 0, 0]) ${vase}`).node.mirror).toEqual([false, false, true]);
+    expect(first('mirror([1, 0, 0]) linear_extrude(height = 10, scale = 0.5) square(10);').node).toMatchObject({ scaleTop: 0.5, mirror: [false, false, true] });
+    expect(first('mirror([0, 0, 1]) linear_extrude(height = 10, twist = 90) square(10);').node.mirror).toEqual([false, false, true]);
+  });
+
+  it('mirror su una forma simmetrica in Z non aggiunge rumore', () => {
+    expect(first('mirror([1, 0, 0]) linear_extrude(5) square(10);').node.mirror).toBeUndefined();
+    expect(first('mirror([0, 0, 1]) rotate_extrude($fn = 24) translate([5, 0]) circle(2);').node.mirror).toBeUndefined();
+  });
+
+  it('rotate_extrude con angolo negativo gira in senso orario: stesso angolo in positivo, ruotato attorno a Z', () => {
+    const { node } = first('rotate_extrude(angle = -90, $fn = 32) translate([5, 0]) square([2, 3]);');
+    expect(node).toMatchObject({ extrusion: 'rotate', revolveAngle: 90 });
+    expect((((node.rotation[2] % 360) + 360) % 360)).toBeCloseTo(270, 1);
+    expect(notes('rotate_extrude(angle = -90) translate([5, 0]) square(2);').filter((m) => /angolo/.test(m))).toEqual([]);
+    // Oltre i limiti si usa il giro intero con una nota
+    expect(notes('rotate_extrude(angle = -400) translate([5, 0]) square(2);').some((m) => /angolo/.test(m))).toBe(true);
+  });
+
+  it('rotate_extrude: un profilo che attraversa l\'asse si segnala, uno tutto a destra no', () => {
+    expect(notes('rotate_extrude() translate([2, 0]) square([6, 2], center = true);').some((m) => /attraversa l'asse/.test(m))).toBe(true);
+    expect(notes('rotate_extrude() translate([5, 0]) square([2, 2]);').some((m) => /asse/.test(m))).toBe(false);
+  });
+
+  it('rotate_extrude: un profilo tutto a X negativa si specchia come in OpenSCAD invece di perdersi', () => {
+    const { node, r } = first('rotate_extrude($fn = 24) translate([-8, 0]) square([4, 2]);');
+    expect(node).toMatchObject({ kind: 'square', extrusion: 'rotate', width: 4, depth: 2, revolveRadius: 6 });
+    expect(r.issues.some((i) => /asse/.test(i.message))).toBe(false);
+  });
+
+  it('esporta e reimporta una forma rotazionale: un solo nodo con le stesse misure, senza il cilindro di ritaglio', () => {
+    const square = { ...shape2dDefaults('square'), id: 's', name: 's', position: [0, 0, 5], width: 4, depth: 6, extrusion: 'rotate', revolveRadius: 10, revolveSegments: 32 } as Shape2DNode;
+    const r = importScad(sceneToOpenScad({ nodes: { s: square }, rootIds: ['s'] }));
+    expect(r.count).toBe(1);
+    expect(r.nodes[r.plates[0].rootIds[0]]).toMatchObject({ kind: 'square', extrusion: 'rotate', width: 4, depth: 6, revolveRadius: 10, revolveSegments: 32 });
+    expect(r.issues.some((i) => /asse/.test(i.message))).toBe(false);
+  });
+
+  it('offset: il contorno segue la scala di fuori da offset(), non quella scritta dentro', () => {
+    expect(first('linear_extrude(5) offset(r = 1) scale(2) square(10);').node).toMatchObject({ width: 20, offset: 1 });
+    expect(first('scale(2) linear_extrude(5) offset(r = 1) square(10);').node).toMatchObject({ width: 20, offset: 2 });
+    expect(first('rotate_extrude($fn = 24) scale(2) offset(r = 1) translate([5, 0]) circle(2);').node).toMatchObject({ extrusion: 'rotate', offset: 2 });
+    expect(first('rotate_extrude($fn = 24) offset(r = 1) scale(2) translate([3, 0]) circle(2);').node).toMatchObject({ extrusion: 'rotate', offset: 1 });
+    // La scala del solido attorno a rotate_extrude() conta come prima
+    expect(first('scale([3, 3, 1]) rotate_extrude($fn = 24) offset(r = 1) translate([5, 0]) circle(2);').node).toMatchObject({ offset: 3 });
+  });
+
+  it('linear_extrude con scale = [x, y] diverse avvisa che Construct usa solo la X', () => {
+    expect(notes('linear_extrude(height = 5, scale = [1, 2]) square(10);').some((m) => /scala della cima/.test(m))).toBe(true);
+    expect(first('linear_extrude(height = 5, scale = [0.5, 0.5]) square(10);').r.issues.some((i) => /scala della cima ha valori diversi/.test(i.message))).toBe(false);
+  });
 });

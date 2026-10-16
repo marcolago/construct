@@ -165,12 +165,16 @@ export interface Revolve {
   /** $fa e $fs del file, quando non c'è $fn: i segmenti si calcolano dal raggio massimo del profilo (come fa OpenSCAD). */
   auto?: { fa: number; fs: number };
   profile: Mat;
+  /** Il profilo era ritagliato sull'asse dal quadrato che scrive Construct: la parte con x < 0 si perde per scelta, non per un errore. */
+  axisClipped?: boolean;
 }
 
 /** `offset()` applicato al profilo: `r` arrotonda gli angoli, `delta` li lascia vivi. */
 export interface Offset {
   v: number;
   join: 'round' | 'sharp';
+  /** Trasformazione al punto in cui è scritto `offset()`: il contorno segue la scala di fuori, non quella scritta dentro. */
+  m: Mat;
 }
 
 interface Flat {
@@ -350,6 +354,21 @@ interface ModuleDef {
 interface FunctionDef {
   params: Param[];
   body: Expr;
+}
+
+/** Il quadrato `translate([0, -1000]) square([1000, 2000])` che Construct scrive dentro `rotate_extrude` per tenere la parte con x >= 0. */
+function isAxisClip(item: Item): boolean {
+  if (item.kind !== 'prim' || item.shape.s !== 'square' || !item.shape.rev) return false;
+  const [m, [w, h]] = [item.shape.rev.profile, item.shape.size];
+  const eq = (a: number, b: number) => Math.abs(a - b) < 1e-9;
+  return !item.shape.center && w === 1000 && h === 2000 && eq(m[0], 1) && eq(m[5], 1) && eq(m[1], 0) && eq(m[4], 0) && eq(m[3], 0) && eq(m[7], -1000);
+}
+
+/** Segna un profilo come ritagliato sull'asse: la sua parte con x < 0 non si segnala come perdita. */
+function markAxisClipped(item: Item): Item {
+  return item.kind === 'prim' && item.shape.s !== 'cube' && item.shape.s !== 'sphere' && item.shape.s !== 'cylinder' && item.shape.rev
+    ? { ...item, shape: { ...item.shape, rev: { ...item.shape.rev, axisClipped: true } } }
+    : item;
 }
 
 interface Ctx {
@@ -882,14 +901,21 @@ export function evaluateScad(source: string): ScadResult {
       case 'linear_extrude': {
         const p = a(['height', 'center', 'convexity', 'twist', 'slices', 'scale']);
         const scale = Array.isArray(p.scale) ? asNum(p.scale[0], 1) : asNum(p.scale, 1);
+        if (Array.isArray(p.scale) && asNum(p.scale[1], 1) !== scale) note('linear_extrude(): la scala della cima ha valori diversi in X e in Y; Construct ne ha uno solo e usa quello di X.');
         const ext: Extrude = { h: asNum(p.height, 1), center: truthy(p.center ?? false), twist: asNum(p.twist, 0), scale };
         return runAll(kids, new Env(env), { ...ctx, ext });
       }
       case 'rotate_extrude': {
         const p = a(['angle', 'convexity']);
         let angle = p.angle === undefined ? 360 : asNum(p.angle, 360);
+        // Un angolo negativo gira in senso orario da +X: è il giro dello stesso angolo in positivo, ruotato di `angle` attorno a Z
+        let outer = ctx.M;
+        if (angle < 0 && angle >= -360) {
+          outer = mulMat(ctx.M, rotateEulerMat(0, 0, angle));
+          angle = -angle;
+        }
         if (!(angle > 0 && angle <= 360)) {
-          note('rotate_extrude(): l\'angolo non è tra 0 e 360 gradi: si usa il giro intero.');
+          note('rotate_extrude(): l\'angolo non è tra -360 e 360 gradi: si usa il giro intero.');
           angle = 360;
         }
         // Dentro, `M` è la trasformazione 2D del profilo: parte dall'identità, quella di fuori si applica al solido
@@ -898,7 +924,7 @@ export function evaluateScad(source: string): ScadResult {
         const fa = env.get('$fa');
         const fs = env.get('$fs');
         const auto = !fn && (fa !== undefined || fs !== undefined) ? { fa: Math.max(0.01, isNum(fa) ? fa : 12), fs: Math.max(0.01, isNum(fs) ? fs : 2) } : undefined;
-        return runAll(kids, new Env(env), { ...ctx, M: IDENTITY, ext: undefined, rev: { angle, fn, auto, outer: ctx.M } });
+        return runAll(kids, new Env(env), { ...ctx, M: IDENTITY, ext: undefined, rev: { angle, fn, auto, outer } });
       }
       case 'offset': {
         const p = a(['r', 'delta', 'chamfer']);
@@ -910,7 +936,7 @@ export function evaluateScad(source: string): ScadResult {
         const sharp = p.delta !== undefined && p.r === undefined;
         const v = asNum(sharp ? p.delta : p.r, 0);
         if (ctx.off) note('offset() annidati: i contorni si sommano.');
-        return runAll(kids, new Env(env), { ...ctx, off: { v: v + (ctx.off?.v ?? 0), join: ctx.off?.join ?? (sharp ? 'sharp' : 'round') } });
+        return runAll(kids, new Env(env), { ...ctx, off: { v: v + (ctx.off?.v ?? 0), join: ctx.off?.join ?? (sharp ? 'sharp' : 'round'), m: ctx.M } });
       }
       case 'translate': {
         const p = a(['v']);
@@ -983,7 +1009,13 @@ export function evaluateScad(source: string): ScadResult {
         return [{ kind: 'group', op: 'minkowski', children: items, M: ctx.M }];
       }
       case 'difference': case 'intersection': case 'hull': {
-        const items = groupedChildren(kids, new Env(env), ctx);
+        let items = groupedChildren(kids, new Env(env), ctx);
+        // Il codice di Construct per rotate_extrude ritaglia la parte oltre l'asse con un quadrato: il kernel lo fa già,
+        // quindi il quadrato si scarta e il profilo torna una forma sola (senza un cilindro di due metri)
+        if (s.name === 'intersection' && ctx.rev) {
+          const kept = items.filter((item) => !isAxisClip(item));
+          if (kept.length > 0 && kept.length < items.length) items = kept.map(markAxisClipped);
+        }
         if (!items.length) return [];
         // Una differenza di un solo oggetto è l'oggetto stesso
         if (items.length === 1 && s.name !== 'hull') return items;

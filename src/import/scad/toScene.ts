@@ -67,6 +67,12 @@ function decompose(M: Mat, localCenter: Vec3): { scale: Vec3; rotation: Vec3; po
   return { scale, rotation: matrixToEuler(rot).map(r3) as Vec3, position: position.map(r3) as Vec3, mirrored, skewed };
 }
 
+/** Specchio in Z da scrivere sul nodo: serve solo se la forma non è simmetrica in Z (altrimenti è solo rumore nel codice esportato). */
+const flipZ = (mirrored: boolean, needed: boolean): { mirror?: [boolean, boolean, boolean] } => (mirrored && needed ? { mirror: [false, false, true] } : {});
+
+/** Misura di un Profilo riletto per la scala: a scala 1 resta com'è (l'andata e ritorno è esatta), altrimenti arrotondata a 4 decimali. */
+const sized = (value: number, k: number) => (Math.abs(k - 1) < 1e-6 ? Math.max(MIN, value) : round(Math.max(MIN, value * k), 4));
+
 /** Raggi uguali (entro la tolleranza)? Serve a tenere cilindri e sfere tondi dopo la scala. */
 const same = (a: number, b: number) => Math.abs(a - b) < 1e-6 * Math.max(1, Math.abs(a), Math.abs(b));
 
@@ -168,8 +174,17 @@ export function importScad(source: string): ScadImport {
     const twist = linear && ext.twist ? { twist: r3(-ext.twist) } : {};
     const scaleTop = linear && ext.scale !== 1 ? { scaleTop: r3(ext.scale) } : {};
     if (linear && (ext.twist || ext.scale !== 1)) addNote('La torsione e la scala della cima di linear_extrude sono importate come parametri della forma.');
-    /** Contorno (offset 2D) del profilo, nelle misure del profilo: segue la scala dell'oggetto. */
-    const offsetOf = (k: number) => (sh.off ? { offset: r3(sh.off.v * k), ...(sh.off.join === 'sharp' ? { offsetJoin: 'sharp' as const } : {}) } : {});
+    /**
+     * Contorno (offset 2D) del profilo, nelle misure del profilo: segue la scala di fuori da `offset()` (quella scritta dentro
+     * è già nelle misure della forma). `extra` è la scala del solido attorno a rotate_extrude().
+     */
+    const offsetOf = (extra = 1) => {
+      if (!sh.off) return {};
+      const k = Math.hypot(sh.off.m[0], sh.off.m[4], sh.off.m[8]) * extra;
+      return { offset: r3(sh.off.v * k), ...(sh.off.join === 'sharp' ? { offsetJoin: 'sharp' as const } : {}) };
+    };
+    // La torsione e la scala della cima non sono simmetriche in Z: con uno specchio serve il ribaltamento sul nodo
+    const turned = linear && !!(ext.twist || ext.scale !== 1);
     const base = { ...placeholder(), color } as const;
 
     if (sh.rev && sh.s !== 'text') {
@@ -198,10 +213,20 @@ export function importScad(source: string): ScadImport {
       }
       // Poligono scritto da Construct con il commento `// construct:path`, rimasto com'era: torna un Profilo (il suo centro è l'origine)
       const restored = sh.s === 'polygon' ? restorePath(sh.meta, sh, { profile: P }) : null;
-      const d = decompose(item.M, [0, 0, restored ? 0 : c[1]]);
+      // Un profilo tutto a X negativa: OpenSCAD lo accetta e lo specchia, il kernel invece perderebbe tutto. Si specchia qui
+      if (!restored && c[0] + width / 2 <= 1e-9 && c[0] < -1e-9) {
+        c = [-c[0], c[1]];
+        pts = pts.map(([x, y]): [number, number] => [-x, y]);
+      }
+      // La scala non dipende dal centro: si sa subito se il Profilo torna (solo senza scala), poi si calcola la posizione
+      const backToPath = !!restored && decompose(item.M, [0, 0, 0]).scale.every((k) => Math.abs(k - 1) < 1e-6);
+      const d = decompose(item.M, [0, 0, backToPath ? 0 : c[1]]);
       note(d.skewed);
       if (!same(d.scale[0], d.scale[1])) addNote('Una scala diversa in X e in Y attorno a rotate_extrude() è stata approssimata.');
-      if (c[0] < -1e-9) addNote('rotate_extrude(): una parte del profilo sta oltre l\'asse (X negativa) e si perde.');
+      // Un profilo che attraversa l'asse: OpenSCAD lo rifiuta, qui la parte con X negativa si perde (non se Construct l'ha ritagliata)
+      if (c[0] - width / 2 < -1e-9 && !sh.rev.axisClipped) addNote('rotate_extrude(): il profilo attraversa l\'asse (X negativa): OpenSCAD lo rifiuta, qui la parte oltre l\'asse si perde.');
+      // Specchio: il ribaltamento in Z cambia il solido solo se il profilo non è simmetrico (un Poligono o un Profilo)
+      const flip = flipZ(d.mirrored, sh.s === 'polygon');
       const [kx, kz] = [d.scale[0], d.scale[2]];
       // Segmenti del giro: $fn, oppure la formula di OpenSCAD con $fa e $fs sul raggio massimo del profilo
       const maxRadius = Math.max(0, c[0] + width / 2) * kx;
@@ -214,9 +239,10 @@ export function importScad(source: string): ScadImport {
         ...offsetOf(kx),
         position: d.position,
         rotation: d.rotation,
+        ...flip,
       };
       // Il raggio di un Profilo non si imposta: con una scala attorno a rotate_extrude() il disegno resta un Poligono
-      if (restored && d.scale.every((k) => Math.abs(k - 1) < 1e-6)) {
+      if (restored && backToPath) {
         const { revolveRadius: _fixed, ...turn } = revolve;
         return { ...shape2dDefaults('path'), ...base, name: SHAPE2D_LABELS.path, ...restored, ...turn } as Shape2DNode;
       }
@@ -241,7 +267,7 @@ export function importScad(source: string): ScadImport {
       const radiusY = r3(Math.max(MIN, Math.abs(sh.r * d.scale[1])));
       return {
         ...shape2dDefaults('circle'), ...base, name: SHAPE2D_LABELS.circle, radius, ...(same(radius, radiusY) ? {} : { radiusY }), segments: segmentsOf(sh.fn), height: heightOf(d.scale[2]), ...twist, ...scaleTop,
-        ...offsetOf(d.scale[0]), position: d.position, rotation: d.rotation,
+        ...offsetOf(), position: d.position, rotation: d.rotation, ...flipZ(d.mirrored, turned),
       } as Shape2DNode;
     }
     if (sh.s === 'square') {
@@ -249,7 +275,7 @@ export function importScad(source: string): ScadImport {
       note(d.skewed);
       return {
         ...shape2dDefaults('square'), ...base, name: SHAPE2D_LABELS.square, width: r3(Math.max(MIN, Math.abs(sh.size[0] * d.scale[0]))), depth: r3(Math.max(MIN, Math.abs(sh.size[1] * d.scale[1]))),
-        cornerRadius: 0, height: heightOf(d.scale[2]), ...twist, ...scaleTop, ...offsetOf(d.scale[0]), position: d.position, rotation: d.rotation,
+        cornerRadius: 0, height: heightOf(d.scale[2]), ...twist, ...scaleTop, ...offsetOf(), position: d.position, rotation: d.rotation, ...flipZ(d.mirrored, turned),
       } as Shape2DNode;
     }
     if (sh.s === 'text') {
@@ -265,7 +291,7 @@ export function importScad(source: string): ScadImport {
       addNote('Testo: la posizione è stimata, perché il font di Construct può avere misure diverse da quello di OpenSCAD.');
       return {
         ...shape2dDefaults('text'), ...base, name: SHAPE2D_LABELS.text, kind: 'text', text: sh.text, font, size: r3(Math.max(MIN, sh.size * d.scale[1])), ...(sh.spacing !== 1 ? { spacing: sh.spacing } : {}), height: heightOf(d.scale[2]),
-        ...twist, ...scaleTop, ...offsetOf(d.scale[0]), position: d.position, rotation: d.rotation,
+        ...twist, ...scaleTop, ...offsetOf(), position: d.position, rotation: d.rotation, ...flipZ(d.mirrored, turned),
       } as Shape2DNode;
     }
     // Poligono (anche con fori): diventa un disegno (contorni centrati nell'origine, come un SVG importato)
@@ -281,13 +307,13 @@ export function importScad(source: string): ScadImport {
     note(d.skewed);
     if (restored) {
       return {
-        ...shape2dDefaults('path'), ...base, name: SHAPE2D_LABELS.path, ...restored, width: round(Math.max(MIN, restored.width * d.scale[0]), 4), depth: round(Math.max(MIN, restored.depth * d.scale[1]), 4),
-        height: heightOf(d.scale[2]), ...twist, ...scaleTop, ...offsetOf(d.scale[0]), position: d.position, rotation: d.rotation,
+        ...shape2dDefaults('path'), ...base, name: SHAPE2D_LABELS.path, ...restored, width: sized(restored.width, d.scale[0]), depth: sized(restored.depth, d.scale[1]),
+        height: heightOf(d.scale[2]), ...twist, ...scaleTop, ...offsetOf(), position: d.position, rotation: d.rotation, ...flipZ(d.mirrored, true),
       } as Shape2DNode;
     }
     return {
       ...shape2dDefaults('svg'), ...base, name: 'Poligono', kind: 'svg', fileName: 'OpenSCAD', contours: contoursOf(sh.paths, sh.points, [cx, cy]),
-      width: r3(width * d.scale[0]), depth: r3(depth * d.scale[1]), height: heightOf(d.scale[2]), ...twist, ...scaleTop, ...offsetOf(d.scale[0]), position: d.position, rotation: d.rotation,
+      width: r3(width * d.scale[0]), depth: r3(depth * d.scale[1]), height: heightOf(d.scale[2]), ...twist, ...scaleTop, ...offsetOf(), position: d.position, rotation: d.rotation, ...flipZ(d.mirrored, turned),
     } as Shape2DNode;
   }
 

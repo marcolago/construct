@@ -143,10 +143,8 @@ Dalla 0.27.0 l'importazione legge anche `let`/`assign`, le liste per comprension
 | `use` e `include` di file locali | Alta | Come `import`: servirebbe far scegliere più file insieme e leggere anche i loro moduli e funzioni. Oggi si avvisa e i moduli richiamati risultano sconosciuti. |
 | `parent_module`, `is_object`, `object`, `has_key`, `textmetrics` | Bassa | Funzioni poco usate; i dizionari (`object`) sono recenti e richiedono un nuovo tipo di valore nell'interprete. |
 | `color` con trasparenza (alpha) | Non rappresentabile | La scena non ha trasparenza per oggetto. |
-| `linear_extrude` con `scale` diversa per X e Y | Non rappresentabile | Il parametro `scaleTop` è un solo numero. |
+| `linear_extrude` con `scale` diversa per X e Y | Non rappresentabile | Il parametro `scaleTop` è un solo numero: dalla 0.66.3 l'importazione usa quello di X e lo segnala con una nota. |
 | `offset(chamfer = true)` | Non rappresentabile | Gli angoli sono arrotondati o vivi, non smussati. |
-| `rotate_extrude` con angolo negativo o profilo oltre l'asse | Media | Oggi la parte con X negativa si perde, mentre OpenSCAD segnala un errore. |
-| Esporta e reimporta un solido rotazionale | Media | Il codice di Construct per `rotate_extrude` contiene un `intersection()` che ritaglia la parte oltre l'asse: riletto diventa un gruppo di tre oggetti invece della forma originale. Si potrebbe riconoscere lo schema. Dalla 0.60.0 non vale per il Profilo di Bézier (`path`) tutto a destra dell'asse: il codice non ha l'`intersection()` e si rilegge come Profilo; resta per le altre forme e per un Profilo che attraversa l'asse. |
 | `text` | Media | La posizione è stimata (il font di OpenSCAD non è nel catalogo e le misure dei glifi non sono disponibili in modo sincrono). Con le misure vere dei font si potrebbe calcolare l'allineamento esatto. |
 
 ## Profili Bézier: punti aperti dalla fase 1 (0.60.0)
@@ -154,9 +152,6 @@ Dalla 0.27.0 l'importazione legge anche `let`/`assign`, le liste per comprension
 - **Costo di un commento ostile ma lecito**: un `// construct:path` al limite dei dati (100 contorni da 500 nodi con cubiche piene di estremi) costa circa 1-2 s di thread principale per poligono (tre campionamenti: riquadro naturale, `pathContours` e di nuovo il riquadro). Un file con molti poligoni così blocca l'interfaccia per diversi secondi; si potrebbe portare il lavoro in un worker o abbassare i tetti.
 - **Linea aperta verticale in rotazione**: un tornio disegnato come un solo tratto verticale produce `[]`, perché `svgContours` scarta i disegni senza larghezza. Dalla 0.61.0 il piede della modale lo spiega ("tutti i punti stanno sulla stessa verticale... aggiungi un punto non allineato") e OK resta disattivato, ma il caso d'uso resta senza soluzione: servirà un modo di dare spessore o larghezza minima al disegno.
 - **Tolleranza oltre il massimo**: dopo 12 raddoppi `samplePaths` può arrivare a 204,8 mm; se i soli estremi superano il tetto di punti, raddoppiare non riduce più i punti e appiattisce comunque le curve. Basterebbe fermarsi quando un raddoppio non riduce il totale.
-- **Larghezza e profondità nel ritorno lineare**: sono arrotondate a 4 decimali, ma `addPath` scrive le misure naturali non arrotondate, quindi l'andata e ritorno è esatta solo se le misure hanno già 4 decimali.
-- **Ripiego del Poligono in rotazione dentro `scale()`**: il centro di `decompose` si calcola prima di sapere se il Profilo torna davvero (scarto al più circa 5e-5 mm); è più pulito calcolarlo dopo.
-- **Test mancanti**: un ritorno da OpenSCAD con `mirror`. (Chiuso con la 0.61.0: il menu contestuale ora ha la voce Profilo e `e2e/profile-editor.spec.ts` la prova.)
 
 ## Profili Bézier: punti aperti dalla fase 2 (0.61.0)
 

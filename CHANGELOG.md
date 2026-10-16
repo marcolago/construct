@@ -18,6 +18,16 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.66.3] - 2026-10-16
+
+### Corretto
+- **Importa OpenSCAD, specchio**: `mirror()` su una forma 2D non simmetrica in Z (rotazione di un poligono, estrusione con torsione o scala della cima, Profilo) ora porta il ribaltamento in Z sul nodo, come già faceva il cono. Prima il solido usciva diritto o capovolto senza avvisi; vale anche per l'andata e ritorno di un Profilo specchiato con Specchia.
+- **Importa OpenSCAD, `rotate_extrude`**: l'angolo negativo gira in senso orario (prima diventava il giro intero); un profilo tutto a X negativa si specchia come in OpenSCAD (prima diventava una sfera o un toro senza foro); un profilo che attraversa l'asse ora lo segnala, anche con il centro a destra.
+- **Esporta e reimporta un solido rotazionale**: il quadrato di ritaglio che Construct scrive dentro `rotate_extrude` non diventa più un cilindro di due metri: la forma torna come un solo nodo con le stesse misure, senza avvisi.
+- **Importa OpenSCAD, `offset()`**: il contorno segue la scala di fuori da `offset()` e non quella scritta dentro (`offset(r = 1) scale(2) square(10)` vale 1 mm, non 2), anche in rotazione.
+- **Importa OpenSCAD, `linear_extrude(scale = [x, y])`**: con valori diversi si usa quello di X e una nota lo dice.
+- Il Profilo riletto da un file senza scala mantiene larghezza e profondità esatte (prima erano arrotondate a 4 decimali) e il Poligono di una rotazione dentro `scale()` si calcola nella posizione giusta.
+
 ## [0.66.2] - 2026-10-16
 
 ### Corretto
