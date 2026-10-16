@@ -50,7 +50,7 @@ describe('applyScale', () => {
   });
 
   it('toro e solidi dei dadi: scala uniforme sul fattore più lontano da 1', () => {
-    expect(applyScale(prim('icosahedron'), [1, 1, 2]).size).toBe(40);
+    expect(applyScale(prim('die'), [1, 1, 2]).size).toBe(40);
     expect(applyScale(prim('torus'), [1, 1.5, 1.2]).majorRadius).toBe(18);
   });
 

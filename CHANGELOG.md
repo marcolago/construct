@@ -18,6 +18,15 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.68.0] - 2026-10-16
+
+### Aggiunto
+- **Dado a 30 facce**: il triacontaedro rombico (d30), con facce a rombo aureo tutte alla stessa distanza dal centro, come gli altri dadi (una faccia poggia sul piatto e l'altezza è la dimensione).
+
+### Modificato
+- **Dado**: Ottaedro, Decaedro, Dodecaedro e Icosaedro sono un'unica forma **Dado** con lo slider **Facce** (8, 10, 12, 20 o 30; parte da 20, come l'Icosaedro di prima) accanto a Dimensione e Raccordo. Lo slider scatta sul valore più vicino, a metà strada su quello maggiore, e un trascinamento è un solo passo di Annulla. Il numero di facce non si lega a un parametro. In libreria e nel menu contestuale c'è un solo pulsante Dado, in fondo alle forme 3D.
+- I progetti salvati con i vecchi solidi si aprono come Dado con 8, 10, 12 o 20 facce, con le stesse misure; il formato del file di progetto passa alla versione 7, quindi una versione precedente di Construct non apre più i progetti salvati da questa (e, per l'autosalvataggio versionato della 0.67.0, non sovrascrive quello nel browser). Le misure ricordate dei vecchi solidi non passano al Dado: la prima volta riparte dai valori iniziali.
+
 ## [0.67.0] - 2026-10-16
 
 ### Corretto

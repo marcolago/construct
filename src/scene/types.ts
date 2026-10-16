@@ -55,14 +55,19 @@ export interface Param {
   note?: string;
 }
 
-/** Solidi dei dadi: ottaedro (d8), decaedro (d10, trapezoedro pentagonale), dodecaedro (d12), icosaedro (d20). */
-export type PolyhedronKind = 'octahedron' | 'decahedron' | 'dodecahedron' | 'icosahedron';
+/**
+ * Solidi geometrici dei dadi (chiave di `polyhedra.ts`): ottaedro (d8), decaedro (d10, trapezoedro pentagonale),
+ * dodecaedro (d12), icosaedro (d20) e triacontaedro rombico (d30). Il nodo `die` sceglie uno di questi dal numero di facce.
+ */
+export type PolyhedronKind = 'octahedron' | 'decahedron' | 'dodecahedron' | 'icosahedron' | 'triacontahedron';
+/** Numero di facce dei dadi disponibili. */
+export type DieFaces = 8 | 10 | 12 | 20 | 30;
 
-export type PrimitiveKind = 'box' | 'cylinder' | 'cone' | 'sphere' | 'torus' | PolyhedronKind;
+export type PrimitiveKind = 'box' | 'cylinder' | 'cone' | 'sphere' | 'torus' | 'die';
 
 export type PrimitiveNode = BaseNode & { type: 'primitive' } & (
   | { kind: 'box'; size: Vec3; /** Raggio di arrotondamento di tutti gli spigoli in mm (0 o assente = spigoli vivi). */ cornerRadius?: number }
-  | { kind: PolyhedronKind; /** Distanza tra due facce opposte in mm (la misura dei dadi). */ size: number; /** Raggio di arrotondamento di spigoli e vertici in mm (0 = vivi). */ cornerRadius: number }
+  | { kind: 'die'; /** Facce del dado: 8, 10, 12, 20 o 30 (vedi `DIE_SOLIDS` in polyhedra.ts). */ faces: DieFaces; /** Distanza tra due facce opposte in mm (la misura dei dadi). */ size: number; /** Raggio di arrotondamento di spigoli e vertici in mm (0 = vivi). */ cornerRadius: number }
   | { kind: 'cylinder'; radius: number; /** Raggio lungo Y in mm (assente = uguale a `radius`: cilindro tondo). */ radiusY?: number; height: number; segments: number }
   | {
       kind: 'cone';

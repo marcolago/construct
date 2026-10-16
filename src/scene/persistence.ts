@@ -19,8 +19,8 @@ const VERSION_KEY = 'construct:scene-version';
 const LEGACY_KEY = 'webcad:scene';
 const FORMAT = 'construct-scene';
 const LEGACY_FORMAT = 'webcad-scene';
-/** Versione 2: il progetto include le mesh importate; 4: i piatti (`plates`); 5: parametri e formule (`params`, `exprs`); 6: la forma Stella con `points` al posto di star5 e star6. Le versioni precedenti si leggono ancora. */
-const VERSION = 6;
+/** Versione 2: il progetto include le mesh importate; 4: i piatti (`plates`); 5: parametri e formule (`params`, `exprs`); 6: la forma Stella con `points` al posto di star5 e star6; 7: il Dado con `faces` al posto di Ottaedro, Decaedro, Dodecaedro e Icosaedro. Le versioni precedenti si leggono ancora. */
+const VERSION = 7;
 
 /** Vero durante la pulizia dei dati: la scena non deve essere riscritta mentre si cancella. */
 let autosaveSuspended = false;
@@ -105,6 +105,6 @@ export function sceneFromJson(text: string): { scene: Scene; assets: MeshAsset[]
   if ((data.format !== FORMAT && data.format !== LEGACY_FORMAT) || !isScene(data.scene)) throw new Error('Il file non è un progetto Construct valido.');
   if ((data.version ?? 1) > VERSION) throw new Error('Il progetto è stato salvato da una versione più recente di Construct.');
   const assets = Object.entries(data.assets ?? {}).map(([id, encoded]) => decodeAsset(id, encoded));
-  // Le scene di versioni precedenti hanno i gruppi dei trattamenti all'origine (si portano sul pezzo) e le stelle a 5 o 6 punte (diventano Stella)
+  // Le scene di versioni precedenti hanno i gruppi dei trattamenti all'origine (si portano sul pezzo) le stelle a 5 o 6 punte (diventano Stella) e i quattro solidi dei dadi (diventano Dado)
   return { scene: migrateLegacyShapes(normalizeTreatmentGroups(data.scene)), assets };
 }

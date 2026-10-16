@@ -17,7 +17,7 @@ import { isProfileShape, profileContours } from '../scene/profiles';
 import { fontInfo, fontsUsed, scadFontName } from '../scene/fontCatalog';
 import { platesOf } from '../scene/plates';
 import { dropBrokenBindings, resolveParams } from '../scene/params';
-import { maxPolyhedronRadius, polygonMaxRadius, polygonShrunkRadius, polyhedronVertices, roundedPolyhedronCenters } from '../scene/polyhedra';
+import { dieSolid, maxPolyhedronRadius, polygonMaxRadius, polygonShrunkRadius, polyhedronVertices, roundedPolyhedronCenters } from '../scene/polyhedra';
 
 const IND = '  ';
 const n = (v: number) => String(round(v, 4));
@@ -96,31 +96,35 @@ function primitiveLines(p: PrimitiveNode): string[] {
       return [...stretchLine(p), `sphere(r = ${field(p, 'radius', p.radius)}, $fn = ${p.segments});`];
     case 'torus':
       return [`rotate_extrude($fn = ${p.segments})`, `translate([${field(p, 'majorRadius', p.majorRadius)}, 0])`, `circle(r = ${field(p, 'minorRadius', p.minorRadius)}, $fn = ${p.segments});`];
-    case 'octahedron':
-    case 'decahedron':
-    case 'dodecahedron':
-    case 'icosahedron': {
+    case 'die': {
+      const solid = dieSolid(p.faces);
       const r = Math.min(Math.max(0, p.cornerRadius), maxPolyhedronRadius(p.size));
       // Solido arrotondato: involucro convesso di sfere sui vertici del solido ridotto
       if (r > 0) {
         return [
           'hull()',
           'for (p = [',
-          ...vectorRows(roundedPolyhedronCenters(p.kind, p.size, r), IND),
+          ...vectorRows(roundedPolyhedronCenters(solid, p.size, r), IND),
           '])',
           'translate(p)',
           `sphere(r = ${n(r)}, $fn = ${CORNER_SPHERE_SEGMENTS});`,
         ];
       }
       // Solido a spigoli vivi: involucro convesso dei vertici (hull() usa solo i punti, le facce indicate sono segnaposto)
-      const points = polyhedronVertices(p.kind, p.size);
+      const points = polyhedronVertices(solid, p.size);
       return [
         'hull()',
         'polyhedron(',
         `${IND}points = [`,
         ...vectorRows(points, IND + IND),
         `${IND}],`,
-        `${IND}faces = [[${points.map((_, i) => i).join(', ')}]]`,
+        // Un solo elenco con tutti gli indici, a righe di 16 (il d30 ha 32 vertici: su una riga sola supererebbe i 100 caratteri)
+        `${IND}faces = [[`,
+        ...Array.from({ length: Math.ceil(points.length / 16) }, (_, row) => {
+          const indices = points.slice(row * 16, row * 16 + 16).map((_, i) => row * 16 + i);
+          return `${IND}${IND}${indices.join(', ')}${(row + 1) * 16 < points.length ? ',' : ''}`;
+        }),
+        `${IND}]]`,
         ');',
       ];
     }

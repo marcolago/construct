@@ -112,11 +112,11 @@ describe('sceneToOpenScad', () => {
   });
 
   it('ogni comando sta su una riga e nessuna riga è lunga, anche per i solidi dei dadi', () => {
-    const kinds = ['octahedron', 'decahedron', 'dodecahedron', 'icosahedron'] as const;
     const nodes: Record<string, PrimitiveNode> = {};
-    for (const kind of kinds) {
-      nodes[kind] = { ...primitiveDefaults(kind), id: kind, name: kind, position: [0, 0, 10] } as PrimitiveNode;
-      nodes[`${kind}-r`] = { ...primitiveDefaults(kind), id: `${kind}-r`, name: kind, position: [0, 0, 10], cornerRadius: 3 } as PrimitiveNode;
+    for (const faces of [8, 10, 12, 20, 30]) {
+      const kind = `d${faces}`;
+      nodes[kind] = { ...primitiveDefaults('die'), id: kind, name: kind, position: [0, 0, 10], faces } as PrimitiveNode;
+      nodes[`${kind}-r`] = { ...primitiveDefaults('die'), id: `${kind}-r`, name: kind, position: [0, 0, 10], faces, cornerRadius: 3 } as PrimitiveNode;
     }
     const code = sceneToOpenScad({ nodes, rootIds: Object.keys(nodes) });
     for (const line of code.split('\n')) {
@@ -125,6 +125,16 @@ describe('sceneToOpenScad', () => {
       const commands = line.replace(/\[[^\]]*\]/g, '[]').match(/\b[a-z_]+\s*\(/g) ?? [];
       expect(commands.length, line).toBeLessThanOrEqual(1);
     }
+  });
+
+  it('il dado a 30 facce esporta tutti i 32 vertici e un elenco di indici a righe di 16', () => {
+    const d30 = { ...primitiveDefaults('die'), id: 'd', name: 'd30', position: [0, 0, 10], faces: 30 } as PrimitiveNode;
+    const code = sceneToOpenScad({ nodes: { d: d30 }, rootIds: ['d'] });
+    expect(code).toContain('hull()\npolyhedron(');
+    // 32 punti (tre per riga) e gli indici da 0 a 31 in due righe
+    const block = /points = \[([\s\S]*?)\n {2}\],/.exec(code)?.[1] ?? '';
+    expect(block.match(/\[-?[\d.]+, -?[\d.]+, -?[\d.]+\]/g)).toHaveLength(32);
+    expect(code).toContain('  faces = [[\n    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,\n    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31\n  ]]');
   });
 
   it('forme non proporzionali: scale() prima del primitivo, solo se serve', () => {

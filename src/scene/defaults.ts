@@ -10,10 +10,7 @@ export const PRIMITIVE_LABELS: Record<PrimitiveKind, string> = {
   cone: 'Cono',
   sphere: 'Sfera',
   torus: 'Toro',
-  octahedron: 'Ottaedro',
-  decahedron: 'Decaedro',
-  dodecahedron: 'Dodecaedro',
-  icosahedron: 'Icosaedro',
+  die: 'Dado',
 };
 
 /** Numero di segmenti predefinito per le curve (TinkerCAD si ferma a 64, qui si arriva a 256). */
@@ -67,7 +64,7 @@ export const SHAPE2D_LABELS: Record<Shape2DKind, string> = {
 export const SHAPES_3D: (PrimitiveKind | ProfileKind)[] = [
   'box', 'cylinder', 'sphere', 'cone', 'torus',
   'tubeRound', 'tubeRect', 'profileL', 'profileU', 'profileT', 'profileH',
-  'octahedron', 'decahedron', 'dodecahedron', 'icosahedron',
+  'die',
 ];
 
 /**
@@ -102,10 +99,7 @@ export function halfHeight(p: PrimitiveNode | Shape2DNode): number {
     case 'sphere': return p.radiusZ ?? p.radius;
     case 'torus': return p.minorRadius;
     // I solidi dei dadi poggiano su una faccia: la metà della distanza tra facce opposte
-    case 'octahedron':
-    case 'decahedron':
-    case 'dodecahedron':
-    case 'icosahedron': return p.size / 2;
+    case 'die': return p.size / 2;
   }
 }
 
@@ -121,10 +115,7 @@ export function primitiveDefaults(kind: PrimitiveKind): DistributiveOmit<Primiti
     case 'cone': return { ...base, kind, radiusBottom: 10, radiusTop: 0, height: 20, segments: DEFAULT_SEGMENTS };
     case 'sphere': return { ...base, kind, radius: 10, segments: DEFAULT_SEGMENTS };
     case 'torus': return { ...base, kind, majorRadius: 12, minorRadius: 4, segments: DEFAULT_SEGMENTS };
-    case 'octahedron':
-    case 'decahedron':
-    case 'dodecahedron':
-    case 'icosahedron': return { ...base, kind, size: 20, cornerRadius: 0 };
+    case 'die': return { ...base, kind, faces: 20, size: 20, cornerRadius: 0 };
   }
 }
 

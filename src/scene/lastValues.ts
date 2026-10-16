@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { FONTS } from './fontCatalog';
+import { DIE_FACES } from './polyhedra';
 import { migrateLocalKey, STORAGE } from '../storageMigration';
 
 /**
@@ -21,10 +22,7 @@ const SHAPE_FIELDS: Record<string, readonly string[]> = {
   cone: ['radiusBottom', 'radiusTop', 'height', 'segments'],
   sphere: ['radius', 'segments'],
   torus: ['majorRadius', 'minorRadius', 'segments'],
-  octahedron: ['size', 'cornerRadius'],
-  decahedron: ['size', 'cornerRadius'],
-  dodecahedron: ['size', 'cornerRadius'],
-  icosahedron: ['size', 'cornerRadius'],
+  die: ['faces', 'size', 'cornerRadius'],
   circle: ['radius', 'segments', 'cornerRadius', 'height', 'twist', 'scaleTop'],
   square: ['width', 'depth', 'cornerRadius', 'height', 'twist', 'scaleTop'],
   ring: ['width', 'depth', 'ratio', 'height', 'twist', 'scaleTop'],
@@ -66,6 +64,8 @@ function isValid(field: string, value: unknown): boolean {
       return Number.isInteger(value) && between(value, 3, 256);
     case 'points':
       return Number.isInteger(value) && between(value, 3, 20);
+    case 'faces':
+      return (DIE_FACES as readonly unknown[]).includes(value);
     case 'shape':
       return value === 'round' || value === 'square';
     case 'count':

@@ -490,16 +490,16 @@ test('il menu hamburger apre le modali Novità e About con la versione', async (
   await expect(page.getByRole('dialog')).toBeHidden();
 });
 
-test('libreria con Cubo e solidi dei dadi; i preset dei lati sono 3, 4, 5, 6, 8, 12', async ({ page }) => {
-  for (const label of ['Cubo', 'Ottaedro', 'Decaedro', 'Dodecaedro', 'Icosaedro']) {
+test('libreria con Cubo e Dado (un solo pulsante per tutti i dadi); i preset dei lati sono 3, 4, 5, 6, 8, 12', async ({ page }) => {
+  for (const label of ['Cubo', 'Dado']) {
     await expect(page.locator(`button[title^="Aggiungi: ${label}"]`)).toHaveCount(1);
   }
   await addShape(page, 'Cilindro');
   await expect(page.locator('.properties__chip')).toHaveText(['3', '4', '5', '6', '8', '12']);
 });
 
-test('icosaedro: mesh valida appoggiata sul piatto, il raccordo ne riduce il volume', async ({ page }) => {
-  await addShape(page, 'Icosaedro');
+test('Dado (parte da 20 facce): mesh valida appoggiata sul piatto, il raccordo ne riduce il volume', async ({ page }) => {
+  await addShape(page, 'Dado');
   await expect(page.locator('.status-bar')).toContainText('Mesh valida');
   const read = () => page.evaluate(() => window.__construct!.results.getState().meshes[0]);
   const sharp = await read();
@@ -764,8 +764,61 @@ test('i tasti C, D e M aprono il codice, cambiano tema e aprono il menu', async 
   await expect(page.getByRole('menuitem', { name: 'Importa' })).toBeHidden();
 });
 
+test('Dado: lo slider Facce sceglie 8, 10, 12, 20 o 30; un valore intermedio scatta sul più vicino e la mesh resta valida', async ({ page }) => {
+  await addShape(page, 'Dado');
+  const id = (await sceneState(page)).rootIds[0];
+  expect((await sceneState(page)).nodes[id]).toMatchObject({ kind: 'die', faces: 20, size: 20 });
+  const faces = page.locator('.slider-field', { hasText: 'Facce' }).locator('.number-field__input');
+  await expect(faces).toHaveValue('20');
+  const read = () => page.evaluate(() => window.__construct!.results.getState().meshes[0]);
+  for (const n of [8, 10, 12, 30, 20]) {
+    await faces.fill(String(n));
+    await faces.press('Enter');
+    await settled(page);
+    await expect(page.locator('.status-bar')).toContainText('Mesh valida');
+    expect(((await sceneState(page)).nodes[id] as unknown as { faces: number }).faces).toBe(n);
+    // Ogni dado resta alto quanto la dimensione e poggia sul piatto
+    const mesh = await read();
+    expect(mesh.bbox.min[2]).toBeCloseTo(0, 3);
+    expect(mesh.bbox.max[2]).toBeCloseTo(20, 3);
+  }
+  // A metà strada vince il numero maggiore; un valore vicino a uno valido scatta su quello
+  await faces.fill('25');
+  await faces.press('Enter');
+  await settled(page);
+  expect(((await sceneState(page)).nodes[id] as unknown as { faces: number }).faces).toBe(30);
+  await expect(faces).toHaveValue('30');
+  await faces.fill('11');
+  await faces.press('Enter');
+  await settled(page);
+  expect(((await sceneState(page)).nodes[id] as unknown as { faces: number }).faces).toBe(12);
+});
+
+test('Dado: trascinando lo slider Facce il numero scatta sui valori dei dadi e tutto il trascinamento è un solo passo di Annulla', async ({ page }) => {
+  await addShape(page, 'Dado');
+  const id = (await sceneState(page)).rootIds[0];
+  const steps = () => page.evaluate(() => window.__construct!.store.temporal.getState().pastStates.length);
+  const before = await steps();
+  const range = page.locator('.slider-field', { hasText: 'Facce' }).locator('input[type=range]');
+  await range.scrollIntoViewIfNeeded();
+  const box = (await range.boundingBox())!;
+  // Dal 20 (a circa metà) verso destra fino in fondo, passando per i valori intermedi
+  await page.mouse.move(box.x + box.width * 0.55, box.y + box.height / 2);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(box.x + box.width * (0.55 + i * 0.06), box.y + box.height / 2);
+  await page.mouse.up();
+  await settled(page);
+  const faces = () => sceneState(page).then((st) => (st.nodes[id] as unknown as { faces: number }).faces);
+  expect(await faces()).toBe(30);
+  expect(await steps()).toBe(before + 1);
+  await expect(page.locator('.status-bar')).toContainText('Mesh valida');
+  await page.keyboard.press('Control+z');
+  await settled(page);
+  expect(await faces()).toBe(20);
+});
+
 test('il codice va a capo dopo ogni comando', async ({ page }) => {
-  await addShape(page, 'Icosaedro');
+  await addShape(page, 'Dado');
   await page.keyboard.press('c');
   await expect(page.locator('.code-view__line').first()).toBeVisible();
   const lines = await page.locator('.code-view__text').allTextContents();
@@ -1581,11 +1634,11 @@ test('Stella: un solo tipo con il numero di punte (3-20), che parte da 5', async
   await expect(page.locator('.status-bar')).toContainText('Mesh valida');
 });
 
-test('la libreria Forme 3D mette i profilati prima dei solidi dei dadi', async ({ page }) => {
+test('la libreria Forme 3D mette i profilati dopo le primitive e il Dado in fondo', async ({ page }) => {
   await expect(page.locator('.shape-library__label')).toHaveText([
     'Cubo', 'Cilindro', 'Sfera', 'Cono', 'Toro',
     'Tubolare tondo', 'Tubolare rettangolare', 'Profilato a L', 'Profilato a U', 'Profilato a T', 'Profilato a H',
-    'Ottaedro', 'Decaedro', 'Dodecaedro', 'Icosaedro',
+    'Dado',
   ]);
 });
 

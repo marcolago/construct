@@ -1,7 +1,25 @@
-import type { PolyhedronKind, Vec3 } from './types';
+import type { DieFaces, PolyhedronKind, Vec3 } from './types';
 
 /** Rapporto aureo: serve per i vertici di icosaedro e dodecaedro. */
 const PHI = (1 + Math.sqrt(5)) / 2;
+
+/** Facce dei dadi disponibili, in ordine crescente. */
+export const DIE_FACES: readonly DieFaces[] = [8, 10, 12, 20, 30];
+
+/** Solido che corrisponde al numero di facce di un dado. */
+export const DIE_SOLIDS: Record<DieFaces, PolyhedronKind> = { 8: 'octahedron', 10: 'decahedron', 12: 'dodecahedron', 20: 'icosahedron', 30: 'triacontahedron' };
+
+/**
+ * Numero di facce valido più vicino; a metà strada (9, 11, 16, 25) vince il maggiore, così uno slider trascinato verso
+ * l'alto avanza al primo passo. Un valore non numerico (per esempio da un file manomesso) vale 20.
+ */
+export function nearestDieFaces(value: number): DieFaces {
+  if (!Number.isFinite(value)) return 20;
+  return DIE_FACES.reduce((best, f) => (Math.abs(f - value) <= Math.abs(best - value) ? f : best));
+}
+
+/** Solido geometrico di un dado dal suo numero di facce. */
+export const dieSolid = (faces: number): PolyhedronKind => DIE_SOLIDS[nearestDieFaces(faces)];
 
 /** Vertici del solido (a meno di scala) e tre vertici di una sua faccia, per appoggiarlo su quella faccia. */
 interface Base {
@@ -37,6 +55,22 @@ function base(kind: PolyhedronKind): Base {
       // Faccia pentagonale che contiene (0, 1/φ, φ), (0, -1/φ, φ) e (1, 1, 1)
       const at = (x: number, y: number, z: number) => vertices.findIndex((v) => v[0] === x && v[1] === y && v[2] === z);
       return { vertices, face: [at(0, inv, PHI), at(0, -inv, PHI), at(1, 1, 1)] };
+    }
+    case 'triacontahedron': {
+      // Triacontaedro rombico: i 12 vertici dell'icosaedro (spigolo 2) e i 20 del dodecaedro duale (spigolo 2/φ, orientato
+      // come le facce dell'icosaedro: (±1/φ, 0, ±φ) e le sue permutazioni cicliche). Ogni faccia è un rombo aureo
+      const inv = 1 / PHI;
+      const vertices: Vec3[] = [];
+      for (const a of SIGNS) for (const b of SIGNS) {
+        // Icosaedro: (0, ±1, ±φ) e permutazioni cicliche
+        vertices.push([0, a, b * PHI], [a, b * PHI, 0], [b * PHI, 0, a]);
+        // Dodecaedro duale: (±1/φ, 0, ±φ), (0, ±φ, ±1/φ), (±φ, ±1/φ, 0)
+        vertices.push([a * inv, 0, b * PHI], [0, a * PHI, b * inv], [a * PHI, b * inv, 0]);
+      }
+      for (const a of SIGNS) for (const b of SIGNS) for (const c of SIGNS) vertices.push([a, b, c]);
+      // Faccia in z = φ: (0, 1, φ), (0, -1, φ) e (1/φ, 0, φ)
+      const at = (x: number, y: number, z: number) => vertices.findIndex((v) => v[0] === x && v[1] === y && v[2] === z);
+      return { vertices, face: [at(0, 1, PHI), at(0, -1, PHI), at(inv, 0, PHI)] };
     }
     case 'decahedron': {
       // Trapezoedro pentagonale: due apici e due anelli di 5 vertici sfasati di 36°.

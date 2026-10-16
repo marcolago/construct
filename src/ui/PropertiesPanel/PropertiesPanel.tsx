@@ -28,7 +28,7 @@ import { PatternFields } from '../Pattern/PatternFields';
 import { localBoundsOf, usePatternTool } from '../Pattern/patternToolStore';
 import { SliderField } from '../SliderField/SliderField';
 import { TIPS } from './tooltips';
-import { maxPolyhedronRadius, polygonMaxRadius } from '../../scene/polyhedra';
+import { DIE_FACES, maxPolyhedronRadius, nearestDieFaces, polygonMaxRadius } from '../../scene/polyhedra';
 import './PropertiesPanel.scss';
 
 const AXES = ['X', 'Y', 'Z'] as const;
@@ -600,13 +600,37 @@ function PrimitiveFields({ node, patch, locked }: { node: Extract<SceneNode, { t
           {[dim('Raggio', node.majorRadius, 'majorRadius', TIPS.majorRadius), dim('Tubo', node.minorRadius, 'minorRadius', TIPS.minorRadius), segments(node.segments)]}
         </Section>
       );
-    case 'octahedron':
-    case 'decahedron':
-    case 'dodecahedron':
-    case 'icosahedron':
+    case 'die':
       return (
         <Section title="Dimensioni">
-          {[dim('Dimensione', node.size, 'size', TIPS.polySize, 0.1, reach), rounding(node.cornerRadius, maxPolyhedronRadius(node.size))]}
+          {[
+            // Il numero di facce ha solo cinque valori: lo slider scatta sul più vicino (8, 10, 12, 20, 30). Non si lega a un
+            // parametro (una formula darebbe valori che non sono dadi)
+            <SliderField
+              key="faces"
+              label="Facce"
+              unit=""
+              min={DIE_FACES[0]}
+              max={DIE_FACES[DIE_FACES.length - 1]}
+              step={1}
+              hardMin={DIE_FACES[0]}
+              hardMax={DIE_FACES[DIE_FACES.length - 1]}
+              integer
+              tooltip={TIPS.dieFaces}
+              disabled={locked}
+              value={node.faces}
+              onCommit={(v) => {
+                const faces = nearestDieFaces(v);
+                // Il confronto è con il valore attuale dello store, non con quello del rendering: al rilascio dello slider
+                // `SliderField` chiama onCommit due volte di seguito (valore iniziale, poi finale) e la seconda deve vedere la prima
+                const current = useSceneStore.getState().scene.nodes[node.id];
+                if (current?.type === 'primitive' && current.kind === 'die' && current.faces === faces) return;
+                patch({ faces } as Partial<PrimitiveNode>);
+              }}
+            />,
+            dim('Dimensione', node.size, 'size', TIPS.polySize, 0.1, reach),
+            rounding(node.cornerRadius, maxPolyhedronRadius(node.size)),
+          ]}
         </Section>
       );
   }

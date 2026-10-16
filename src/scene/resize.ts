@@ -135,10 +135,7 @@ export function applyScale(node: Resizable, scale: Vec3, step = 0.5): ResizePatc
     }
     case 'torus':
       return { majorRadius: q(node.majorRadius, uniform), minorRadius: q(node.minorRadius, uniform) };
-    case 'octahedron':
-    case 'decahedron':
-    case 'dodecahedron':
-    case 'icosahedron': {
+    case 'die': {
       const size = q(node.size, uniform);
       return { size, cornerRadius: Math.min(node.cornerRadius, maxPolyhedronRadius(size)) };
     }

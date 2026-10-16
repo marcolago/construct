@@ -1,6 +1,5 @@
-import { Box, Circle, CircleDot, Cone, Cylinder, Diamond, Donut, Droplet, Egg, Heart, Hexagon, Moon, PenTool, Pentagon, Plus, Shapes, Square, Star, Type } from 'lucide-react';
+import { Box, Circle, CircleDot, Cone, Cylinder, Dices, Donut, Droplet, Egg, Heart, Moon, PenTool, Plus, Shapes, Square, Star, Type } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { Decagon } from '../icons/Decagon';
 import { Ring, Trapezoid } from '../icons/Shapes2D';
 import { ProfileH, ProfileL, ProfileT, ProfileU, TubeRect, TubeRound } from '../icons/Profiles';
 import { useSceneStore } from '../../scene/store';
@@ -17,10 +16,7 @@ export const PRIMITIVE_ICONS: Record<PrimitiveKind, LucideIcon> = {
   cone: Cone,
   sphere: Circle,
   torus: Donut,
-  octahedron: Diamond,
-  decahedron: Decagon,
-  dodecahedron: Pentagon,
-  icosahedron: Hexagon,
+  die: Dices,
 };
 
 /** Icona di ogni forma 2D estrudibile. */

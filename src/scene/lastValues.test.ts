@@ -31,9 +31,9 @@ describe('ultimi valori usati', () => {
     useLastValues.setState({ shapes: { box: { size: 'grande', cornerRadius: Infinity, radius: 5 } } as never });
     expect(lastShape('box')).toEqual({});
     // Il cubo vuole tre misure, i dadi una sola
-    useLastValues.setState({ shapes: { box: { size: 12 }, octahedron: { size: [1, 2, 3] } } as never });
+    useLastValues.setState({ shapes: { box: { size: 12 }, die: { size: [1, 2, 3] } } as never });
     expect(lastShape('box')).toEqual({});
-    expect(lastShape('octahedron')).toEqual({});
+    expect(lastShape('die')).toEqual({});
   });
 
   it('un nuovo oggetto parte dalle ultime misure e il nome e la posizione restano quelli di sempre', () => {

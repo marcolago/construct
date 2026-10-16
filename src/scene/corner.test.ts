@@ -129,7 +129,7 @@ describe('smusso piano', () => {
   });
 
   it('icosaedro: un angolo con cinque spigoli si smussa e la mesh resta valida', () => {
-    const scene = sceneOf([prim('icosahedron', { size: 20, cornerRadius: 0 })], ['a']);
+    const scene = sceneOf([prim('die', { faces: 20, size: 20, cornerRadius: 0 })], ['a']);
     const [mesh] = evaluate(scene);
     const map = faceMap(mesh);
     const v = cornerAt(mesh, map, faceFacing(mesh, [0, 0, 1]), [0, 0, 20]);

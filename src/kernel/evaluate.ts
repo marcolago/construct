@@ -16,7 +16,7 @@ import { cavityOf, SHELL_OPEN_MARGIN } from '../scene/shell';
 import { cornerCutter } from '../scene/cornerProfile';
 import { separateParts, thinWalls, type PartBox } from './analyze';
 import type { DeepResult, DetachedFinding, ThinFinding } from '../scene/printability';
-import { maxPolyhedronRadius, polygonMaxRadius, polygonShrunkRadius, polyhedronVertices, roundedPolyhedronCenters } from '../scene/polyhedra';
+import { dieSolid, maxPolyhedronRadius, polygonMaxRadius, polygonShrunkRadius, polyhedronVertices, roundedPolyhedronCenters } from '../scene/polyhedra';
 import type { Transform } from '../scene/math';
 import type { CornerNode, EdgeNode, GroupNode, MeshNode, PrimitiveNode, Scene, SceneNode, Shape2DNode, ShellParams, Vec3 } from '../scene/types';
 
@@ -192,15 +192,13 @@ export class Evaluator {
         section.delete();
         return torus;
       }
-      case 'octahedron':
-      case 'decahedron':
-      case 'dodecahedron':
-      case 'icosahedron': {
+      case 'die': {
+        const solid = dieSolid(p.faces);
         const size = Math.max(EPS, p.size);
         const r = Math.min(Math.max(0, p.cornerRadius), maxPolyhedronRadius(size));
-        if (r <= 0) return Manifold.hull(polyhedronVertices(p.kind, size));
+        if (r <= 0) return Manifold.hull(polyhedronVertices(solid, size));
         // Solido arrotondato: involucro convesso di sfere sui vertici del solido ridotto (le facce restano a size/2)
-        const spheres = roundedPolyhedronCenters(p.kind, size, r).map((c) => Manifold.sphere(r, CORNER_SPHERE_SEGMENTS).translate(c));
+        const spheres = roundedPolyhedronCenters(solid, size, r).map((c) => Manifold.sphere(r, CORNER_SPHERE_SEGMENTS).translate(c));
         const hull = Manifold.hull(spheres);
         spheres.forEach((m) => m.delete());
         return hull;

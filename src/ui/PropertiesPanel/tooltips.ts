@@ -21,6 +21,7 @@ export const TIPS = {
   height: 'Altezza: quanto la forma è alta lungo Z, in mm.',
   majorRadius: 'Raggio del toro: distanza dal centro del toro al centro del suo tubo, in mm.',
   minorRadius: 'Raggio del tubo: spessore del tubo del toro, in mm.',
+  dieFaces: 'Facce: il dado ha 8, 10, 12, 20 o 30 facce (ottaedro, trapezoedro pentagonale, dodecaedro, icosaedro, triacontaedro rombico). Lo slider scatta sul valore più vicino.',
   polySize: 'Dimensione: distanza tra due facce opposte, in mm. È la misura che si usa per i dadi.',
 
   width: 'Larghezza: dimensione del profilo 2D lungo X, in mm.',
