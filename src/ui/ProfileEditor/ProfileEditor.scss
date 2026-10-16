@@ -649,9 +649,17 @@
     @include focus-ring;
   }
 
-  // Finestre strette: una colonna sola (anteprima, disegno, opzioni); il disegno ha almeno 320 px e il resto, piede compreso, scorre
+  // Finestre strette: una colonna sola (anteprima, disegno, opzioni); il disegno ha almeno 320 px e il resto scorre,
+  // mentre il piede con OK e Annulla resta sempre in vista in basso
   @media (max-width: 900px) {
     overflow-y: auto;
+
+    &__footer {
+      position: sticky;
+      bottom: 0;
+      z-index: 1;
+      background: color('panel');
+    }
 
     &__main {
       display: flex;

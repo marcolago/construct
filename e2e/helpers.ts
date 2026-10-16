@@ -28,6 +28,43 @@ export async function openApp(page: Page, options: { welcome?: boolean } = {}): 
   await page.waitForFunction(() => !!window.__construct && !!window.__r3f);
 }
 
+/**
+ * Aspetta che il salvataggio automatico (IndexedDB, con debounce) abbia scritto la scena attuale: prima di ricaricare la
+ * pagina o di leggere l'archivio. Non crea il database se manca (l'apertura si annulla da sola): idb-keyval lo creerebbe
+ * poi senza archivio e il salvataggio si romperebbe.
+ */
+export async function sceneSaved(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<boolean>((resolve) => {
+            const open = indexedDB.open('keyval-store');
+            open.onupgradeneeded = () => open.transaction!.abort();
+            open.onerror = () => resolve(false);
+            open.onsuccess = () => {
+              const db = open.result;
+              try {
+                const read = db.transaction('keyval').objectStore('keyval').get('construct:scene');
+                read.onsuccess = () => {
+                  db.close();
+                  resolve(!!read.result && JSON.stringify(read.result) === JSON.stringify(window.__construct!.store.getState().scene));
+                };
+                read.onerror = () => {
+                  db.close();
+                  resolve(false);
+                };
+              } catch {
+                db.close();
+                resolve(false);
+              }
+            };
+          }),
+      ),
+    )
+    .toBe(true);
+}
+
 /** Aspetta che il kernel abbia terminato il calcolo e che i risultati riflettano la scena. */
 export async function settled(page: Page): Promise<void> {
   await page.waitForFunction(() => {

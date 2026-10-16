@@ -18,6 +18,18 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.66.2] - 2026-10-16
+
+### Corretto
+- **Esc nei campi numerici** (Proprietà, Impostazioni, strumenti, modale del Profilo): ora annulla davvero la modifica. Prima il testo scritto veniva confermato all'uscita dal campo, con un passo di Annulla in più nelle Proprietà.
+- **Modale del Profilo, campi legati a un parametro** (Altezza, Torsione, Scala cima, Angolo): gli slider sono disattivati e un'avvertenza lo spiega, invece di accettare un valore che all'OK la formula scartava in silenzio; se un campo legato doveva comunque cambiare, l'OK mostra l'avviso come le altre modifiche.
+- **Modale del Profilo a finestra stretta** (sotto i 900 px): il piede con OK e Annulla resta fisso in basso mentre le opzioni scorrono.
+- **Anteprima del Profilo**: alla fine di un gesto non si ricalcola più lo stesso disegno già calcolato, e se l'ultimo contorno valido sparisce mentre un calcolo è in corso la mesh vecchia non ricompare.
+
+### Modificato
+- Lo scheduler dell'anteprima è in `previewScheduler.ts`, senza React e con test Vitest (timer e kernel finti). Il tipo `Draft` sta in `scene/types.ts`.
+- Test e2e: le attese fisse che aspettavano il salvataggio automatico usano l'helper `sceneSaved`.
+
 ## [0.66.1] - 2026-10-16
 
 ### Aggiunto

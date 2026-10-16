@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { round } from '../../scene/math';
 import { evalFormula, formulaDeps } from '../../scene/params';
 import { notify } from '../notify/notifyStore';
@@ -32,6 +32,9 @@ interface Props {
 export function NumberField({ label, value, onCommit, min = -Infinity, max = Infinity, step = 1, unit, disabled, path, pickLabel, integer }: Props) {
   const [text, setText] = useState(String(value));
   const [focused, setFocused] = useState(false);
+  // Esc annulla: all'uscita dal campo (blur) il testo scritto non si conferma. Serve un flag perché il blur parte nello
+  // stesso gestore di Esc, prima che `setText` abbia aggiornato il valore che `onBlur` legge dal DOM
+  const cancelled = useRef(false);
   const formulas = useContext(FormulaContext);
   // Formula legata a questo campo (solo dentro il pannello Proprietà e con un percorso)
   const formula = path ? formulas?.exprs?.[path]?.expr : undefined;
@@ -87,17 +90,20 @@ export function NumberField({ label, value, onCommit, min = -Infinity, max = Inf
         disabled={disabled}
         value={text}
         onFocus={(e) => {
+          cancelled.current = false;
           setFocused(true);
           e.currentTarget.select();
         }}
         onChange={(e) => setText(e.target.value)}
         onBlur={(e) => {
           setFocused(false);
-          commit(e.target.value);
+          if (cancelled.current) cancelled.current = false;
+          else commit(e.target.value);
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') e.currentTarget.blur();
           if (e.key === 'Escape') {
+            cancelled.current = true;
             setText(String(round(value, 3)));
             e.currentTarget.blur();
           }

@@ -106,6 +106,18 @@ export interface PathContour {
   nodes: PathNode[];
 }
 
+/** Stato del disegno nella modale del Profilo: contorni e parametri di estrusione (quelli del nodo `path`). */
+export interface Draft {
+  paths: PathContour[];
+  tolerance: number;
+  extrusion: 'linear' | 'rotate';
+  height: number;
+  twist: number;
+  scaleTop: number;
+  revolveAngle: number;
+  revolveSegments: number;
+}
+
 /**
  * Forma 2D estrusa (come linear_extrude di OpenSCAD): il profilo sta sul piano XY e si estrude
  * lungo Z per `height` mm, con torsione e scala della cima opzionali.

@@ -2,7 +2,10 @@ import { MAX_PATH_CONTOURS, MAX_PATH_NODES, PATH_DEFAULT_TOLERANCE, cubicPoint, 
 import { REVOLVE_DEFAULT_ANGLE, REVOLVE_DEFAULT_SEGMENTS, pathContours, pathNaturalBox } from '../../scene/shapes2d';
 import { hasBoundDimension } from '../../scene/resize';
 import { shape2dDefaults } from '../../scene/defaults';
-import type { PathContour, PathNode, Shape2DNode, Vec2 } from '../../scene/types';
+import type { Draft, PathContour, PathNode, Shape2DNode, Vec2 } from '../../scene/types';
+
+// Il tipo vive nella scena (lo usa anche lo store): qui si riesporta per chi lo importava da qui
+export type { Draft };
 
 /**
  * Modello del disegno nella modale del Profilo: funzioni pure e IMMUTABILI sui contorni (`PathContour[]`). Ogni funzione
@@ -10,18 +13,6 @@ import type { PathContour, PathNode, Shape2DNode, Vec2 } from '../../scene/types
  * (`pathNaturalBox`) e la cronologia locale si basano sull'identità degli array, quindi nessuna funzione modifica
  * l'input. Le coordinate sono quelle dell'editor (mm, Y verso l'alto); le maniglie sono relative al nodo.
  */
-
-/** Stato del disegno nella modale: contorni e parametri di estrusione (quelli del nodo `path`). */
-export interface Draft {
-  paths: PathContour[];
-  tolerance: number;
-  extrusion: 'linear' | 'rotate';
-  height: number;
-  twist: number;
-  scaleTop: number;
-  revolveAngle: number;
-  revolveSegments: number;
-}
 
 /** Un nodo: indice del contorno e del nodo dentro il contorno. */
 export type NodeRef = { path: number; node: number };

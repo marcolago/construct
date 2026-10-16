@@ -1,5 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
-import { openApp, readCode, sceneState, settled } from './helpers';
+import { openApp, readCode, sceneSaved, sceneState, settled } from './helpers';
+
+/** Attesa per le prove di assenza (la bozza non deve tornare): più lunga del salvataggio ritardato della bozza (`SAVE_DELAY`, 500 ms). */
+const DRAFT_SAVE_WAIT = 700;
 
 test.beforeEach(async ({ page }) => {
   await openApp(page);
@@ -180,7 +183,7 @@ test('Esc con modifiche chiede conferma: Annulla lascia aperto, due Esc di fila 
   await expect(editor(page)).toHaveCount(0);
   expect(await history(page)).toBe(steps);
   expect((await getNode(page, id)).paths).toEqual(start.paths);
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(DRAFT_SAVE_WAIT);
   expect(await page.evaluate((nodeId) => localStorage.getItem(`construct:profile-draft:${nodeId}`), id)).toBeNull();
 });
 
@@ -219,9 +222,8 @@ test('Backspace nel campo X modifica il testo e non elimina il nodo; fuori dal c
   await page.keyboard.press('Escape');
   await expect(confirmBox(page)).toHaveCount(0);
   await expect(editor(page)).toBeVisible();
-  // Bug noto di NumberField (docs/da-fare.md): Esc conferma il testo modificato invece di annullarlo, quindi X resta 4 e il
-  // nodo si è spostato. Se il bug viene corretto questa asserzione va cambiata in 40
-  await expect(x).toHaveValue('4');
+  // Esc annulla la modifica del campo (0.66.2): X torna a 40 e il nodo non si è spostato
+  await expect(x).toHaveValue('40');
   // Fuori dal campo Canc elimina il nodo selezionato
   await editor(page).locator('.profile-editor__canvas').focus();
   await page.keyboard.press('Delete');
@@ -595,8 +597,8 @@ test('rotazionale: compare l\'asse di rotazione, l\'OK scrive extrusion rotate',
 
 test('bozza: modifica, ricarica senza OK, riapertura con la proposta di ripristino', async ({ page }) => {
   const id = await addPath(page);
-  // Lascia al salvataggio della scena il tempo di scrivere
-  await page.waitForTimeout(800);
+  // Il salvataggio automatico della scena deve aver scritto prima della ricarica
+  await sceneSaved(page);
   await openEditor(page, id);
   const k = await pixelsPerMm(page);
   const c = await center(node(page, '0:2'));
@@ -616,13 +618,13 @@ test('bozza: modifica, ricarica senza OK, riapertura con la proposta di ripristi
   const moved = (await getNode(page, id)).paths[0].nodes[2].p;
   expect(moved[0]).toBeGreaterThan(48);
   // Dopo l'OK la bozza non c'è più
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(DRAFT_SAVE_WAIT);
   expect(await page.evaluate((nodeId) => localStorage.getItem(`construct:profile-draft:${nodeId}`), id)).toBeNull();
 });
 
 test('rifiutare il ripristino elimina la bozza e apre il disegno della scena', async ({ page }) => {
   const id = await addPath(page);
-  await page.waitForTimeout(800);
+  await sceneSaved(page);
   await openEditor(page, id);
   const k = await pixelsPerMm(page);
   const c = await center(node(page, '0:2'));
@@ -1381,9 +1383,8 @@ test('una colonna sola sotto i 900 px: anteprima sopra il disegno e il disegno a
   const [view, drawing] = [(await preview(page).boundingBox())!, (await canvas(page).boundingBox())!];
   expect(view.y).toBeLessThan(drawing.y);
   expect(drawing.height).toBeGreaterThanOrEqual(320);
-  // Il piede e le opzioni scorrono: i pulsanti si raggiungono
-  await okButton(page).scrollIntoViewIfNeeded();
-  await expect(okButton(page)).toBeVisible();
+  // Il piede resta fisso in basso mentre le opzioni scorrono: OK è in vista senza scorrere
+  await expect(okButton(page)).toBeInViewport();
 });
 
 test('con uno strumento della scena aperto (Serie, Raccordo) la modale non tocca la scena: lo strumento si annulla e Invio ed Esc restano della modale', async ({ page }) => {
@@ -1430,4 +1431,39 @@ test('dopo aver trascinato uno slider con il mouse il focus resta nella modale: 
   await expect(value).toHaveValue('5');
   await page.keyboard.press('p');
   await expect(editor(page).getByRole('button', { name: 'Penna' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('Esc nel campo Tolleranza annulla la modifica del campo e non chiude la modale', async ({ page }) => {
+  const id = await addPath(page);
+  await openEditor(page, id);
+  await editor(page).locator('summary', { hasText: 'Qualità' }).click();
+  const tolerance = editor(page).locator('.number-field', { hasText: 'Tolleranza' }).locator('.number-field__input');
+  const before = await tolerance.inputValue();
+  await tolerance.fill('0.5');
+  await tolerance.press('Escape');
+  await expect(tolerance).toHaveValue(before);
+  // In un campo di testo Esc annulla solo il campo: la modale resta aperta
+  await expect(editor(page)).toBeVisible();
+});
+
+test('Altezza legata a un parametro: nella modale lo slider è disattivato (gli altri no) e dopo OK l\'altezza è quella della formula', async ({ page }) => {
+  const id = await addPath(page);
+  await page.evaluate((nodeId) => {
+    const store = window.__construct!.store.getState();
+    store.addParam('h', '12');
+    store.bindField(nodeId, 'height', { expr: 'h' });
+  }, id);
+  await settled(page);
+  expect(((await sceneState(page)).nodes[id] as unknown as { height: number }).height).toBe(12);
+
+  await openEditor(page, id);
+  // L'altezza è legata: la formula decide, da qui non si muove; la torsione, non legata, resta libera
+  await expect(editor(page).locator('.slider-field', { hasText: 'Altezza' }).locator('input[type=range]')).toBeDisabled();
+  await expect(editor(page).locator('.slider-field', { hasText: 'Torsione' }).locator('input[type=range]')).toBeEnabled();
+  await expect(editor(page).getByText('I campi legati a un parametro si cambiano dalle Proprietà')).toBeVisible();
+  await editor(page).getByRole('button', { name: 'OK', exact: true }).click();
+  await settled(page);
+  const node = (await sceneState(page)).nodes[id] as unknown as { height: number; exprs: Record<string, unknown> };
+  expect(node.height).toBe(12);
+  expect(node.exprs.height).toBeDefined();
 });

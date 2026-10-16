@@ -3,7 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import { current } from 'immer';
 import { temporal } from 'zundo';
 import type { ScadImport } from '../import/scad/toScene';
-import type { Binding, CornerNode, EdgeNode, GroupNode, GroupOp, MeshNode, Param, PathContour, PrimitiveKind, PrimitiveNode, Scene, SceneNode, Shape2DKind, Shape2DNode, Vec2, Vec3 } from './types';
+import type { Binding, CornerNode, Draft, EdgeNode, GroupNode, GroupOp, MeshNode, Param, PathContour, PrimitiveKind, PrimitiveNode, Scene, SceneNode, Shape2DKind, Shape2DNode, Vec2, Vec3 } from './types';
 import { notify } from '../ui/notify/notifyStore';
 import { applyBindings, boundValue, formulaDeps, holdBound, nameProblem, renameInExpr, resolveParams, setPath } from './params';
 import { randomColor } from './color';
@@ -18,7 +18,6 @@ import type { Mirror, Transform } from './math';
 import { pathNaturalSize } from './shapes2d';
 import { hasBoundDimension } from './resize';
 import { compensatePosition } from './pathPlacement';
-import type { Draft } from '../ui/ProfileEditor/model';
 
 export type GizmoMode = 'select' | 'translate' | 'rotate' | 'resize' | 'extrude';
 
@@ -359,6 +358,7 @@ export const useSceneStore = create<SceneState>()(
         const node = get().scene.nodes[id];
         // Solo un Profilo, e non bloccato (nemmeno da un gruppo che lo contiene)
         if (node?.type !== 'shape2d' || node.kind !== 'path' || isLocked(get().scene, id)) return false;
+        let held = false;
         act('Profilo', (s) => {
           const target = s.scene.nodes[id] as Shape2DNode;
           const rounded = roundPaths(draft.paths);
@@ -378,8 +378,12 @@ export const useSceneStore = create<SceneState>()(
           // Con una misura legata a un parametro il disegno si scala alla misura della formula: larghezza e profondità non si toccano
           if (!hasBoundDimension(target)) Object.assign(patch, { width: size.width, depth: size.depth });
           // I campi legati (altezza, posizione...) tengono il valore della formula, come per ogni altra modifica
-          Object.assign(target, holdBound(target, patch).patch);
+          const kept = holdBound(target, patch);
+          held = kept.held;
+          Object.assign(target, kept.patch);
         });
+        // Come in updateNode: se un campo legato doveva cambiare, l'utente lo sa invece di vederlo restare com'era
+        if (held) noteHeld(node.name);
         return true;
       },
 

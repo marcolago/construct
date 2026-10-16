@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addShape, dragGizmoAlongX, dragGizmoAxis, hoveredAxis, openApp, openMenuItem, project, readCode, sceneState, settled } from './helpers';
+import { addShape, dragGizmoAlongX, dragGizmoAxis, hoveredAxis, openApp, openMenuItem, project, readCode, sceneSaved, sceneState, settled } from './helpers';
 import { writeStl } from '../src/kernel/export/stl';
 
 test.beforeEach(async ({ page }) => {
@@ -409,7 +409,7 @@ test('importa un STL: nodo mesh centrato sul piatto, che sopravvive al ricaricam
   await expect(page.locator('.status-bar')).toContainText('Volume 8.00 cm³');
 
   // Dopo il salvataggio automatico e il ricaricamento la mesh torna dall'archivio locale
-  await page.waitForTimeout(900);
+  await sceneSaved(page);
   await page.reload();
   await page.waitForFunction(() => window.__construct!.results.getState().meshes.length === 1);
   await expect(page.locator('.status-bar')).toContainText('Volume 8.00 cm³');
@@ -511,6 +511,27 @@ test('icosaedro: mesh valida appoggiata sul piatto, il raccordo ne riduce il vol
   await field.press('Enter');
   await settled(page);
   expect((await read()).volume).toBeLessThan(sharp.volume);
+});
+
+test('Esc in un campo numerico annulla la modifica: valore e cronologia restano quelli di prima, Invio la conferma', async ({ page }) => {
+  await addShape(page, 'Cerchio');
+  const id = (await sceneState(page)).rootIds[0];
+  const steps = () => page.evaluate(() => window.__construct!.store.temporal.getState().pastStates.length);
+  const before = await steps();
+  const field = page.locator('.slider-field', { hasText: 'Altezza' }).locator('.number-field__input');
+  await field.fill('37');
+  await field.press('Escape');
+  // Il testo torna al valore della scena, che non è cambiato e non ha creato passi di Annulla
+  await expect(field).toHaveValue('10');
+  await settled(page);
+  expect((await sceneState(page)).nodes[id].height).toBe(10);
+  expect(await steps()).toBe(before);
+  // Invio conferma come sempre
+  await field.fill('37');
+  await field.press('Enter');
+  await settled(page);
+  expect((await sceneState(page)).nodes[id].height).toBe(37);
+  expect(await steps()).toBe(before + 1);
 });
 
 test('trascinando uno slider la scena cambia dal vivo e Ctrl+Z lo annulla in un solo passo', async ({ page }) => {
@@ -2226,7 +2247,7 @@ test('Ultimi valori: le misure inserite su una forma restano per le forme nuove,
   });
   await settled(page);
   // Il ricaricamento riporta anche il primo cubo (salvataggio automatico): il nuovo è sempre in cima all'elenco
-  await page.waitForTimeout(900);
+  await sceneSaved(page);
   await page.reload();
   await expect(page.locator('canvas')).toBeVisible();
   await page.waitForFunction(() => !!window.__construct);
@@ -3574,7 +3595,7 @@ test('Piatti: il menu contestuale sposta nel piatto e i piatti sopravvivono al r
   expect((await sceneState(page)).rootIds).toHaveLength(0);
 
   // Il salvataggio automatico conserva i piatti
-  await page.waitForTimeout(700);
+  await sceneSaved(page);
   await page.reload();
   await page.waitForFunction(() => !!window.__construct && !!window.__r3f);
   const scene = await sceneState(page);
@@ -3952,7 +3973,7 @@ test('Impostazioni: Pulisci tutti i dati chiede conferma, cancella localStorage 
   await openApp(page, { welcome: true });
   await page.keyboard.press('Escape');
   await addShape(page, 'Cubo');
-  await page.waitForTimeout(700);
+  await sceneSaved(page);
   // Qualcosa da cancellare: la scena salvata e le preferenze
   expect(await page.evaluate(() => localStorage.getItem('construct:welcomed'))).toBe('1');
   expect(await page.evaluate(async () => (await indexedDB.databases()).length)).toBeGreaterThan(0);

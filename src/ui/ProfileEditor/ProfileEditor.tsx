@@ -102,6 +102,8 @@ function Editor({ target }: { target: ProfileTarget }) {
       baked: !!path && draft.paths !== path.paths,
       // Misure legate a un parametro: il disegno si scala alla misura della formula
       bound: path ? { is: hasBoundDimension(path), width: path.width, depth: path.depth } : { is: false, width: 0, depth: 0 },
+      // Campi legati a un parametro (altezza, torsione...): la modale non li cambia, all'OK la formula vincerebbe comunque
+      boundFields: path ? Object.keys(path.exprs ?? {}) : [],
       // Il nodo esistente (colore, contorno 2D) e le misure che l'anteprima deve tenere
       node: path ?? null,
       size: path && hasBoundDimension(path) ? { width: path.width, depth: path.depth } : null,
@@ -475,6 +477,7 @@ function Editor({ target }: { target: ProfileTarget }) {
             selection={selection}
             grid={grid}
             sampling={sampling}
+            boundFields={init.boundFields}
             onExtrusion={(mode) => commitDraft({ ...draft, extrusion: mode })}
             onLive={liveDraft}
             onPatch={(patch) => commitDraft({ ...draft, ...patch })}

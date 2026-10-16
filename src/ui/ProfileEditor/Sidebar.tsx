@@ -12,6 +12,8 @@ interface Props {
   grid: GridSettings;
   /** Campionamento del disegno: punti totali, tolleranza usata davvero e se si è dovuta alzare per i tetti di punti. */
   sampling: { points: number; tolerance: number; capped: boolean };
+  /** Campi del Profilo legati a un parametro (`exprs`): i relativi slider sono disattivati, la formula decide il valore. */
+  boundFields: string[];
   /** Cambia il tipo di estrusione: un passo della cronologia. */
   onExtrusion: (mode: Draft['extrusion']) => void;
   /** Modifica in corso di un parametro (slider): il passo si chiude al rilascio. */
@@ -43,12 +45,15 @@ const GRID_STEPS = [0.1, 0.5, 1, 5, 10];
 const comma = (n: number) => String(n).replace('.', ',');
 
 /** Colonna di destra della modale: estrusione, punto selezionato, percorsi, griglia e snap, qualità. */
-export function Sidebar({ draft, selection, grid, sampling, onExtrusion, onLive, onPatch, onKind, onCoordinate, onHandle, onGrid, onSelectPath, onClosePath, onDeletePath }: Props) {
+export function Sidebar({ draft, selection, grid, sampling, boundFields, onExtrusion, onLive, onPatch, onKind, onCoordinate, onHandle, onGrid, onSelectPath, onClosePath, onDeletePath }: Props) {
   // Il pannello del punto vale per un nodo solo (con più nodi si mostra il conteggio)
   const ref = selection.length === 1 ? selection[0] : null;
   const contour = ref ? draft.paths[ref.path] : undefined;
   const node = ref && contour ? contour.nodes[ref.node] : undefined;
   const rotate = draft.extrusion === 'rotate';
+  // Uno slider legato a un parametro non si muove da qui: la formula decide il valore (si cambia dalle Proprietà)
+  const bound = (field: string) => boundFields.includes(field);
+  const anyBound = ['height', 'twist', 'scaleTop', 'revolveAngle'].some(bound);
 
   return (
     <aside className="profile-editor__sidebar" aria-label="Opzioni del profilo">
@@ -64,17 +69,18 @@ export function Sidebar({ draft, selection, grid, sampling, onExtrusion, onLive,
         {/* Il cambio di valore è un passo solo per tutto il trascinamento: lo chiude la modale al rilascio (history={false}: niente cronologia della scena) */}
         {rotate ? (
           <>
-            <SliderField label="Angolo" unit="°" min={1} max={360} step={1} hardMin={1} hardMax={360} tooltip={TIPS.revolveAngle} history={false} value={draft.revolveAngle} onCommit={(v) => onLive({ revolveAngle: v })} />
+            <SliderField label="Angolo" unit="°" min={1} max={360} step={1} hardMin={1} hardMax={360} tooltip={TIPS.revolveAngle} history={false} disabled={bound('revolveAngle')} value={draft.revolveAngle} onCommit={(v) => onLive({ revolveAngle: v })} />
             <SliderField label="Segmenti" unit="" min={8} max={128} step={1} hardMin={3} hardMax={256} integer tooltip={TIPS.revolveSegments} history={false} value={draft.revolveSegments} onCommit={(v) => onLive({ revolveSegments: v })} />
             <p className="profile-editor__hint">Il raggio è la distanza del disegno dall&apos;asse: si cambia spostando il disegno.</p>
           </>
         ) : (
           <>
-            <SliderField label="Altezza" unit="mm" min={0.5} max={200} step={0.5} hardMin={0.1} hardMax={2000} tooltip={TIPS.extrudeHeight} history={false} value={draft.height} onCommit={(v) => onLive({ height: v })} />
-            <SliderField label="Torsione" unit="°" min={-360} max={360} step={5} hardMin={-3600} hardMax={3600} tooltip={TIPS.twist} history={false} value={draft.twist} onCommit={(v) => onLive({ twist: v })} />
-            <SliderField label="Scala cima" unit="%" min={0} max={300} step={5} hardMin={0} hardMax={500} tooltip={TIPS.scaleTop} history={false} value={Math.round(draft.scaleTop * 100)} onCommit={(v) => onLive({ scaleTop: v / 100 })} />
+            <SliderField label="Altezza" unit="mm" min={0.5} max={200} step={0.5} hardMin={0.1} hardMax={2000} tooltip={TIPS.extrudeHeight} history={false} disabled={bound('height')} value={draft.height} onCommit={(v) => onLive({ height: v })} />
+            <SliderField label="Torsione" unit="°" min={-360} max={360} step={5} hardMin={-3600} hardMax={3600} tooltip={TIPS.twist} history={false} disabled={bound('twist')} value={draft.twist} onCommit={(v) => onLive({ twist: v })} />
+            <SliderField label="Scala cima" unit="%" min={0} max={300} step={5} hardMin={0} hardMax={500} tooltip={TIPS.scaleTop} history={false} disabled={bound('scaleTop')} value={Math.round(draft.scaleTop * 100)} onCommit={(v) => onLive({ scaleTop: v / 100 })} />
           </>
         )}
+        {anyBound && <p className="profile-editor__hint">I campi legati a un parametro si cambiano dalle Proprietà: da qui restano come sono.</p>}
       </section>
 
       <section className="profile-editor__section">
