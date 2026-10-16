@@ -2,6 +2,7 @@ import { get, set } from 'idb-keyval';
 import type { Scene } from './types';
 import { useSceneStore } from './store';
 import { normalizeTreatmentGroups } from './treatment';
+import { migrateLegacyShapes } from './legacyShapes';
 import { platesAreValid } from './plates';
 import { decodeAsset, encodeAsset, getAsset, type MeshAsset } from '../import/assets';
 import { restoreAssets } from '../import/restore';
@@ -13,8 +14,8 @@ const KEY = 'construct:scene';
 const LEGACY_KEY = 'webcad:scene';
 const FORMAT = 'construct-scene';
 const LEGACY_FORMAT = 'webcad-scene';
-/** Versione 2: il progetto include le mesh importate; 4: i piatti (`plates`); 5: parametri e formule (`params`, `exprs`). Le versioni precedenti si leggono ancora. */
-const VERSION = 5;
+/** Versione 2: il progetto include le mesh importate; 4: i piatti (`plates`); 5: parametri e formule (`params`, `exprs`); 6: la forma Stella con `points` al posto di star5 e star6. Le versioni precedenti si leggono ancora. */
+const VERSION = 6;
 
 /** Vero durante la pulizia dei dati: la scena non deve essere riscritta mentre si cancella. */
 let autosaveSuspended = false;
@@ -47,7 +48,7 @@ export async function initPersistence(): Promise<boolean> {
   if (isScene(saved)) {
     try {
       // Le mesh importate si recuperano e si registrano nel kernel prima di mostrare la scena
-      useSceneStore.getState().loadScene(await restoreAssets(normalizeTreatmentGroups(saved)));
+      useSceneStore.getState().loadScene(await restoreAssets(migrateLegacyShapes(normalizeTreatmentGroups(saved))));
       // La scena ripristinata è il punto di partenza della timeline, non un'operazione da annullare
       useSceneStore.temporal.getState().clear();
       restored = true;
@@ -88,6 +89,6 @@ export function sceneFromJson(text: string): { scene: Scene; assets: MeshAsset[]
   if ((data.format !== FORMAT && data.format !== LEGACY_FORMAT) || !isScene(data.scene)) throw new Error('Il file non è un progetto Construct valido.');
   if ((data.version ?? 1) > VERSION) throw new Error('Il progetto è stato salvato da una versione più recente di Construct.');
   const assets = Object.entries(data.assets ?? {}).map(([id, encoded]) => decodeAsset(id, encoded));
-  // Le scene di versioni precedenti hanno i gruppi dei trattamenti all'origine: si portano sul pezzo
-  return { scene: normalizeTreatmentGroups(data.scene), assets };
+  // Le scene di versioni precedenti hanno i gruppi dei trattamenti all'origine (si portano sul pezzo) e le stelle a 5 o 6 punte (diventano Stella)
+  return { scene: migrateLegacyShapes(normalizeTreatmentGroups(data.scene)), assets };
 }

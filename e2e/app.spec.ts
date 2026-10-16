@@ -1530,10 +1530,12 @@ test('Salva con il selettore di file: nome e cartella scelti, poi Salva riscrive
   expect((await state()).suggested).toBe('scelto.json');
 });
 
-test('le dodici forme 2D si aggiungono dalla libreria e danno un solido valido', async ({ page }) => {
-  const labels = ['Cerchio', 'Quadrato', 'Anello', 'Cuore', 'Stella 5 punte', 'Stella 6 punte', 'Uovo', 'Trapezio', 'Croce', 'Goccia', 'Mezzaluna', 'Testo'];
+test('le undici forme 2D estrudibili si aggiungono dalla libreria, in ordine di utilità, e danno un solido valido', async ({ page }) => {
+  const labels = ['Quadrato', 'Cerchio', 'Testo', 'Anello', 'Trapezio', 'Croce', 'Stella', 'Cuore', 'Goccia', 'Uovo', 'Mezzaluna'];
   await page.getByRole('tab', { name: 'Forme 2D' }).click();
   await expect(page.locator('button[title^="Aggiungi: "][title$="estruso"]')).toHaveCount(labels.length);
+  // Ordine della tab: le basi e gli strumenti più usati per primi, il Profilo (si disegna in una modale) tra i primi
+  await expect(page.locator('.shape-library__label')).toHaveText([...labels.slice(0, 3), 'Profilo', ...labels.slice(3)]);
   for (const label of labels) {
     await addShape(page, label);
     await settled(page);
@@ -1543,6 +1545,27 @@ test('le dodici forme 2D si aggiungono dalla libreria e danno un solido valido',
   // Ogni forma ha le sue proprietà: il terzo slider dell'anello è il foro
   await page.locator('.outliner__row', { hasText: 'Anello' }).click();
   await expect(page.locator('.slider-field', { hasText: 'Foro' })).toBeVisible();
+});
+
+test('Stella: un solo tipo con il numero di punte (3-20), che parte da 5', async ({ page }) => {
+  await addShape(page, 'Stella');
+  await settled(page);
+  const id = (await sceneState(page)).rootIds[0];
+  expect((await sceneState(page)).nodes[id]).toMatchObject({ kind: 'star', points: 5 });
+  const points = page.locator('.slider-field', { hasText: 'Punte' }).locator('.number-field__input');
+  await points.fill('8');
+  await points.press('Enter');
+  await settled(page);
+  expect((await sceneState(page)).nodes[id].points).toBe(8);
+  await expect(page.locator('.status-bar')).toContainText('Mesh valida');
+});
+
+test('la libreria Forme 3D mette i profilati prima dei solidi dei dadi', async ({ page }) => {
+  await expect(page.locator('.shape-library__label')).toHaveText([
+    'Cubo', 'Cilindro', 'Sfera', 'Cono', 'Toro',
+    'Tubolare tondo', 'Tubolare rettangolare', 'Profilato a L', 'Profilato a U', 'Profilato a T', 'Profilato a H',
+    'Ottaedro', 'Decaedro', 'Dodecaedro', 'Icosaedro',
+  ]);
 });
 
 test('profilati a L, T e H: nella tab Forme 3D, pannello dedicato con spessori e raccordo interno, polygon nel codice', async ({ page }) => {

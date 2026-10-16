@@ -25,6 +25,7 @@ export const TIPS = {
 
   width: 'Larghezza: dimensione del profilo 2D lungo X, in mm.',
   depth: 'Profondità: dimensione del profilo 2D lungo Y, in mm.',
+  starPoints: 'Punte: numero di punte della stella, da 3 a 20.',
   profileWidth: 'Larghezza: ingombro della sezione del profilato lungo X, in mm.',
   profileDepth: 'Profondità: ingombro della sezione del profilato lungo Y, in mm.',
   rootRadius: "Raccordo interno: raggio con cui si arrotonda l'angolo tra ala e anima, come nei profilati laminati, in mm. 0 lascia lo spigolo vivo.",

@@ -18,6 +18,13 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.66.0] - 2026-10-16
+
+### Modificato
+- **Stella**: le forme "Stella 5 punte" e "Stella 6 punte" sono un'unica **Stella** con il parametro **Punte** (da 3 a 20, 5 all'inizio), accanto al Raggio interno. Il numero di punte è un intero e si può legare a un parametro. I progetti salvati con le vecchie stelle si aprono come Stella con 5 o 6 punte, con la stessa geometria; il formato del file di progetto passa alla versione 6, quindi una versione precedente di Construct non apre più i progetti salvati da questa.
+- **Ordine della libreria e del menu contestuale** per frequenza d'uso e utilità. Forme 3D: Cubo, Cilindro, Sfera, Cono, Toro, Tubolare tondo, Tubolare rettangolare, Profilato a L, U, T, H e in fondo i solidi dei dadi (Ottaedro, Decaedro, Dodecaedro, Icosaedro). Forme 2D: Quadrato, Cerchio, Testo, Profilo, Anello, Trapezio, Croce, Stella, Cuore, Goccia, Uovo, Mezzaluna.
+- Le misure ricordate della vecchia Stella a 5 o 6 punte non passano alla nuova Stella: la prima volta riparte dai valori iniziali.
+
 ## [0.65.2] - 2026-10-15
 
 ### Aggiunto

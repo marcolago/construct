@@ -16,6 +16,14 @@ describe('ultimi valori usati', () => {
     expect(lastShape('cylinder')).toEqual({ radius: 7, height: 30 });
   });
 
+  it('ricorda le punte della stella solo se sono un intero tra 3 e 20', () => {
+    rememberShape('star', { points: 8, ratio: 0.3 });
+    expect(lastShape('star')).toEqual({ points: 8, ratio: 0.3 });
+    rememberShape('star', { points: 2 });
+    rememberShape('star', { points: 7.5 });
+    expect(lastShape('star')).toEqual({ points: 8, ratio: 0.3 });
+  });
+
   it('scarta i valori non validi e non rompe con dati rovinati', () => {
     rememberShape('sphere', { radius: -5, segments: 2.5 });
     expect(lastShape('sphere')).toEqual({});

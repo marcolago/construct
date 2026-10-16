@@ -6,7 +6,7 @@ import { isCutter } from '../../scene/treatment';
 import { FONTS, FONT_CATEGORIES, fontInfo } from '../../scene/fontCatalog';
 import type { FontCategory, FontInfo } from '../../scene/fontCatalog';
 import { Lock, Unlock } from 'lucide-react';
-import { isPolygonShape, isRotational, RATIO_INFO, revolveParams } from '../../scene/shapes2d';
+import { isPolygonShape, isRotational, RATIO_INFO, revolveParams, STAR_POINTS } from '../../scene/shapes2d';
 import { clampProfile, isBarShape, isProfileShape, maxRootRadius, maxTipSize, PROFILE_INFO } from '../../scene/profiles';
 import { hasBoundDimension, isRatioLocked, lockedPatch, scalePatch, scalePercent } from '../../scene/resize';
 import { cornerSphere } from '../../scene/cornerProfile';
@@ -907,6 +907,24 @@ function Shape2DFields({ node, patch, locked }: { node: Shape2DNode; patch: (p: 
           [
             slider('Larghezza', node.width, 'width', TIPS.width, length),
             slider('Profondità', node.depth, 'depth', TIPS.depth, length),
+            // Stella: numero di punte intero (anche legato a un parametro: la formula si arrotonda)
+            node.kind === 'star' && (
+              <SliderField
+                key="points"
+                label="Punte"
+                min={STAR_POINTS.min}
+                max={STAR_POINTS.max}
+                step={1}
+                hardMin={STAR_POINTS.min}
+                hardMax={STAR_POINTS.max}
+                integer
+                tooltip={TIPS.starPoints}
+                disabled={locked}
+                value={node.points}
+                path="points"
+                onCommit={(v) => patch({ points: Math.round(v) } as Partial<Shape2DNode>)}
+              />
+            ),
             ratioInfo && (
               <SliderField
                 key="ratio"

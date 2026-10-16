@@ -29,8 +29,7 @@ const SHAPE_FIELDS: Record<string, readonly string[]> = {
   square: ['width', 'depth', 'cornerRadius', 'height', 'twist', 'scaleTop'],
   ring: ['width', 'depth', 'ratio', 'height', 'twist', 'scaleTop'],
   heart: ['width', 'depth', 'height', 'twist', 'scaleTop'],
-  star5: ['width', 'depth', 'ratio', 'height', 'twist', 'scaleTop'],
-  star6: ['width', 'depth', 'ratio', 'height', 'twist', 'scaleTop'],
+  star: ['width', 'depth', 'ratio', 'points', 'height', 'twist', 'scaleTop'],
   egg: ['width', 'depth', 'ratio', 'height', 'twist', 'scaleTop'],
   trapezoid: ['width', 'depth', 'ratio', 'height', 'twist', 'scaleTop'],
   cross: ['width', 'depth', 'ratio', 'height', 'twist', 'scaleTop'],
@@ -65,6 +64,8 @@ function isValid(field: string, value: unknown): boolean {
       return Array.isArray(value) ? value.length === 3 && value.every((v) => between(v, 0.01, 5000)) : between(value, 0.01, 5000);
     case 'segments':
       return Number.isInteger(value) && between(value, 3, 256);
+    case 'points':
+      return Number.isInteger(value) && between(value, 3, 20);
     case 'shape':
       return value === 'round' || value === 'square';
     case 'count':

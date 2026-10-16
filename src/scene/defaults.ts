@@ -1,7 +1,7 @@
-import type { PrimitiveKind, PrimitiveNode, Shape2DKind, Shape2DNode } from './types';
+import type { PrimitiveKind, PrimitiveNode, ProfileKind, Shape2DKind, Shape2DNode } from './types';
 import { DEFAULT_FONT } from './fontCatalog';
 import { PATH_DEFAULT_TOLERANCE } from './bezier';
-import { RATIO_INFO, profileExtent } from './shapes2d';
+import { RATIO_INFO, STAR_POINTS, profileExtent } from './shapes2d';
 
 /** Etichette italiane delle primitive, usate in libreria e outliner. */
 export const PRIMITIVE_LABELS: Record<PrimitiveKind, string> = {
@@ -43,8 +43,7 @@ export const SHAPE2D_LABELS: Record<Shape2DKind, string> = {
   square: 'Quadrato',
   ring: 'Anello',
   heart: 'Cuore',
-  star5: 'Stella 5 punte',
-  star6: 'Stella 6 punte',
+  star: 'Stella',
   egg: 'Uovo',
   trapezoid: 'Trapezio',
   cross: 'Croce',
@@ -60,6 +59,22 @@ export const SHAPE2D_LABELS: Record<Shape2DKind, string> = {
   tubeRect: 'Tubolare rettangolare',
   tubeRound: 'Tubolare tondo',
 };
+
+/**
+ * Ordine delle forme 3D in libreria e nel menu contestuale: per frequenza d'uso e utilità (le basi, poi i tubolari e i
+ * profilati, in fondo i solidi dei dadi). I profilati sono sezioni 2D estruse ma si usano come solidi.
+ */
+export const SHAPES_3D: (PrimitiveKind | ProfileKind)[] = [
+  'box', 'cylinder', 'sphere', 'cone', 'torus',
+  'tubeRound', 'tubeRect', 'profileL', 'profileU', 'profileT', 'profileH',
+  'octahedron', 'decahedron', 'dodecahedron', 'icosahedron',
+];
+
+/**
+ * Ordine delle forme 2D estrudibili in libreria e nel menu contestuale: le basi e gli strumenti più usati (Testo,
+ * Profilo), poi i pezzi tecnici e infine le forme decorative. L'SVG nasce solo dall'importazione di un file.
+ */
+export const SHAPES_2D: Shape2DKind[] = ['square', 'circle', 'text', 'path', 'ring', 'trapezoid', 'cross', 'star', 'heart', 'drop', 'egg', 'crescent'];
 
 /**
  * Divisioni verticali di un'estrusione con torsione: una ogni 2° di rotazione.
@@ -136,6 +151,7 @@ export function shape2dDefaults(kind: Shape2DKind): DistributiveOmit<Shape2DNode
     case 'egg': return { ...base, kind, width: 16, depth: 22, ratio: RATIO_INFO.egg!.default };
     case 'trapezoid': return { ...base, kind, width: 24, depth: 16, ratio: RATIO_INFO.trapezoid!.default };
     case 'heart': return { ...base, kind, width: 20, depth: 20, ratio: 0 };
+    case 'star': return { ...base, kind, width: 20, depth: 20, ratio: RATIO_INFO.star!.default, points: STAR_POINTS.default };
     case 'drop': return { ...base, kind, width: 16, depth: 24, ratio: 0 };
     // Profilati: sezione 20 × 20 con pareti di 3 mm, più lunghi delle altre estrusioni perché sono travi
     case 'profileL':

@@ -284,7 +284,7 @@ describe('Evaluator', () => {
 
 describe('nuove forme 2D e testo nel kernel', () => {
   const extruded = (node: Shape2DNode) => new Evaluator(wasm).evaluate({ nodes: { a: node }, rootIds: ['a'] }).meshes[0];
-  const POLYGON_KINDS = ['ring', 'heart', 'star5', 'star6', 'egg', 'trapezoid', 'cross', 'drop', 'crescent'] as const;
+  const POLYGON_KINDS = ['ring', 'heart', 'star', 'egg', 'trapezoid', 'cross', 'drop', 'crescent'] as const;
 
   it.each(POLYGON_KINDS)('%s: solido valido con l\'ingombro richiesto, appoggiato a metà altezza', (kind) => {
     const m = extruded(shape('a', kind, { width: 30, depth: 20, height: 6 } as Partial<Shape2DNode>));
@@ -327,7 +327,7 @@ describe('nuove forme 2D e testo nel kernel', () => {
     const ring = extruded(shape('a', 'ring', { width: 40, depth: 40, ratio: 0.5, height: 5 } as Partial<Shape2DNode>));
     // Poligono a 64 lati: pochi decimi di punto percentuale sotto il cerchio ideale
     expect(Math.abs(ring.volume / (Math.PI * (20 ** 2 - 10 ** 2) * 5) - 1)).toBeLessThan(0.005);
-    const twisted = extruded(shape('a', 'star5', { width: 20, depth: 20, height: 10, twist: 90 } as Partial<Shape2DNode>));
+    const twisted = extruded(shape('a', 'star', { width: 20, depth: 20, height: 10, twist: 90 } as Partial<Shape2DNode>));
     expect(twisted.status).toBe('NoError');
     const cone = extruded(shape('a', 'cross', { width: 20, depth: 20, height: 10, scaleTop: 0 } as Partial<Shape2DNode>));
     const prism = extruded(shape('a', 'cross', { width: 20, depth: 20, height: 10 } as Partial<Shape2DNode>));

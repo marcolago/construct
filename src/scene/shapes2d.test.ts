@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { RATIO_INFO, pathContours, pathNaturalBox, pathNaturalSize, pathRadius, revolveParams, shapeContours, svgNaturalSize, svgScalePercent, type PolygonKind, type PolygonShape } from './shapes2d';
+import { RATIO_INFO, STAR_POINTS, pathContours, pathNaturalBox, pathNaturalSize, pathRadius, revolveParams, shapeContours, svgNaturalSize, svgScalePercent, type PolygonKind, type PolygonShape } from './shapes2d';
 import { halfHeight, shape2dDefaults } from './defaults';
 import type { PathContour, PathNode, Shape2DNode, Vec2 } from './types';
 
 const KINDS = Object.keys(RATIO_INFO) as PolygonKind[];
 
-const shape = (kind: PolygonKind, width = 20, depth = 20, ratio = RATIO_INFO[kind]?.default ?? 0): PolygonShape =>
-  ({ type: 'shape2d', kind, width, depth, ratio, height: 10, twist: 0, scaleTop: 1 }) as unknown as PolygonShape;
+const shape = (kind: PolygonKind, width = 20, depth = 20, ratio = RATIO_INFO[kind]?.default ?? 0, points = STAR_POINTS.default): PolygonShape =>
+  ({ type: 'shape2d', kind, width, depth, ratio, points, height: 10, twist: 0, scaleTop: 1 }) as unknown as PolygonShape;
 
 const bounds = (contours: [number, number][][]) => {
   const all = contours.flat();
@@ -48,7 +48,7 @@ describe('forme 2D poligonali', () => {
   });
 
   it('stella a 5 punte: area della formula e una punta verso l\'alto', () => {
-    const [c] = shapeContours(shape('star5', 20, 20, 0.4));
+    const [c] = shapeContours(shape('star', 20, 20, 0.4, 5));
     expect(c).toHaveLength(10);
     // La punta più alta sta sull'asse Y
     const top = c.reduce((a, b) => (b[1] > a[1] ? b : a));
@@ -58,11 +58,25 @@ describe('forme 2D poligonali', () => {
   });
 
   it('stella a 6 punte: simmetrica rispetto a X e Y, 12 vertici', () => {
-    const [c] = shapeContours(shape('star6', 20, 20, 0.5));
+    const [c] = shapeContours(shape('star', 20, 20, 0.5, 6));
     expect(c).toHaveLength(12);
     for (const [x, y] of c) {
       expect(c.some(([qx, qy]) => Math.abs(qx + x) < 1e-3 && Math.abs(qy - y) < 1e-3), `specchio di ${x},${y}`).toBe(true);
     }
+  });
+
+  it.each([3, 8, 20])('stella a %i punte: 2 × punte vertici e una punta verso l\'alto', (points) => {
+    const [c] = shapeContours(shape('star', 20, 20, 0.4, points));
+    expect(c).toHaveLength(points * 2);
+    const top = c.reduce((a, b) => (b[1] > a[1] ? b : a));
+    expect(top[0]).toBeCloseTo(0, 3);
+  });
+
+  it('stella: punte non valide si riportano ai limiti o al predefinito', () => {
+    expect(shapeContours(shape('star', 20, 20, 0.4, 1))[0]).toHaveLength(STAR_POINTS.min * 2);
+    expect(shapeContours(shape('star', 20, 20, 0.4, 99))[0]).toHaveLength(STAR_POINTS.max * 2);
+    expect(shapeContours(shape('star', 20, 20, 0.4, 5.6))[0]).toHaveLength(12);
+    expect(shapeContours(shape('star', 20, 20, 0.4, NaN))[0]).toHaveLength(STAR_POINTS.default * 2);
   });
 
   it('croce: area = due barre meno l\'incrocio, esatta', () => {

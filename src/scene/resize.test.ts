@@ -109,7 +109,7 @@ describe('applyScale', () => {
   });
 
   it('forme 2D poligonali: scalano ingombro e altezza, il parametro ratio non cambia', () => {
-    const star = shape('star5', { width: 20, depth: 20, ratio: 0.4, height: 10 } as Partial<Shape2DNode>);
+    const star = shape('star', { width: 20, depth: 20, ratio: 0.4, height: 10 } as Partial<Shape2DNode>);
     const patch = applyScale(star, [2, 1, 0.5]);
     expect(patch).toEqual({ height: 5, width: 40, depth: 20 });
     expect('ratio' in patch).toBe(false);

@@ -84,7 +84,7 @@ export type TubeKind = 'tubeRect' | 'tubeRound';
 /** Profilati strutturali: ali e anima oppure tubolari. */
 export type ProfileKind = BarKind | TubeKind;
 
-export type Shape2DKind = 'circle' | 'square' | 'ring' | 'heart' | 'star5' | 'star6' | 'egg' | 'trapezoid' | 'cross' | 'drop' | 'crescent' | 'text' | 'svg' | 'path' | ProfileKind;
+export type Shape2DKind = 'circle' | 'square' | 'ring' | 'heart' | 'star' | 'egg' | 'trapezoid' | 'cross' | 'drop' | 'crescent' | 'text' | 'svg' | 'path' | ProfileKind;
 
 /** Punto del piano XY in mm (Y verso l'alto). */
 export type Vec2 = [number, number];
@@ -150,11 +150,19 @@ export type Shape2DNode = BaseNode & {
   | { kind: 'square'; width: number; depth: number; /** Raggio di arrotondamento degli angoli in mm (0 = vivi). */ cornerRadius: number }
   | {
       /** Forme poligonali (profili in src/scene/shapes2d.ts): ingombro `width × depth` mm centrato nell'origine. */
-      kind: 'ring' | 'heart' | 'star5' | 'star6' | 'egg' | 'trapezoid' | 'cross' | 'drop' | 'crescent';
+      kind: 'ring' | 'heart' | 'egg' | 'trapezoid' | 'cross' | 'drop' | 'crescent';
       width: number;
       depth: number;
       /** Parametro della forma (foro dell'anello, raggio interno della stella, ...): significato e limiti in `RATIO_INFO`. */
       ratio: number;
+    }
+  | {
+      /** Stella: ingombro `width × depth` mm, `ratio` è il raggio interno e `points` il numero di punte (3..20). */
+      kind: 'star';
+      width: number;
+      depth: number;
+      ratio: number;
+      points: number;
     }
   | {
       /**

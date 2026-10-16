@@ -20,14 +20,19 @@ export type PolygonKind = PolygonShape['kind'];
 export const RATIO_INFO: Record<PolygonKind, { default: number; min: number; max: number; label: string; tip: string } | null> = {
   ring: { default: 0.6, min: 0.1, max: 0.95, label: 'Foro', tip: 'Diametro del foro rispetto a quello esterno (in %).' },
   heart: null,
-  star5: { default: 0.4, min: 0.1, max: 0.9, label: 'Raggio interno', tip: 'Raggio delle punte rientranti rispetto a quello delle punte (in %): più basso = punte più sottili.' },
-  star6: { default: 0.5, min: 0.1, max: 0.9, label: 'Raggio interno', tip: 'Raggio delle punte rientranti rispetto a quello delle punte (in %): più basso = punte più sottili.' },
+  star: { default: 0.4, min: 0.1, max: 0.9, label: 'Raggio interno', tip: 'Raggio delle punte rientranti rispetto a quello delle punte (in %): più basso = punte più sottili.' },
   egg: { default: 0.25, min: 0, max: 0.6, label: 'Punta', tip: 'Quanto si restringe la parte alta: 0 è un\'ellisse, più alto = uovo più appuntito (in %).' },
   trapezoid: { default: 0.6, min: 0.05, max: 1.5, label: 'Larghezza cima', tip: 'Larghezza del lato alto rispetto alla base (in %).' },
   cross: { default: 0.33, min: 0.1, max: 0.9, label: 'Spessore braccia', tip: 'Spessore delle braccia rispetto al lato più corto (in %).' },
   drop: null,
   crescent: { default: 0.45, min: 0.25, max: 0.95, label: 'Spessore', tip: 'Spostamento del cerchio che scava la luna: più alto = luna più spessa (in %).' },
 };
+
+/** Numero di punte della stella: valore iniziale e limiti. */
+export const STAR_POINTS = { default: 5, min: 3, max: 20 };
+
+/** Punte della stella come intero tra i limiti (un valore non numerico, per esempio da un file manomesso, vale il predefinito). */
+const starPoints = (value: number): number => (Number.isFinite(value) ? Math.min(STAR_POINTS.max, Math.max(STAR_POINTS.min, Math.round(value))) : STAR_POINTS.default);
 
 /** Vero se la forma 2D è una di quelle poligonali (non cerchio, quadrato o testo). */
 export const isPolygonShape = (node: Shape2DNode): node is Shape2DNode & PolygonShape => 'ratio' in node;
@@ -66,10 +71,9 @@ function rawContours(p: PolygonShape): Vec2[][] {
       });
       return [orient(pts, true)];
     }
-    case 'star5':
-    case 'star6': {
+    case 'star': {
       // Punte e rientranze alternate, con una punta rivolta verso l'alto
-      const points = p.kind === 'star5' ? 5 : 6;
+      const points = starPoints(p.points);
       return [
         Array.from({ length: points * 2 }, (_, i): Vec2 => {
           const a = Math.PI / 2 + (i * Math.PI) / points;

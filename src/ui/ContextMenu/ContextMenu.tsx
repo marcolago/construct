@@ -2,14 +2,13 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { Box, Camera, ChevronRight, Eye, FileDown, Grid3x3, House, Layers, Sigma, Smile, Square, Upload } from 'lucide-react';
 import { fitView } from '../../viewport/cameraControl';
-import { PRIMITIVE_LABELS, SHAPE2D_LABELS } from '../../scene/defaults';
-import { isProfileKind, PROFILE_KINDS } from '../../scene/profiles';
+import { PRIMITIVE_LABELS, SHAPE2D_LABELS, SHAPES_2D, SHAPES_3D } from '../../scene/defaults';
+import { isProfileKind } from '../../scene/profiles';
 import { EMOJI_FONT, EMOJI_GROUPS } from '../../scene/emojiCatalog';
 import { fontInfo } from '../../scene/fontCatalog';
 import { activePlateId, hasManyPlates, platesOf } from '../../scene/plates';
 import { useSceneStore } from '../../scene/store';
 import { SYMBOL_GROUPS } from '../../scene/symbolCatalog';
-import type { PrimitiveKind, Shape2DKind } from '../../scene/types';
 import { applicableGroups, helpOf, useCommandContext } from '../commands';
 import { moveSelectionToPlate } from '../Plates/plateActions';
 import { PRIMITIVE_ICONS, SHAPE2D_ICONS } from '../ShapeLibrary/ShapeLibrary';
@@ -24,10 +23,6 @@ import './ContextMenu.scss';
 const MARGIN = 8;
 /** Colonne delle griglie di simboli ed emoji (serve alle frecce su e giù). */
 const GLYPH_COLUMNS = 8;
-
-const KINDS_3D = Object.keys(PRIMITIVE_LABELS) as PrimitiveKind[];
-// L'SVG nasce dall'importazione di un file, non dal menu; i profilati stanno nel sottomenu delle forme 3D
-const KINDS_2D = (Object.keys(SHAPE2D_LABELS) as Shape2DKind[]).filter((kind) => kind !== 'svg' && kind !== 'path' && !isProfileKind(kind));
 
 /** Un carattere di una griglia (simbolo o emoji) con ciò che serve a mostrarlo e ad aggiungerlo. */
 interface Glyph {
@@ -280,23 +275,23 @@ export function ContextMenu() {
       ) : at ? (
         <>
           {submenu('3d', 'Forme 3D', <Box size={16} />, [
-            ...KINDS_3D.map((kind) => {
+            // Ordine per frequenza d'uso; i profilati sono sezioni estruse, ma si usano come solidi
+            ...SHAPES_3D.map((kind) => {
+              if (isProfileKind(kind)) {
+                const Icon = SHAPE2D_ICONS[kind];
+                return item(kind, SHAPE2D_LABELS[kind], <Icon size={16} />, () => st().addShape2D(kind, at), { nested: true });
+              }
               const Icon = PRIMITIVE_ICONS[kind];
               return item(kind, PRIMITIVE_LABELS[kind], <Icon size={16} />, () => st().addPrimitive(kind, at), { nested: true });
             }),
-            // Profilati: sezioni estruse, ma si usano come solidi
-            ...PROFILE_KINDS.map((kind) => {
-              const Icon = SHAPE2D_ICONS[kind];
-              return item(kind, SHAPE2D_LABELS[kind], <Icon size={16} />, () => st().addShape2D(kind, at), { nested: true });
-            }),
           ])}
           {submenu('2d', 'Forme 2D', <Square size={16} />, [
-            ...KINDS_2D.map((kind) => {
+            ...SHAPES_2D.map((kind) => {
               const Icon = SHAPE2D_ICONS[kind];
+              // Il Profilo si disegna in una modale: nasce nel punto cliccato solo con l'OK
+              if (kind === 'path') return item('2d-path', SHAPE2D_LABELS.path, <Icon size={16} />, () => useProfileEditor.getState().open({ new: true, at }), { nested: true });
               return item(`2d-${kind}`, SHAPE2D_LABELS[kind], <Icon size={16} />, () => st().addShape2D(kind, at), { nested: true });
             }),
-            // Il Profilo si disegna in una modale: nasce nel punto cliccato solo con l'OK
-            item('2d-path', SHAPE2D_LABELS.path, <SHAPE2D_ICONS.path size={16} />, () => useProfileEditor.getState().open({ new: true, at }), { nested: true }),
           ])}
           {submenu(
             'symbols',
