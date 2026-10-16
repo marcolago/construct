@@ -101,8 +101,7 @@ Primo passo economico alla Tinkercad: **Duplica e ripeti** (Ctrl+D ripete l'ulti
 - Pattern: applicando un secondo Pattern a un oggetto già forato, partire dagli stessi parametri del precedente (tipo, passo, parete, margine, arrotondamento) invece dei valori di default, così le facce forate in momenti diversi hanno lo stesso aspetto.
 - Pattern: pulsante "Cambia faccia" nelle proprietà del gruppo Pattern, che riapre lo strumento sulla faccia già scelta (oggi la faccia si sceglie solo all'applicazione; dopo l'OK si può solo riapplicare il Pattern).
 - Timeline: un clic sulla miniatura nel tooltip per ingrandirla o salvarla come PNG.
-- **Rotazione parziale, segmenti: kernel e codice non coincidono** (emerso con lo studio delle deformazioni, 0.66.1). `Manifold.revolve` di manifold 3.5.4 usa i segmenti per l'arco intero, qualunque sia l'angolo, e `evaluate.ts` li passa così (64 segmenti su 90° sono 64 lati); il codice esportato `rotate_extrude(angle = 90, $fn = 64)` in OpenSCAD ne ha 16, perché `$fn` si scala con `angle / 360`. Da decidere: allineare il kernel (cambia la mesh dei progetti già salvati con rotazione parziale) o scalare i segmenti nel codice esportato. Dettagli nell'appendice A di `docs/studio-deformazioni.md`.
-- **Torsione: tetto delle divisioni.** `twistDivisions` si ferma a 360 divisioni ma il cursore Torsione arriva a ±3600°: oltre 720° ogni strato supera i 2° e torna il difetto della Bauble. Meglio un budget di triangoli (studio delle deformazioni, sezione 4.4).
+- **Torsione oltre 720°: il tetto di 360 strati resta** (misurato in 0.67.0 su un profilo 60 × 5 × 40 mm, volume esatto 12 000 mm³: errore -0,19% a 3600°, +0,03% a 1800°, +0,04% a 720°). Portare gli strati a 1800 darebbe +0,05% ma con 807 mila triangoli invece di 188 mila e il triplo del tempo: non è un difetto di qualità. Il budget di triangoli resta utile solo per il costo in memoria dei profili con molti punti (scatola con fori a 3600°: 793 mila triangoli, 711 MB, studio delle deformazioni, sezione 4.4); il test `una torsione fino a 3600°…` in `src/kernel/evaluate.test.ts` fissa l'errore sotto l'1%.
 
 ## Importa OpenSCAD: cosa non si legge ancora (aggiornato alla 0.49.0, nessun comando nuovo dalla 0.32.0)
 
@@ -149,9 +148,8 @@ Dalla 0.27.0 l'importazione legge anche `let`/`assign`, le liste per comprension
 
 ## Profili Bézier: punti aperti dalla fase 1 (0.60.0)
 
-- **Costo di un commento ostile ma lecito**: un `// construct:path` al limite dei dati (100 contorni da 500 nodi con cubiche piene di estremi) costa circa 1-2 s di thread principale per poligono (tre campionamenti: riquadro naturale, `pathContours` e di nuovo il riquadro). Un file con molti poligoni così blocca l'interfaccia per diversi secondi; si potrebbe portare il lavoro in un worker o abbassare i tetti.
+- **Costo di un commento ostile ma lecito**: un `// construct:path` al limite dei dati (100 contorni da 500 nodi con cubiche piene di estremi) costa circa 1 s di thread principale per poligono (3 s prima della 0.67.0, che ha tolto i raddoppi inutili della tolleranza oltre 1 mm). Un file con molti poligoni così rallenta ancora l'interfaccia; si potrebbe portare il lavoro in un worker, abbassare i tetti o calcolare il riquadro dai soli estremi delle cubiche.
 - **Linea aperta verticale in rotazione**: un tornio disegnato come un solo tratto verticale produce `[]`, perché `svgContours` scarta i disegni senza larghezza. Dalla 0.61.0 il piede della modale lo spiega ("tutti i punti stanno sulla stessa verticale... aggiungi un punto non allineato") e OK resta disattivato, ma il caso d'uso resta senza soluzione: servirà un modo di dare spessore o larghezza minima al disegno.
-- **Tolleranza oltre il massimo**: dopo 12 raddoppi `samplePaths` può arrivare a 204,8 mm; se i soli estremi superano il tetto di punti, raddoppiare non riduce più i punti e appiattisce comunque le curve. Basterebbe fermarsi quando un raddoppio non riduce il totale.
 
 ## Profili Bézier: punti aperti dalla fase 2 (0.61.0)
 

@@ -18,6 +18,16 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.67.0] - 2026-10-16
+
+### Corretto
+- **Rotazione parziale, segmenti**: il campo Segmenti dell'estrusione rotazionale vale per il giro intero (come `$fn` di OpenSCAD), anche con un angolo parziale: 64 segmenti su 90° sono 16 lati, non 64. Prima il kernel ne usava 64 sull'arco mentre il codice esportato ne dava 16 in OpenSCAD, e l'importazione di `$fn` da file di terzi non coincideva. **I progetti salvati con una rotazione parziale ottengono una mesh più grossolana** (stessa forma, meno facce: alzare Segmenti per riaverle).
+- **Autosalvataggio versionato**: il progetto nel browser porta la versione del formato in una chiave a parte. Una build vecchia (per esempio una PWA rimasta in cache) non apre né sovrascrive un progetto scritto da una versione più recente: avvisa e sospende il salvataggio automatico. Le build precedenti, che non conoscono la chiave, continuano a funzionare come prima.
+- **Campionamento delle curve di Bézier**: oltre la tolleranza massima (1 mm) non si ripetono più 12 raddoppi che davano gli stessi punti; la tolleranza indicata nel piede della modale è quella davvero usata (prima poteva dire 204,8 mm). La geometria non cambia, e un `// construct:path` al limite dei dati si importa in circa 1 s invece di 3.
+
+### Modificato
+- Torsione: misurato che il tetto di 360 strati conserva il volume entro lo 0,2% anche a 3600° su un profilo sottile; non si cambia, e un test lo fissa.
+
 ## [0.66.3] - 2026-10-16
 
 ### Corretto

@@ -10,6 +10,11 @@ import { notify } from '../ui/notify/notifyStore';
 import { useUiStore } from '../ui/uiStore';
 
 const KEY = 'construct:scene';
+/**
+ * Versione del formato con cui è stata scritta la scena salvata. Sta in una chiave a parte, così le build vecchie (che
+ * non la leggono e scrivono solo la scena) continuano a funzionare come prima.
+ */
+const VERSION_KEY = 'construct:scene-version';
 /** Chiave e formato dell'app quando si chiamava WebCAD: si leggono ancora, così nessun progetto va perso. */
 const LEGACY_KEY = 'webcad:scene';
 const FORMAT = 'construct-scene';
@@ -38,10 +43,19 @@ function isScene(value: unknown): value is Scene {
  */
 export async function initPersistence(): Promise<boolean> {
   let saved: Scene | undefined;
+  let savedVersion: unknown;
   try {
     saved = (await get<Scene>(KEY)) ?? (await get<Scene>(LEGACY_KEY));
+    savedVersion = await get(VERSION_KEY);
   } catch {
     // IndexedDB non disponibile (navigazione privata): si lavora senza salvataggio
+    return false;
+  }
+  // Salvata da una versione più recente (una PWA vecchia rimasta in cache): non si apre, e non si sovrascrive con la
+  // scena di questa versione, che perderebbe ciò che la versione nuova sa scrivere
+  if (typeof savedVersion === 'number' && savedVersion > VERSION) {
+    suspendAutosave();
+    notify.error('Il progetto salvato in questo browser è di una versione più recente di Construct: non è stato aperto e il salvataggio automatico è sospeso. Ricarica la pagina per aggiornare l\'app.');
     return false;
   }
   let restored = false;
@@ -63,7 +77,9 @@ export async function initPersistence(): Promise<boolean> {
     clearTimeout(timer);
     // Con il salvataggio automatico spento (Impostazioni) la scena resta solo nel progetto salvato a mano
     if (autosaveSuspended || !useUiStore.getState().autosave) return;
-    timer = setTimeout(() => void set(KEY, state.scene).catch(() => undefined), 400);
+    // La versione si scrive prima della scena: così non esiste una scena nuova con una versione vecchia (una build più
+    // vecchia la leggerebbe senza accorgersene); l'inverso, scena vecchia con versione nuova, non fa danni
+    timer = setTimeout(() => void set(VERSION_KEY, VERSION).then(() => set(KEY, state.scene)).catch(() => undefined), 400);
   });
   return restored;
 }

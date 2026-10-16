@@ -163,7 +163,9 @@ export function sampleContour(c: PathContour, tol: number): Vec2[] {
 
 /**
  * Campiona tutti i contorni. Se superano i tetti di punti la tolleranza raddoppia e si ricampiona (deterministico):
- * `capped` lo segnala e `tolerance` è quella usata davvero.
+ * `capped` lo segnala e `tolerance` è quella usata davvero. La tolleranza non va oltre `PATH_MAX_TOLERANCE`: arrivati lì
+ * un altro raddoppio darebbe gli stessi punti, quindi ci si ferma (anche se i tetti restano superati) e si restituisce
+ * la tolleranza limitata, non quella raddoppiata a vuoto.
  */
 export function samplePaths(paths: PathContour[], tolerance: number): { contours: { points: Vec2[]; closed: boolean }[]; tolerance: number; capped: boolean } {
   let tol = clampTolerance(tolerance);
@@ -172,8 +174,10 @@ export function samplePaths(paths: PathContour[], tolerance: number): { contours
     const contours = paths.map((c) => ({ points: sampleContour(c, tol), closed: c.closed }));
     const total = contours.reduce((sum, c) => sum + c.points.length, 0);
     const over = total > MAX_PATH_SAMPLES || contours.some((c) => c.points.length > MAX_CONTOUR_SAMPLES);
-    if (!over || attempt >= MAX_DOUBLINGS) return { contours, tolerance: tol, capped: capped || over };
-    tol *= 2;
+    // Tolleranza davvero usata da `sampleContour`: la stessa funzione la limita
+    const used = clampTolerance(tol);
+    if (!over || attempt >= MAX_DOUBLINGS || used >= PATH_MAX_TOLERANCE) return { contours, tolerance: used, capped: capped || over };
+    tol = used * 2;
     capped = true;
   }
 }

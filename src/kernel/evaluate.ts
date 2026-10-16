@@ -447,7 +447,9 @@ export class Evaluator {
       const { angle, radius, segments } = revolveParams(p);
       const moved = section.translate([radius, 0]);
       section.delete();
-      const revolved = Manifold.revolve(moved, segments, angle);
+      // `segments` è il numero di lati del giro intero (come `$fn` di OpenSCAD), mentre `Manifold.revolve` li usa tutti
+      // sull'arco: con un angolo parziale se ne usa la parte che serve (almeno 3: sotto manifold userebbe il valore predefinito)
+      const revolved = Manifold.revolve(moved, Math.max(3, Math.ceil((segments * angle) / 360)), angle);
       moved.delete();
       return revolved;
     }

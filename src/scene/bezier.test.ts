@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MAX_CONTOUR_SAMPLES,
   MAX_PATH_SAMPLES,
+  PATH_MAX_TOLERANCE,
   bboxOf,
   cubicExtrema,
   cubicPoint,
@@ -133,6 +134,16 @@ describe('campionamento', () => {
     expect(capped).toBe(true);
     const points = new Set(contours[0].points.map(([x, y]) => `${x},${y}`));
     for (const n of nodes) expect(points.has(`${n.p[0]},${n.p[1]}`)).toBe(true);
+  });
+
+  it('un contorno che supera i tetti anche a tolleranza massima si ferma lì: stessi punti di prima, tolleranza limitata a 1 mm', () => {
+    const nodes: PathNode[] = Array.from({ length: 500 }, (_, i) => node([10 * i, 0], [30, 30], [-30, -30], 'smooth'));
+    const huge: PathContour = { closed: true, nodes };
+    const a = samplePaths([huge], 0.05);
+    // Prima la tolleranza restituita arrivava a 204,8 mm (12 raddoppi, ognuno con gli stessi punti): ora è quella davvero usata
+    expect(a.tolerance).toBe(PATH_MAX_TOLERANCE);
+    expect(a.capped).toBe(true);
+    expect(a.contours).toEqual(samplePaths([huge], PATH_MAX_TOLERANCE).contours);
   });
 
   it('la tolleranza resta nei limiti consentiti', () => {

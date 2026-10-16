@@ -109,6 +109,20 @@ describe('Evaluator', () => {
       expect(half.bbox.max[1]).toBeCloseTo(35, 0);
     });
 
+    it('con un angolo parziale i segmenti sono quelli del giro intero, come $fn di OpenSCAD', () => {
+      const full = revolved({});
+      const quarter = revolved({ revolveAngle: 90 });
+      expect(quarter.status).toBe('NoError');
+      // 64 segmenti per il giro intero sono 16 su 90°: circa un quarto dei triangoli (più i due tappi), non lo stesso numero
+      const ratio = quarter.indices.length / full.indices.length;
+      expect(ratio).toBeGreaterThan(0.2);
+      expect(ratio).toBeLessThan(0.3);
+      // Un angolo minuscolo non scende sotto i 3 segmenti e dà comunque una mesh valida
+      const sliver = revolved({ revolveAngle: 1, revolveSegments: 8 });
+      expect(sliver.status).toBe('NoError');
+      expect(sliver.volume).toBeGreaterThan(0);
+    });
+
     it('una forma che attraversa l asse si taglia: resta solo la parte con x > 0 e la mesh è valida', () => {
       const m = revolved({ revolveRadius: 5 });
       expect(m.status).toBe('NoError');
@@ -241,6 +255,16 @@ describe('Evaluator', () => {
       const area = 30 * 20 - (4 - Math.PI) * 16;
       expect(m.volume / 10).toBeCloseTo(area, 0);
       expect(m.bbox.max[0]).toBeCloseTo(15, 3);
+    });
+
+    it('una torsione fino a 3600° su un profilo sottile conserva il volume entro l\'1% anche con il tetto di 360 strati', () => {
+      // 60 × 5 × 40 mm: volume esatto 12000 (la torsione non lo cambia). Misurato: -0,19% a 3600°, +0,03% a 1800°;
+      // portare gli strati a 1800 darebbe +0,05% ma con 4 volte i triangoli, quindi il tetto di `twistDivisions` resta
+      for (const twist of [1800, 3600, -3600]) {
+        const m = volumeOf(shape('a', 'square', { width: 60, depth: 5, height: 40, twist } as Partial<Shape2DNode>));
+        expect(m.status).toBe('NoError');
+        expect(Math.abs(m.volume / 12000 - 1)).toBeLessThan(0.01);
+      }
     });
 
     it('la scala della cima a 0 produce un cono (un terzo del prisma)', () => {
