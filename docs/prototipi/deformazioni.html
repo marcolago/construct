@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Deformazioni ed elica</title>
+</head>
+<body>
+<style>
+/* Token ripresi da src/styles/abstracts/_tokens.scss (stessi del prototipo dei profili di Bézier). */
+:root {
+  --bg: #e9eff6; --panel: #f8f9fc; --raised: #ffffff; --border: #cdd5e3;
+  --text: #1e2433; --muted: #4f5b73;
+  --accent: #2f5fc7; --accent-strong: #3563d1; --accent-soft: rgba(79, 124, 230, 0.16);
+  --danger: #c23b3b; --ok: #23794a; --warn: #9a5b00;
+  --grid: #dfe6f0; --grid-major: #c3cddd; --mesh: #9db8ea; --mesh-edge: #24376a;
+  --code-bg: #f1f4fa;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171c; --panel: #1b2027; --raised: #232a33; --border: #2d3540;
+    --text: #e6e9ee; --muted: #8b95a3;
+    --accent: #4da3ff; --accent-strong: #2a73d0; --accent-soft: rgba(77, 163, 255, 0.16);
+    --danger: #ff5d5d; --ok: #46c47a; --warn: #f0b429;
+    --grid: #232a33; --grid-major: #333c48; --mesh: #6c9ee0; --mesh-edge: #cfe0ff;
+    --code-bg: #10141a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171c; --panel: #1b2027; --raised: #232a33; --border: #2d3540;
+  --text: #e6e9ee; --muted: #8b95a3;
+  --accent: #4da3ff; --accent-strong: #2a73d0; --accent-soft: rgba(77, 163, 255, 0.16);
+  --danger: #ff5d5d; --ok: #46c47a; --warn: #f0b429;
+  --grid: #232a33; --grid-major: #333c48; --mesh: #6c9ee0; --mesh-edge: #cfe0ff;
+  --code-bg: #10141a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 13px; line-height: 1.45;
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.page { max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+.top__titles { min-width: 0; flex: 1 1 360px; }
+.top h1 { margin: 0 0 2px; font-size: 20px; font-weight: 650; letter-spacing: -0.01em; text-wrap: balance; }
+.top p { margin: 0; color: var(--muted); max-width: 78ch; }
+.lbl { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 28px; padding: 0 10px;
+  background: var(--raised); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; white-space: nowrap;
+}
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn--primary { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; font-weight: 600; }
+select, input[type="number"] { background: var(--raised); border: 1px solid var(--border); border-radius: 4px; min-height: 28px; padding: 0 8px; }
+select { max-width: 100%; }
+input[type="number"] { width: 84px; font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; accent-color: var(--accent); min-width: 0; margin: 0; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--raised); }
+.seg button { background: transparent; border: 0; border-right: 1px solid var(--border); padding: 0 8px; min-height: 26px; cursor: pointer; min-width: 0; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.seg--full { display: flex; width: 100%; }
+.seg--full button { flex: 1; }
+
+/* Cornice: vista 3D a sinistra, pannello a destra, misure sotto */
+.frame {
+  display: grid; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "tabs tabs" "view panel" "stat stat";
+  height: clamp(640px, calc(100dvh - 150px), 860px);
+}
+.tabs { grid-area: tabs; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.tabs small { color: var(--muted); }
+.view { grid-area: view; position: relative; min-width: 0; min-height: 0; background: var(--bg); overflow: hidden; cursor: grab; }
+.view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.view__msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; color: var(--muted); pointer-events: none; }
+.view__bar { position: absolute; right: 10px; top: 10px; display: flex; gap: 6px; }
+.view__hint { position: absolute; left: 10px; bottom: 10px; color: var(--muted); font-size: 12px; background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px; pointer-events: none; }
+.panel { grid-area: panel; overflow-y: auto; min-width: 0; border-left: 1px solid var(--border); background: var(--panel); }
+.panel h2 { margin: 0; padding: 10px 12px; font-size: 14px; font-weight: 650; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.panel h2 span { font-weight: 400; font-size: 11px; color: var(--muted); }
+.sec { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+.sec h3 { margin: 0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.row { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 4px 8px; }
+.row--num { grid-template-columns: 96px minmax(0, 1fr) 84px; }
+.row > label, .row > span.l { color: var(--muted); }
+.chk { display: flex; align-items: center; gap: 8px; color: var(--text); }
+.note { margin: 0; color: var(--muted); font-size: 12px; }
+.msg { margin: 0; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--code-bg); font-size: 12px; }
+.msg--ok { border-color: var(--ok); color: var(--ok); }
+.msg--err { border-color: var(--danger); color: var(--danger); }
+.msg--warn { border-color: var(--warn); color: var(--warn); }
+.foot { display: flex; gap: 8px; justify-content: flex-end; padding: 10px 12px; }
+.stat { grid-area: stat; display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 12px; border-top: 1px solid var(--border); color: var(--muted); font-variant-numeric: tabular-nums; }
+.stat b { color: var(--text); font-weight: 600; }
+.stat .ok { color: var(--ok); } .stat .bad { color: var(--danger); } .stat .warn { color: var(--warn); }
+
+@media (max-width: 900px) {
+  .frame { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 56vh auto auto; grid-template-areas: "tabs" "view" "panel" "stat"; height: auto; }
+  .panel { border-left: 0; border-top: 1px solid var(--border); overflow: visible; }
+  .row, .row--num { grid-template-columns: 96px minmax(0, 1fr); }
+  .row--num input[type="number"] { grid-column: 2; width: 100%; }
+}
+</style>
+
+<div class="page">
+  <header class="top">
+    <div class="top__titles">
+      <h1>Deformazioni ed elica</h1>
+      <p>Prototipo per lo studio <code>docs/studio-deformazioni.md</code>: due schede, <b>Elica</b> (rotazione con passo) e <b>Deforma</b> (Torsione, Rastremazione, Piega).
+        La geometria è calcolata da <code>manifold-3d</code> 3.5.4, la stessa versione dell'app, caricata dalla rete; le funzioni di calcolo sono pure e pronte da portare in <code>src/kernel/deform.ts</code>. L'interfaccia, invece, è solo un disegno.</p>
+    </div>
+    <label class="lbl">Tema
+      <select id="theme" aria-label="Tema">
+        <option value="auto">Automatico</option><option value="light">Chiaro</option><option value="dark">Scuro</option>
+      </select>
+    </label>
+  </header>
+
+  <main class="frame" id="frame">
+    <div class="tabs">
+      <div class="seg" role="group" aria-label="Scheda" data-k="tab">
+        <button type="button" data-v="helix" aria-pressed="true">Elica</button>
+        <button type="button" data-v="def" aria-pressed="false">Deforma</button>
+      </div>
+      <small id="tabNote"></small>
+    </div>
+
+    <section class="view" id="view" aria-label="Anteprima 3D">
+      <div class="view__msg" id="viewMsg">Caricamento di manifold-3d e three.js…</div>
+      <div class="view__bar"><button type="button" class="btn" id="fit">Adatta</button></div>
+      <div class="view__hint">Trascina per orbitare, rotella per lo zoom</div>
+    </section>
+
+    <aside class="panel" id="panel">
+      <!-- ============ ELICA ============ -->
+      <div id="pHelix">
+        <h2>Proprietà <span>Profilo in rotazione</span></h2>
+        <div class="sec">
+          <div class="row"><label for="hEx">Esempio</label>
+            <select id="hEx">
+              <option value="molla">Molla di compressione</option>
+              <option value="quadro">Molla a filo quadro</option>
+              <option value="m8">Filetto M8</option>
+              <option value="m5s">Filetto M5 sinistro</option>
+              <option value="fitta">Molla a spire che si toccano</option>
+            </select></div>
+          <div class="row"><span class="l">Profilo</span>
+            <div class="seg seg--full" data-k="h.profile"><button type="button" data-v="round">Filo tondo</button><button type="button" data-v="square">Filo quadro</button><button type="button" data-v="iso">Filetto ISO</button></div></div>
+        </div>
+        <div class="sec">
+          <h3>Sezione</h3>
+          <div class="row row--num" data-show="h.profile=round|square"><label for="hR">Raggio spira</label><input type="range" min="2" max="40" step="0.5" data-k="h.R" id="hR"><input type="number" min="1" max="200" step="0.5" data-k="h.R" aria-label="Raggio spira in mm"></div>
+          <div class="row row--num" data-show="h.profile=round"><label for="hWire">Diametro filo</label><input type="range" min="0.5" max="8" step="0.1" data-k="h.wire" id="hWire"><input type="number" min="0.2" max="20" step="0.1" data-k="h.wire" aria-label="Diametro del filo in mm"></div>
+          <div class="row row--num" data-show="h.profile=square"><label for="hW">Larghezza</label><input type="range" min="0.5" max="8" step="0.1" data-k="h.w" id="hW"><input type="number" min="0.2" max="20" step="0.1" data-k="h.w" aria-label="Larghezza radiale in mm"></div>
+          <div class="row row--num" data-show="h.profile=square"><label for="hH">Altezza</label><input type="range" min="0.5" max="8" step="0.1" data-k="h.h" id="hH"><input type="number" min="0.2" max="20" step="0.1" data-k="h.h" aria-label="Altezza assiale in mm"></div>
+          <div class="row" data-show="h.profile=iso"><label for="hM">Misura</label>
+            <select id="hM" data-k="h.size"><option value="3">M3 (passo 0,5)</option><option value="4">M4 (0,7)</option><option value="5">M5 (0,8)</option><option value="6">M6 (1,0)</option><option value="8">M8 (1,25)</option><option value="10">M10 (1,5)</option><option value="12">M12 (1,75)</option></select></div>
+          <div class="row row--num" data-show="h.profile=iso"><label for="hGap">Gioco radiale</label><input type="range" min="0" max="0.4" step="0.01" data-k="h.gap" id="hGap"><input type="number" min="0" max="1" step="0.01" data-k="h.gap" aria-label="Gioco radiale in mm"></div>
+        </div>
+        <div class="sec">
+          <h3>Elica</h3>
+          <div class="row row--num"><label for="hP">Passo</label><input type="range" min="0.3" max="20" step="0.05" data-k="h.pitch" id="hP"><input type="number" min="0.1" max="100" step="0.05" data-k="h.pitch" aria-label="Passo in mm per giro"></div>
+          <div class="row row--num"><label for="hT">Giri</label><input type="range" min="0.5" max="30" step="0.5" data-k="h.turns" id="hT"><input type="number" min="0.5" max="60" step="0.5" data-k="h.turns" aria-label="Numero di giri"></div>
+          <div class="row"><span class="l">Verso</span><div class="seg seg--full" data-k="h.hand"><button type="button" data-v="right">Destro</button><button type="button" data-v="left">Sinistro</button></div></div>
+          <div class="row row--num"><label for="hF">Segmenti/giro</label><input type="range" min="12" max="120" step="2" data-k="h.fn" id="hF"><input type="number" min="12" max="240" step="2" data-k="h.fn" aria-label="Segmenti per giro"></div>
+        </div>
+        <div class="sec">
+          <p class="msg" id="hInfo"></p>
+          <p class="note">Il solido si costruisce a mezzi giri (rivoluzione di 180°, poi sollevata con <code>warpBatch</code>) e si unisce con <code>Manifold.union</code>: con il passo minore del profilo le spire si sovrappongono e un solo <code>warp</code> darebbe un solido che si autointerseca.</p>
+        </div>
+      </div>
+
+      <!-- ============ DEFORMA ============ -->
+      <div id="pDef" hidden>
+        <h2>Deforma <span>Strumento, tasto proposto Maiusc+D</span></h2>
+        <div class="sec">
+          <div class="row"><label for="dObj">Oggetto</label>
+            <select id="dObj" data-k="d.obj">
+              <option value="cube">Cubo 30 mm</option><option value="bar">Barra 100 × 10 × 5 mm</option><option value="cyl">Cilindro Ø20 × 60 mm</option>
+              <option value="box">Scatola con tre fori 60 × 40 × 10 mm</option><option value="star">Stella 40 mm</option>
+            </select></div>
+          <div class="row"><span class="l">Tipo</span><div class="seg seg--full" data-k="d.kind"><button type="button" data-v="twist">Torsione</button><button type="button" data-v="taper">Rastremazione</button><button type="button" data-v="bend">Piega</button></div></div>
+          <div class="row"><span class="l">Asse</span><div class="seg seg--full" data-k="d.axis"><button type="button" data-v="0">X</button><button type="button" data-v="1">Y</button><button type="button" data-v="2">Z</button></div></div>
+        </div>
+        <div class="sec">
+          <h3>Parametri</h3>
+          <div class="row row--num" data-show="d.kind=twist"><label for="dTw">Angolo</label><input type="range" min="-720" max="720" step="5" data-k="d.twist" id="dTw"><input type="number" min="-3600" max="3600" step="5" data-k="d.twist" aria-label="Angolo di torsione in gradi"></div>
+          <div class="row row--num" data-show="d.kind=taper"><label for="dSc">Scala finale %</label><input type="range" min="5" max="300" step="1" data-k="d.scale" id="dSc"><input type="number" min="5" max="1000" step="1" data-k="d.scale" aria-label="Scala finale in percentuale"></div>
+          <div class="row row--num" data-show="d.kind=bend"><label for="dBe">Angolo</label><input type="range" min="-180" max="180" step="1" data-k="d.bend" id="dBe"><input type="number" min="-180" max="180" step="1" data-k="d.bend" aria-label="Angolo di piega in gradi"></div>
+          <div class="row" data-show="d.kind=bend"><label for="dDir">Direzione</label><select id="dDir" data-k="d.dir"></select></div>
+          <div class="row row--num"><label for="dFrom">Da %</label><input type="range" min="0" max="100" step="1" data-k="d.from" id="dFrom"><input type="number" min="0" max="99" step="1" data-k="d.from" aria-label="Inizio della zona in percentuale"></div>
+          <div class="row row--num"><label for="dTo">A %</label><input type="range" min="0" max="100" step="1" data-k="d.to" id="dTo"><input type="number" min="1" max="100" step="1" data-k="d.to" aria-label="Fine della zona in percentuale"></div>
+          <p class="msg" id="dCheck"></p>
+        </div>
+        <div class="sec">
+          <h3>Qualità</h3>
+          <div class="row"><span class="l">Lato</span><div class="seg seg--full" data-k="d.qmode"><button type="button" data-v="auto">Automatico</button><button type="button" data-v="manual">Manuale</button></div></div>
+          <div class="row row--num" data-show="d.qmode=manual"><label for="dEdge">Assiale mm</label><input type="range" min="0.05" max="10" step="0.05" data-k="d.edge" id="dEdge"><input type="number" min="0.02" max="50" step="0.05" data-k="d.edge" aria-label="Lunghezza del lato lungo l'asse in mm"></div>
+          <div class="row row--num" data-show="d.qmode=manual"><label for="dLat">Laterale mm</label><input type="range" min="1" max="40" step="0.5" data-k="d.lat" id="dLat"><input type="number" min="0.5" max="200" step="0.5" data-k="d.lat" aria-label="Lunghezza del lato nel piano della sezione in mm, solo torsione"></div>
+          <label class="chk"><input type="checkbox" data-k="d.iso"> Raffinamento isotropo (confronto)</label>
+          <p class="note" data-show="d.kind=twist">Automatico: un tratto ogni 2° di angolo lungo l'asse e spigoli laterali di al più un ottavo dell'ingombro. L'isotropo divide tutti gli spigoli con la stessa lunghezza e fa crescere i triangoli con il quadrato.</p>
+          <p class="note" data-show="d.kind=bend">Automatico: un tratto ogni 2° di angolo lungo l'asse. Gli spigoli laterali restano interi: nella piega ogni sezione resta piana, quindi non servono tagli.</p>
+          <p class="note" data-show="d.kind=taper">Automatico: otto tratti lungo l'asse. Con la scala lineare le facce piane restano piane, quindi bastano pochi tratti; servono più tagli solo sulle superfici curve.</p>
+        </div>
+        <div class="sec">
+          <h3>Vista</h3>
+          <label class="chk"><input type="checkbox" data-k="d.orig"> Mostra l'oggetto originale</label>
+          <label class="chk"><input type="checkbox" data-k="d.guides"> Mostra asse e piani dei limiti</label>
+        </div>
+        <div class="foot"><button type="button" class="btn" id="dCancel">Annulla</button><button type="button" class="btn btn--primary" id="dOk">OK</button></div>
+      </div>
+    </aside>
+
+    <div class="stat" id="stat" aria-live="polite"></div>
+  </main>
+</div>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+
+/* CORE-BEGIN: funzioni pure di calcolo, estratte e provate in Node dallo script di misura. M è il modulo di manifold-3d. */
+const DEG = Math.PI / 180, TAU = 2 * Math.PI;
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+/* ---------- Oggetti di prova ---------- */
+// const: la sezione non cambia lungo l'asse (serve per il volume atteso della rastremazione); sym: simmetrico rispetto al centro (volume atteso della piega)
+const OBJECTS = {
+  cube: { axis: 2, const: [1, 1, 1], sym: true },
+  bar: { axis: 0, const: [1, 1, 1], sym: true },
+  cyl: { axis: 2, const: [0, 0, 1], sym: true },
+  box: { axis: 2, const: [0, 0, 1], sym: true },
+  star: { axis: 2, const: [0, 0, 1], sym: false },
+};
+function makeObject(M, kind) {
+  const { Manifold, CrossSection } = M;
+  let m;
+  if (kind === 'cube') m = Manifold.cube([30, 30, 30], true);
+  else if (kind === 'bar') m = Manifold.cube([100, 10, 5], true);
+  else if (kind === 'cyl') m = Manifold.cylinder(60, 10, 10, 48, true);
+  else if (kind === 'box') {
+    const holes = [-18, 0, 18].map((x) => Manifold.cylinder(14, 4, 4, 32, true).translate([x, 0, 0]));
+    m = Manifold.cube([60, 40, 10], true).subtract(Manifold.union(holes));
+  } else { // stella a cinque punte
+    const pts = [];
+    for (let i = 0; i < 10; i++) { const r = i % 2 ? 9 : 20, a = (90 + 36 * i) * DEG; pts.push([r * Math.cos(a), r * Math.sin(a)]); }
+    m = Manifold.extrude(new CrossSection([pts]), 40, 0, 0, 1, false);
+  }
+  const b = m.boundingBox(); // centrata su X e Y, appoggiata al piano
+  return m.translate([-(b.min[0] + b.max[0]) / 2, -(b.min[1] + b.max[1]) / 2, -b.min[2]]);
+}
+
+/* ---------- Deformazioni ---------- */
+// Funzione di warp (batch xyz) per Torsione, Rastremazione e Piega. Ogni piano perpendicolare all'asse si muove per conto suo:
+// torsione e rastremazione sono iniettive se la scala resta positiva, la piega lo è se il raggio supera lo spessore dal lato interno.
+function makeWarp(kind, a, bb, o) {
+  const u = (a + 1) % 3, w = (a + 2) % 3;
+  const t0 = bb.min[a], L = bb.max[a] - bb.min[a];
+  const ta = t0 + o.from * L, tb = t0 + o.to * L, span = tb - ta;
+  const cu = (bb.min[u] + bb.max[u]) / 2, cw = (bb.min[w] + bb.max[w]) / 2;
+  const frac = (t) => clamp((t - ta) / span, 0, 1);
+  if (kind === 'twist') {
+    const al = o.angle * DEG;
+    return (v, n) => {
+      for (let i = 0; i < n; i++) {
+        const phi = al * frac(v[3 * i + a]);
+        if (phi === 0) continue;
+        const c = Math.cos(phi), s = Math.sin(phi), du = v[3 * i + u] - cu, dw = v[3 * i + w] - cw;
+        v[3 * i + u] = cu + du * c - dw * s; v[3 * i + w] = cw + du * s + dw * c;
+      }
+    };
+  }
+  if (kind === 'taper') {
+    return (v, n) => {
+      for (let i = 0; i < n; i++) {
+        const s = 1 + (o.scaleEnd - 1) * frac(v[3 * i + a]);
+        if (s === 1) continue;
+        v[3 * i + u] = cu + (v[3 * i + u] - cu) * s; v[3 * i + w] = cw + (v[3 * i + w] - cw) * s;
+      }
+    };
+  }
+  // piega: il piano della piega contiene l'asse e la direzione d; il centro di curvatura sta a +R (o -R) lungo d
+  const d = o.dir === 0 ? u : w, cd = d === u ? cu : cw, beta = o.angle * DEG;
+  if (Math.abs(beta) < 1e-9) return () => {};
+  const R = span / beta, cb = Math.cos(beta), sb = Math.sin(beta);
+  return (v, n) => {
+    for (let i = 0; i < n; i++) {
+      const t = v[3 * i + a];
+      if (t <= ta) continue;
+      const th = (Math.min(t, tb) - ta) / R, rho = R - (v[3 * i + d] - cd);
+      let tt = ta + rho * Math.sin(th), dd = R - rho * Math.cos(th);
+      if (t > tb) { const e = t - tb; tt += e * cb; dd += e * sb; } // oltre la zona il pezzo prosegue dritto, sulla tangente
+      v[3 * i + a] = tt; v[3 * i + d] = cd + dd;
+    }
+  };
+}
+
+// Registro dei temporanei: la memoria WASM non la libera il garbage collector in tempo, ogni passaggio intermedio si cancella con delete()
+function scope() {
+  const list = [];
+  return { own: (m) => (list.push(m), m), free: (keep) => list.forEach((m) => { if (m !== keep) m.delete(); }) };
+}
+
+// Raffinamento a due lunghezze: lato `edge` lungo l'asse e lato `lat` nel piano della sezione. Si dilata l'asse di lam volte e si taglia a
+// edge·lam: gli spigoli assiali si dividono in tratti da `edge`, quelli laterali solo se superano `lat` (con lat grande non si dividono mai)
+function refineAxial(own, solid, a, edge, lat) {
+  const lam = Math.max(1, Math.ceil(lat / edge));
+  const up = [1, 1, 1], down = [1, 1, 1]; up[a] = lam; down[a] = 1 / lam;
+  return own(own(own(solid.scale(up)).refineToLength(edge * lam)).scale(down));
+}
+
+function expectedVolume(kind, info, V0, a, bb, o) {
+  if (kind === 'twist') return V0; // ogni piano ruota rigidamente: il determinante è 1
+  if (kind === 'bend') return info.sym ? V0 : null; // il determinante è (R - d)/R: si annulla con la simmetria
+  if (!info.const[a]) return null;
+  const L = bb.max[a] - bb.min[a], span = (o.to - o.from) * L, s = o.scaleEnd;
+  return (V0 / L) * (o.from * L + (span * (1 + s + s * s)) / 3 + (1 - o.to) * L * s * s);
+}
+
+// Controlli analitici: restituiscono il testo dell'errore oppure null
+function checkDeform(kind, a, bb, o) {
+  const u = (a + 1) % 3, w = (a + 2) % 3, L = bb.max[a] - bb.min[a], span = (o.to - o.from) * L;
+  if (span < 1e-6) return { error: 'I limiti coincidono: la zona da deformare non ha lunghezza.' };
+  if (kind === 'taper' && !(o.scaleEnd > 0)) return { error: 'La scala finale deve essere positiva.' };
+  if (kind === 'bend') {
+    const beta = o.angle * DEG;
+    if (Math.abs(beta) < 1e-9) return { ok: 'Angolo nullo: nessuna piega.' };
+    const d = o.dir === 0 ? u : w, R = span / beta, c = (bb.min[d] + bb.max[d]) / 2;
+    const inner = beta > 0 ? bb.max[d] - c : c - bb.min[d]; // lo spessore dal lato interno della curva
+    const mm = (x) => x.toFixed(1).replace('.', ',');
+    if (Math.abs(R) <= inner * 1.001) return { error: `Raggio ${mm(Math.abs(R))} mm, minore dello spessore dal lato interno (${mm(inner)} mm): il solido si ripiegherebbe su se stesso.`, R, inner };
+    return { ok: `Raggio ${mm(Math.abs(R))} mm, spessore dal lato interno ${mm(inner)} mm: nessuna autointersezione.`, R, inner };
+  }
+  return { ok: kind === 'twist' ? 'Ogni piano ruota rigidamente: nessuna autointersezione possibile.' : 'Scala sempre positiva: nessuna autointersezione possibile.' };
+}
+
+// Pipeline completa. o: { axis, kind params, from, to (0..1), edge (mm, 0 = automatico), iso (raffinamento isotropo) }
+// Il solido di partenza resta di chi chiama; il risultato va cancellato da chi lo riceve.
+function deform(M, solid, kind, o, info) {
+  const { own, free } = scope();
+  const T = {}, t00 = now(), tri0 = solid.numTri(), V0 = solid.volume(), bb = solid.boundingBox(), a = o.axis;
+  const chk = checkDeform(kind, a, bb, o);
+  if (chk.error) return { error: chk.error, check: chk, bb, tri0 };
+  const u = (a + 1) % 3, w = (a + 2) % 3, L = bb.max[a] - bb.min[a];
+  const ta = bb.min[a] + o.from * L, tb = bb.min[a] + o.to * L, span = tb - ta;
+  const latDiag = Math.hypot(bb.max[u] - bb.min[u], bb.max[w] - bb.min[w]);
+  const divisions = kind === 'taper' ? 8 : clamp(Math.ceil(Math.abs(o.angle) / 2), 4, 2000);
+  const edge = o.edge > 0 ? o.edge : span / divisions;
+  // La torsione storce i quadrilateri laterali tra due strati: serve un limite anche sugli spigoli del piano (automatico: un ottavo dell'ingombro).
+  // Piega e rastremazione lasciano esatte le facce: i lati laterali non si dividono.
+  const lat = kind === 'twist' ? Math.max(edge, o.lat > 0 ? o.lat : latDiag / 8) : 1.02 * latDiag;
+  const nrm = [0, 0, 0]; nrm[a] = 1;
+
+  // 1. Taglio sui piani dei limiti: la parte fuori zona resta con i triangoli di partenza
+  let t = now(), low = null, mid = solid, up = null;
+  if (o.from > 1e-6) { const [hi, lo] = mid.splitByPlane(nrm, ta); own(hi); low = own(lo); mid = hi; }
+  if (o.to < 1 - 1e-6) { const [hi, lo] = mid.splitByPlane(nrm, tb); own(hi); own(lo); mid = lo; up = hi; }
+  mid.numTri(); T.split = now() - t;
+
+  // 2. Raffinamento della zona
+  t = now();
+  let estimate = null;
+  if (o.iso) {
+    estimate = Math.round(mid.surfaceArea() / (0.433 * edge * edge));
+    if (estimate > 800000) { free(); return { error: `Il raffinamento isotropo darebbe circa ${Math.round(estimate / 1000)} mila triangoli: troppi per il prototipo. Aumenta il lato o usa il raffinamento assiale.`, check: chk, bb, tri0 }; }
+    mid = own(mid.refineToLength(edge));
+  } else mid = refineAxial(own, mid, a, edge, lat);
+  const triMid = mid.numTri(); T.refine = now() - t;
+
+  // 3. Warp della zona e della parte oltre il limite (la funzione lì è già un moto rigido)
+  t = now();
+  const fn = makeWarp(kind, a, bb, o), parts = [];
+  if (low) parts.push(low);
+  parts.push(own(mid.warpBatch(fn)));
+  if (up) parts.push(own(up.warpBatch(fn)));
+  parts.forEach((p) => p.numTri()); T.warp = now() - t;
+
+  // 4. Unione delle tre parti (facce coplanari sui piani di taglio)
+  t = now();
+  const result = parts.length > 1 ? own(M.Manifold.union(parts)) : parts[0];
+  const tri1 = result.numTri(); T.union = now() - t;
+  T.total = now() - t00;
+  const V = result.volume(), Ve = expectedVolume(kind, info, V0, a, bb, o), status = String(result.status());
+  free(result);
+  return { manifold: result, check: chk, bb, tri0, tri1, triMid, T, V0, V, Ve, status, edge, lat: kind === 'twist' ? lat : null, divisions, estimate, warp: fn };
+}
+
+/* ---------- Elica ---------- */
+const ISO_PITCH = { 3: 0.5, 4: 0.7, 5: 0.8, 6: 1.0, 8: 1.25, 10: 1.5, 12: 1.75 };
+
+// Profilo nel piano (raggio, quota), in senso antiorario
+function helixProfile(p) {
+  if (p.profile === 'round') {
+    const rw = p.wire / 2, pts = [];
+    if (p.R <= rw + 0.01) return { error: 'Il raggio della spira deve superare il raggio del filo.' };
+    for (let i = 0; i < 20; i++) { const a = (TAU * i) / 20; pts.push([p.R + rw * Math.cos(a), rw * Math.sin(a)]); }
+    return { poly: pts, height: p.wire };
+  }
+  if (p.profile === 'square') {
+    if (p.R <= p.w / 2 + 0.01) return { error: 'Il raggio della spira deve superare metà larghezza.' };
+    const a = p.R - p.w / 2, b = p.R + p.w / 2, h = p.h / 2;
+    return { poly: [[a, -h], [b, -h], [b, h], [a, h]], height: p.h };
+  }
+  // Filetto ISO metrico, profilo a 60°: cresta P/8, fondo P/4, altezza utile 5H/8 (H = 0,866 P)
+  const P = p.pitch, rMaj = p.size / 2 - p.gap, depth = (5 * 0.8660254 * P) / 8, rRoot = rMaj - depth;
+  if (rRoot < 0.8) return { error: 'Il passo è troppo grande per questo diametro.' };
+  const hb = 0.375 * P, hc = P / 16, rIn = rRoot - Math.min(0.4, rRoot * 0.4);
+  return { poly: [[rIn, -hb], [rRoot, -hb], [rMaj, -hc], [rMaj, hc], [rRoot, hb], [rIn, hb]], height: P, rMaj, rRoot };
+}
+
+// Il risultato va cancellato da chi lo riceve.
+function buildHelix(M, p) {
+  const { own, free } = scope();
+  const T = {}, t00 = now(), prof = helixProfile(p);
+  if (prof.error) return { error: prof.error };
+  const sgn = p.hand === 'left' ? -1 : 1, iso = p.profile === 'iso';
+  const turns = iso ? p.turns + 2 : p.turns; // il filetto si fa più lungo e poi si taglia a filo
+  const total = turns * 360, n = Math.ceil(total / 180 - 1e-9), cs = own(new M.CrossSection([prof.poly]));
+
+  // 1. Pezzi: ogni mezzo giro è una rivoluzione di 180° sollevata in proporzione all'angolo
+  let t = now();
+  const base = new Map(), pieces = [];
+  const make = (deg) => {
+    const key = deg.toFixed(6);
+    if (!base.has(key)) {
+      // revolve di manifold-3d 3.5.4 usa il numero di segmenti per l'arco intero, qualunque sia l'angolo: lo si scala per avere p.fn segmenti per giro
+      const segs = Math.max(2, Math.round((p.fn * deg) / 360));
+      base.set(key, own(own(M.Manifold.revolve(cs, segs, deg)).warpBatch((v, cnt) => {
+        for (let i = 0; i < cnt; i++) {
+          let th = Math.atan2(v[3 * i + 1], v[3 * i]);
+          if (th < -1e-9) th += TAU; // l'estremo a 180° può uscire come -180°
+          v[3 * i + 2] += (sgn * p.pitch * th) / TAU;
+        }
+      })));
+    }
+    return base.get(key);
+  };
+  for (let k = 0; k < n; k++) pieces.push(own(own(make(Math.min(180, total - 180 * k)).rotate([0, 0, 180 * k])).translate([0, 0, (sgn * p.pitch * k) / 2])));
+  pieces.forEach((q) => q.numTri()); T.pieces = now() - t;
+
+  // 2. Unione dei pezzi (con il passo minore del profilo le spire si sovrappongono)
+  t = now();
+  let result = own(M.Manifold.union(pieces));
+  result.numTri(); T.union = now() - t;
+
+  // 3. Filetto: nucleo pieno e taglio a filo alle due estremità
+  if (iso) {
+    t = now();
+    const Lz = p.turns * p.pitch, bb0 = result.boundingBox();
+    result = own(result.translate([0, 0, Lz / 2 - (bb0.min[2] + bb0.max[2]) / 2]));
+    const core = own(M.Manifold.cylinder(Lz, prof.rRoot, prof.rRoot, p.fn, false));
+    const trim = own(M.Manifold.cylinder(Lz, prof.rMaj + 1, prof.rMaj + 1, p.fn, false));
+    result = own(own(M.Manifold.union([core, result])).intersect(trim));
+    result.numTri(); T.finish = now() - t;
+  } else {
+    const bb0 = result.boundingBox();
+    result = own(result.translate([0, 0, -bb0.min[2]]));
+  }
+  T.total = now() - t00;
+  const bb = result.boundingBox();
+  const warn = !iso && p.pitch < prof.height - 1e-9 ? `Passo (${p.pitch} mm) minore dell'altezza del profilo (${prof.height} mm): le spire si toccano e si fondono.` : null;
+  const out = { manifold: result, T, pieces: n, tri: result.numTri(), V: result.volume(), status: String(result.status()), height: bb.max[2] - bb.min[2], profileHeight: prof.height, warn };
+  free(result);
+  return out;
+}
+/* CORE-END */
+
+/* ---------- Stato e controlli ---------- */
+const HELIX_PRESETS = {
+  molla: { profile: 'round', R: 10, wire: 2, pitch: 5, turns: 6, hand: 'right', fn: 48 },
+  quadro: { profile: 'square', R: 12, w: 2.5, h: 2, pitch: 4, turns: 5, hand: 'right', fn: 48 },
+  m8: { profile: 'iso', size: 8, pitch: 1.25, gap: 0.15, turns: 8, hand: 'right', fn: 64 },
+  m5s: { profile: 'iso', size: 5, pitch: 0.8, gap: 0.1, turns: 10, hand: 'left', fn: 48 },
+  fitta: { profile: 'round', R: 8, wire: 3, pitch: 2, turns: 5, hand: 'right', fn: 48 },
+};
+const S = {
+  tab: 'helix',
+  h: { ...HELIX_PRESETS.molla, size: 8, gap: 0.15, w: 2.5, h: 2 },
+  d: { obj: 'star', kind: 'twist', axis: 2, twist: 180, scale: 40, bend: 90, dir: 0, from: 0, to: 100, qmode: 'auto', edge: 1, lat: 6, iso: false, orig: false, guides: true },
+};
+const DEF_DEFAULT = { ...S.d };
+const getPath = (path) => path.split('.').reduce((o, k) => o[k], S);
+const setPath = (path, v) => { const ks = path.split('.'), last = ks.pop(); ks.reduce((o, k) => o[k], S)[last] = v; };
+const TYPES = { 'h.size': Number, 'h.R': Number, 'h.wire': Number, 'h.w': Number, 'h.h': Number, 'h.gap': Number, 'h.pitch': Number, 'h.turns': Number, 'h.fn': Number,
+  'd.axis': Number, 'd.dir': Number, 'd.twist': Number, 'd.scale': Number, 'd.bend': Number, 'd.from': Number, 'd.to': Number, 'd.edge': Number, 'd.lat': Number };
+const AXN = ['X', 'Y', 'Z'];
+
+function sync() { // dal modello ai controlli
+  document.querySelectorAll('[data-k]').forEach((el) => {
+    const v = getPath(el.dataset.k);
+    if (el.classList.contains('seg')) el.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === String(v))));
+    else if (el.type === 'checkbox') el.checked = !!v;
+    else if (document.activeElement !== el) el.value = v;
+  });
+  document.querySelectorAll('[data-show]').forEach((el) => { const [k, vals] = el.dataset.show.split('='); el.hidden = !vals.split('|').includes(String(getPath(k))); });
+  $('pHelix').hidden = S.tab !== 'helix'; $('pDef').hidden = S.tab !== 'def';
+  // direzione della piega: i due assi perpendicolari
+  const a = S.d.axis, dirs = [AXN[(a + 1) % 3], AXN[(a + 2) % 3]], sel = $('dDir');
+  if (sel.options.length !== 2 || sel.options[0].textContent !== dirs[0]) { sel.innerHTML = `<option value="0">${dirs[0]}</option><option value="1">${dirs[1]}</option>`; sel.value = S.d.dir; }
+  $('tabNote').textContent = S.tab === 'helix' ? 'Scheda Proprietà della forma in rotazione: passo, giri e verso' : 'Strumento a pannello, come Guscio e Pattern';
+}
+document.addEventListener('input', (e) => change(e.target));
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.seg button'); if (b) { change(b.parentElement, b.dataset.v); }
+});
+function change(el, forced) {
+  const k = el.dataset && el.dataset.k; if (!k) return;
+  let v = forced !== undefined ? forced : el.type === 'checkbox' ? el.checked : el.value;
+  if (TYPES[k]) v = TYPES[k](v);
+  setPath(k, v);
+  if (k === 'd.from' && S.d.from >= S.d.to) S.d.to = Math.min(100, S.d.from + 1);
+  if (k === 'd.to' && S.d.to <= S.d.from) S.d.from = Math.max(0, S.d.to - 1);
+  if (k === 'h.size') S.h.pitch = ISO_PITCH[S.h.size];
+  if (k === 'd.obj') S.d.axis = OBJECTS[S.d.obj].axis, S.d.dir = 0, needFit = true;
+  if (k === 'd.axis') S.d.dir = 0;
+  if (k === 'h.profile') needFit = true;
+  if (k === 'tab') needFit = true;
+  sync(); schedule();
+}
+$('hEx').onchange = (e) => { Object.assign(S.h, HELIX_PRESETS[e.target.value]); needFit = true; sync(); schedule(); };
+$('dCancel').onclick = () => { Object.assign(S.d, DEF_DEFAULT, { obj: S.d.obj, axis: OBJECTS[S.d.obj].axis }); sync(); schedule(); };
+$('dOk').onclick = () => { $('dCheck').className = 'msg msg--ok'; $('dCheck').textContent = 'Nell\'app l\'OK crea il gruppo Deforma in un solo passo di Annulla.'; };
+$('theme').onchange = (e) => { const v = e.target.value; if (v === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = v; setTimeout(applyTheme, 30); };
+
+/* ---------- Calcolo e misure ---------- */
+let M = null, timer = 0, needFit = true;
+function schedule() { clearTimeout(timer); timer = setTimeout(rebuild, 40); }
+const fmt = (x, d = 1) => Number(x).toLocaleString('it-IT', { maximumFractionDigits: d });
+const chip = (label, val, cls = '') => `<span>${label} <b class="${cls}">${val}</b></span>`;
+const ms = (x) => `${fmt(x, x < 10 ? 1 : 0)} ms`;
+
+function extract(m) { // copia i buffer fuori dalla memoria WASM
+  const g = m.getMesh(), np = g.numProp, n = g.vertProperties.length / np, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) pos[3 * i + k] = g.vertProperties[i * np + k];
+  return { pos, idx: new Uint32Array(g.triVerts) };
+}
+
+let lastKey = '';
+function rebuild() {
+  if (!M) return;
+  const key = S.tab === 'helix' ? 'h' + S.h.profile + S.h.size : 'd' + S.d.obj + S.d.axis; // si reinquadra quando cambia la forma, non a ogni cursore
+  if (key !== lastKey) { lastKey = key; needFit = true; }
+  try { S.tab === 'helix' ? runHelix() : runDeform(); }
+  catch (err) { $('stat').innerHTML = chip('Errore', String(err && err.message || err), 'bad'); console.error(err); }
+}
+
+function runHelix() {
+  const r = buildHelix(M, S.h), info = $('hInfo');
+  if (r.error) { info.className = 'msg msg--err'; info.textContent = r.error; $('stat').innerHTML = chip('Errore', r.error, 'bad'); return; }
+  const ex = extract(r.manifold);
+  r.manifold.delete(); // i buffer sono già copiati: la memoria WASM si libera subito
+  show({ pos: ex.pos, idx: ex.idx });
+  info.className = 'msg' + (r.warn ? ' msg--warn' : ' msg--ok');
+  info.textContent = r.warn || `Altezza ${fmt(r.height, 2)} mm, ${r.pieces} pezzi da mezzo giro.`;
+  $('stat').innerHTML = [
+    chip('Triangoli', fmt(r.tri, 0)), chip('Pezzi da mezzo giro', r.pieces),
+    chip('Costruzione', ms(r.T.pieces)), chip('Unione', ms(r.T.union)), r.T.finish ? chip('Nucleo e taglio', ms(r.T.finish)) : '', chip('Totale', ms(r.T.total)),
+    chip('Stato', r.status, r.status === 'NoError' ? 'ok' : 'bad'), chip('Volume', `${fmt(r.V, 0)} mm³`),
+  ].join('');
+}
+
+function runDeform() {
+  const d = S.d, info = OBJECTS[d.obj], solid = makeObject(M, d.obj);
+  const o = { axis: d.axis, from: d.from / 100, to: d.to / 100, angle: d.kind === 'twist' ? d.twist : d.bend, scaleEnd: d.scale / 100, dir: d.dir, edge: d.qmode === 'manual' ? d.edge : 0, lat: d.qmode === 'manual' ? d.lat : 0, iso: d.iso };
+  const r = deform(M, solid, d.kind, o, info), orig = extract(solid), chk = $('dCheck');
+  solid.delete(); // i buffer dell'originale sono già copiati
+  if (r.error) {
+    chk.className = 'msg msg--err'; chk.textContent = r.error;
+    show({ pos: orig.pos, idx: orig.idx });
+    $('stat').innerHTML = chip('Stato', 'rifiutato dal controllo', 'bad') + chip('Triangoli', fmt(r.tri0, 0));
+    return;
+  }
+  chk.className = 'msg msg--ok'; chk.textContent = r.check.ok;
+  const ex = extract(r.manifold), extra = { orig: d.orig ? orig : null };
+  r.manifold.delete();
+  if (d.guides) { // asse neutro e piani dei limiti, deformati con la stessa funzione
+    const a = d.axis, u = (a + 1) % 3, w = (a + 2) % 3, bb = r.bb, L = bb.max[a] - bb.min[a], cu = (bb.min[u] + bb.max[u]) / 2, cw = (bb.min[w] + bb.max[w]) / 2;
+    const ax = new Float64Array(3 * 65);
+    for (let i = 0; i <= 64; i++) { ax[3 * i + a] = bb.min[a] - 0.05 * L + (1.1 * L * i) / 64; ax[3 * i + u] = cu; ax[3 * i + w] = cw; }
+    r.warp(ax, 65); extra.axis = Float32Array.from(ax);
+    const hu = ((bb.max[u] - bb.min[u]) / 2) * 1.2 + 2, hw = ((bb.max[w] - bb.min[w]) / 2) * 1.2 + 2;
+    extra.planes = [];
+    for (const f of [o.from, o.to]) {
+      if (f <= 0.001 || f >= 0.999) continue;
+      const q = new Float64Array(12), t = bb.min[a] + f * L;
+      [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([su, sw], i) => { q[3 * i + a] = t; q[3 * i + u] = cu + su * hu; q[3 * i + w] = cw + sw * hw; });
+      r.warp(q, 4); extra.planes.push(Float32Array.from(q));
+    }
+  }
+  show({ pos: ex.pos, idx: ex.idx, ...extra });
+  const dv = r.Ve ? ((r.V - r.Ve) / r.Ve) * 100 : null;
+  $('stat').innerHTML = [
+    chip('Triangoli', `${fmt(r.tri0, 0)} → ${fmt(r.tri1, 0)}`), chip('Zona', fmt(r.triMid, 0)),
+    chip(r.lat ? 'Lato assiale / laterale' : 'Lato assiale', r.lat ? `${fmt(r.edge, 2)} / ${fmt(r.lat, 1)} mm` : `${fmt(r.edge, 2)} mm`), r.estimate ? chip('Stima isotropa', fmt(r.estimate, 0)) : '',
+    chip('Taglio', ms(r.T.split)), chip('Raffina', ms(r.T.refine)), chip('Warp', ms(r.T.warp)), chip('Unione', ms(r.T.union)), chip('Totale', ms(r.T.total)),
+    chip('Stato', r.status, r.status === 'NoError' ? 'ok' : 'bad'),
+    chip('Volume', `${fmt(r.V0, 0)} → ${fmt(r.V, 0)} mm³`),
+    dv === null ? chip('Atteso', 'non calcolabile') : chip('Scarto dal volume atteso', `${fmt(dv, 2)}%`, Math.abs(dv) < 1 ? 'ok' : Math.abs(dv) < 3 ? 'warn' : 'bad'),
+  ].join('');
+}
+// per gli script di misura e le schermate
+window.__proto = { S, sync, schedule, rebuild, get ready() { return !!M; }, get orbit() { return orbit; }, redraw() { dirty = true; draw(); } };
+
+/* ---------- Anteprima 3D (three.js) ---------- */
+let T3 = null, renderer, scene3, camera, grid, dirty = false;
+const objs = { mesh: null, edges: null, orig: null, axis: null, planes: [] };
+const orbit = { th: -0.8, ph: 1.15, r: 100, c: [0, 0, 0] };
+const view = $('view');
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
+function clearObj(o) { if (!o) return; scene3.remove(o); o.geometry && o.geometry.dispose(); o.material && o.material.dispose(); }
+function applyTheme() {
+  if (!T3) return;
+  if (objs.mesh) objs.mesh.material.color.set(css('--mesh'));
+  if (objs.edges) objs.edges.material.color.set(css('--mesh-edge'));
+  if (objs.orig) objs.orig.material.color.set(css('--muted'));
+  if (objs.axis) objs.axis.material.color.set(css('--accent'));
+  objs.planes.forEach((p) => p.children.forEach((c) => c.material.color.set(css('--accent'))));
+  grid.material.color.set(css('--grid-major')); dirty = true; draw();
+}
+function init3d() {
+  renderer = new T3.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  view.insertBefore(renderer.domElement, view.firstChild);
+  scene3 = new T3.Scene();
+  camera = new T3.PerspectiveCamera(35, 1, 0.5, 5000); camera.up.set(0, 0, 1); scene3.add(camera);
+  scene3.add(new T3.HemisphereLight(0xffffff, 0x556070, 1.1));
+  const key = new T3.DirectionalLight(0xffffff, 1.6); key.position.set(0.5, -0.8, 1); camera.add(key);
+  grid = new T3.GridHelper(240, 24); grid.rotation.x = Math.PI / 2; scene3.add(grid);
+  new ResizeObserver(resize3d).observe(view);
+  const el = renderer.domElement; let od = null;
+  el.addEventListener('pointerdown', (e) => { el.setPointerCapture(e.pointerId); od = { x: e.clientX, y: e.clientY }; view.style.cursor = 'grabbing'; });
+  el.addEventListener('pointermove', (e) => { if (!od) return; orbit.th -= (e.clientX - od.x) * 0.01; orbit.ph = clamp(orbit.ph - (e.clientY - od.y) * 0.01, 0.15, 3.0); od = { x: e.clientX, y: e.clientY }; dirty = true; draw(); });
+  const up = () => { od = null; view.style.cursor = ''; }; el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  el.addEventListener('wheel', (e) => { e.preventDefault(); orbit.r = clamp(orbit.r * Math.exp(e.deltaY * 0.0012), 8, 1500); dirty = true; draw(); }, { passive: false });
+  $('fit').onclick = fit3d;
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => setTimeout(applyTheme, 30));
+  resize3d();
+}
+function resize3d() { if (!renderer) return; const w = view.clientWidth, h = view.clientHeight; if (w < 4 || h < 4) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); dirty = true; draw(); }
+function draw() {
+  if (!renderer || !dirty) return; dirty = false;
+  const o = orbit;
+  camera.position.set(o.c[0] + o.r * Math.sin(o.ph) * Math.cos(o.th), o.c[1] + o.r * Math.sin(o.ph) * Math.sin(o.th), o.c[2] + o.r * Math.cos(o.ph));
+  camera.lookAt(o.c[0], o.c[1], o.c[2]); renderer.render(scene3, camera);
+}
+function fit3d() {
+  if (!objs.mesh) return; objs.mesh.geometry.computeBoundingSphere();
+  const b = objs.mesh.geometry.boundingSphere; orbit.c = [b.center.x, b.center.y, b.center.z]; orbit.r = Math.max(15, b.radius * 3.1); dirty = true; draw();
+}
+function geo(ex) { const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.BufferAttribute(ex.pos, 3)); g.setIndex(new T3.BufferAttribute(ex.idx, 1)); return g; }
+function show({ pos, idx, orig, axis, planes }) {
+  if (!T3) return;
+  [objs.mesh, objs.edges, objs.orig, objs.axis].forEach(clearObj); objs.planes.forEach(clearGroup); objs.planes = [];
+  const g = geo({ pos, idx });
+  objs.mesh = new T3.Mesh(g, new T3.MeshStandardMaterial({ color: css('--mesh'), flatShading: true, roughness: 0.6, metalness: 0.05 }));
+  scene3.add(objs.mesh);
+  objs.edges = idx.length / 3 < 90000 ? new T3.LineSegments(new T3.EdgesGeometry(g, 28), new T3.LineBasicMaterial({ color: css('--mesh-edge'), transparent: true, opacity: 0.5 })) : null;
+  if (objs.edges) scene3.add(objs.edges);
+  objs.orig = orig ? new T3.LineSegments(new T3.EdgesGeometry(geo(orig), 15), new T3.LineBasicMaterial({ color: css('--muted'), transparent: true, opacity: 0.8 })) : null;
+  if (objs.orig) scene3.add(objs.orig);
+  if (axis) {
+    const ag = new T3.BufferGeometry(); ag.setAttribute('position', new T3.BufferAttribute(axis, 3));
+    objs.axis = new T3.Line(ag, new T3.LineBasicMaterial({ color: css('--accent') })); scene3.add(objs.axis);
+  } else objs.axis = null;
+  (planes || []).forEach((q) => {
+    const pg = new T3.BufferGeometry(); pg.setAttribute('position', new T3.BufferAttribute(q, 3)); pg.setIndex([0, 1, 2, 0, 2, 3]);
+    const grp = new T3.Group();
+    grp.add(new T3.Mesh(pg, new T3.MeshBasicMaterial({ color: css('--accent'), transparent: true, opacity: 0.16, side: T3.DoubleSide, depthWrite: false })));
+    grp.add(new T3.LineLoop(pg.clone().setIndex(null), new T3.LineBasicMaterial({ color: css('--accent') })));
+    scene3.add(grp); objs.planes.push(grp);
+  });
+  g.computeBoundingBox(); grid.position.z = Math.min(0, g.boundingBox.min.z);
+  if (needFit) { needFit = false; fit3d(); }
+  dirty = true; draw();
+}
+function clearGroup(grp) { scene3.remove(grp); grp.children.forEach((c) => { c.geometry.dispose(); c.material.dispose(); }); }
+
+/* ---------- Avvio ---------- */
+sync();
+const MANIFOLD_URL = 'https://cdn.jsdelivr.net/npm/manifold-3d@3.5.4/';
+Promise.all([
+  import('https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js'),
+  import(MANIFOLD_URL + 'manifold.js').then(async (m) => { const mod = await m.default({ locateFile: () => MANIFOLD_URL + 'manifold.wasm' }); mod.setup(); return mod; }),
+]).then(([three, mod]) => {
+  T3 = three; M = mod; init3d(); $('viewMsg').hidden = true; rebuild();
+}).catch((err) => { $('viewMsg').textContent = 'Anteprima non disponibile: servono la rete (manifold-3d e three.js da jsDelivr) e WebGL.'; console.error(err); });
+</script>
+</body>
+</html>

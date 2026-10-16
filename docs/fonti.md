@@ -104,3 +104,32 @@ Raccolte durante la ricerca del 5 ottobre 2026, raggruppate per tema.
 - https://edutechwiki.unige.ch/en/Inkscape_-_path_editing
 - https://docs.blender.org/manual/nb/2.79/modeling/curves/structure.html
 - https://docs.blender.org/manual/de/5.0/modeling/curves_new/editing/control_points.html
+
+## Deformazioni ed elica (16 ottobre 2026)
+
+Lette direttamente (manuale o pagina ufficiale):
+- https://docs.blender.org/manual/en/latest/modeling/modifiers/deform/simple_deform.html
+- https://docs.blender.org/manual/en/latest/modeling/modifiers/generate/screw.html
+- https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-REF-COIL.htm
+- https://en.wikibooks.org/wiki/OpenSCAD_User_Manual/2D_to_3D_Extrusion
+- https://github.com/BelfrySCAD/BOSL2/wiki/threading.scad
+- https://github.com/BelfrySCAD/BOSL2/blob/master/skin.scad
+- https://github.com/rcolyer/threads-scad
+- https://cad.onshape.com/help/Content/helix.htm
+- https://github.com/elalish/manifold/blob/master/bindings/wasm/manifold-encapsulated-types.d.ts
+- https://github.com/elalish/manifold/issues/289 (la rimozione delle sovrapposizioni dopo `warp` non è implementata)
+- https://github.com/openscad/openscad/blob/master/src/core/CurveDiscretizer.cc (`getCircularSegmentCount`: `$fn` si scala con l'angolo)
+- https://github.com/openscad/openscad/blob/master/src/geometry/rotate_extrude.cc
+- https://en.wikipedia.org/wiki/ISO_metric_screw_thread
+- https://www.sovol3d.com/blogs/news/3d-printing-threads-and-screws-how-to-design-reliable-fdm-fasteners (gioco per FDM: 0,1-0,2 mm sul raggio)
+
+Solo anteprima dei risultati di ricerca, forum o fonti senza data (da riverificare prima di citarle come manuale):
+- https://help.solidworks.com/2023/English/SolidWorks/Sldworks/HIDD_DVE_FEAT_BENDING.htm (SolidWorks Flex: pagina non leggibile, parametri dall'anteprima)
+- https://wiki.freecad.org/Part_Helix e https://wiki.freecad.org/PartDesign_AdditiveHelix (non leggibili, dall'anteprima)
+- https://github.com/FreeCAD/FreeCAD/blob/main/src/Mod/PartDesign/App/FeatureHelix.cpp (repository ufficiale, non letto; la ricerca ha trovato solo un mirror)
+- https://discourse.shapr3d.com/t/helix-and-threads/9866 e https://discourse.shapr3d.com/t/how-can-i-add-a-bending-command-to-shapr3d/16573 (Shapr3D: solo forum, nessun manuale)
+- https://forums.autodesk.com/t5/fusion-360-ideastation-archived/bend-body/idc-p/6676181/highlight/true (Fusion: richiesta di una piega dei solidi, discussione datata)
+- https://forums.autodesk.com/t5/fusion-360-ideastation-archived/flex-tool/idc-p/8593427
+- https://forum.onshape.com/discussion/30911/deform-new-custom-feature-twist-bend-scale-morph-wrap-flex
+- https://hackaday.com/blog/page/1621/?tag=led (fine degli Shape Generators di Tinkercad: post senza data)
+- https://forum.bambulab.com/t/how-can-i-bend-a-model-into-a-slight-curve/82998 e https://help.prusa3d.com/article/cut-tool_1779 (gli slicer non deformano; Cut con connettori)

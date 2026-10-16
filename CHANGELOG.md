@@ -18,6 +18,16 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.66.1] - 2026-10-16
+
+### Aggiunto
+- Documentazione: studio di fattibilità delle deformazioni **Torsione, Rastremazione e Piega** e del **passo elicoidale** (`docs/studio-deformazioni.md`): confronto con Blender, SolidWorks, Fusion 360, OpenSCAD, FreeCAD, Onshape, Shapr3D e Tinkercad con il livello di verifica di ogni fonte, modello dati (campo `helix` della rotazione e gruppo `deform`), pipeline del kernel misurata (taglio sui limiti, raffinamento mirato a due lunghezze, `warpBatch`, unione), controlli analitici contro le autointersezioni, tetto di triangoli e memoria, codice OpenSCAD con ritorno dall'import, interfaccia, rischi e quattro fasi (elica, Torsione e Rastremazione, Piega, Filetto e Molla).
+- Prototipo interattivo `docs/prototipi/deformazioni.html`: schede Elica e Deforma calcolate da `manifold-3d` 3.5.4 vero (caricato da jsDelivr), con misure di triangoli, tempi, stato e volume atteso; sei schermate in `docs/images/deformazioni-*.png`. Le funzioni di calcolo sono pure (blocco `CORE-BEGIN` e `CORE-END`), pronte da portare nel kernel.
+- `docs/fonti.md`: sezione sulle deformazioni, con le fonti lette direttamente separate da quelle solo da anteprima di ricerca o da forum.
+
+### Modificato
+- `docs/da-fare.md`: punto 7 con rimando allo studio e alle fasi; punto 6 con le fasi del disegno libero già fatte (0.60.0, 0.61.0); intestazione aggiornata alla 0.66.1; due difetti noti emersi dallo studio: i segmenti di `revolve` per l'arco intero (il kernel non coincide con `rotate_extrude(angle, $fn)` di OpenSCAD per le rotazioni parziali) e il tetto di 360 divisioni di `twistDivisions` contro i ±3600° del cursore.
+
 ## [0.66.0] - 2026-10-16
 
 ### Modificato
