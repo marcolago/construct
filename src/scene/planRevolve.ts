@@ -150,6 +150,8 @@ export function ringRadii(prep: PlanPrep, model: PlanRingModel, rmax: number, x:
     out.set(R);
     return out;
   }
+  // Oltre il raggio inscritto l'anello è una cresta (un segmento): nel solido diventerebbe una pinna senza spessore, che
+  // non è una varietà. Si fa collassare nel centro: la cupola su un rettangolo finisce in un punto invece che in un colmo
   for (let k = 0; k < K; k++) {
     const b = k * (M + 1);
     let m = M;
@@ -206,60 +208,54 @@ export interface RevolveMesh {
 export function revolveMesh(prep: PlanPrep, model: PlanRingModel, contours: Vec2[][], rmax: number): RevolveMesh {
   const ring = ringCache(prep, model, rmax);
   const K = prep.K;
-  const total = contours.reduce((n, c) => n + c.length, 0);
-  const positions = new Float32Array(total * K * 3);
-  const indices: number[] = [];
-  let base = 0;
-  let rings = 0;
+  // Vertici unici per posizione: gli anelli collassati (asse, punte) condividono lo stesso vertice, così la superficie resta
+  // chiusa; i triangoli piatti con vertici distinti restano e li collassa manifold
+  const index = new Map<string, number>();
+  const pos: number[] = [];
   const min: Vec3 = [Infinity, Infinity, Infinity];
   const max: Vec3 = [-Infinity, -Infinity, -Infinity];
+  const vertex = (x: number, y: number, z: number): number => {
+    const key = `${Math.round(x * 1e6)},${Math.round(y * 1e6)},${Math.round(z * 1e6)}`;
+    let i = index.get(key);
+    if (i === undefined) {
+      i = pos.length / 3;
+      index.set(key, i);
+      pos.push(x, y, z);
+      if (x < min[0]) min[0] = x;
+      if (y < min[1]) min[1] = y;
+      if (z < min[2]) min[2] = z;
+      if (x > max[0]) max[0] = x;
+      if (y > max[1]) max[1] = y;
+      if (z > max[2]) max[2] = z;
+    }
+    return i;
+  };
+  const indices: number[] = [];
+  let rings = 0;
   for (const c of contours) {
     const J = c.length;
+    const ids: number[][] = c.map(([x, z]) => {
+      const r = ring(Math.max(0, x));
+      return Array.from({ length: K }, (_, k) => vertex(r[k] * prep.cos[k], r[k] * prep.sin[k], z));
+    });
     for (let j = 0; j < J; j++) {
-      const r = ring(Math.max(0, c[j][0]));
-      for (let k = 0; k < K; k++) {
-        const o = (base + j * K + k) * 3;
-        const x = r[k] * prep.cos[k];
-        const y = r[k] * prep.sin[k];
-        const z = c[j][1];
-        positions[o] = x;
-        positions[o + 1] = y;
-        positions[o + 2] = z;
-        if (x < min[0]) min[0] = x;
-        if (y < min[1]) min[1] = y;
-        if (z < min[2]) min[2] = z;
-        if (x > max[0]) max[0] = x;
-        if (y > max[1]) max[1] = y;
-        if (z > max[2]) max[2] = z;
-      }
-    }
-    for (let j = 0; j < J; j++) {
-      const j2 = (j + 1) % J;
+      const a0 = ids[j];
+      const a1 = ids[(j + 1) % J];
       for (let k = 0; k < K; k++) {
         const k2 = (k + 1) % K;
-        const a = base + j * K + k;
-        const b = base + j * K + k2;
-        const cc = base + j2 * K + k2;
-        const d = base + j2 * K + k;
-        for (const [p, q, s] of [[a, b, cc], [a, cc, d]]) {
-          const [ox, oy, oz] = [p * 3, q * 3, s * 3];
-          const ux = positions[oy] - positions[ox], uy = positions[oy + 1] - positions[ox + 1], uz = positions[oy + 2] - positions[ox + 2];
-          const vx = positions[oz] - positions[ox], vy = positions[oz + 1] - positions[ox + 1], vz = positions[oz + 2] - positions[ox + 2];
-          const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx;
-          if (cx * cx + cy * cy + cz * cz > 1e-10) indices.push(p, q, s);
-        }
+        for (const [p, q, t] of [[a0[k], a0[k2], a1[k2]], [a0[k], a1[k2], a1[k]]]) if (p !== q && q !== t && p !== t) indices.push(p, q, t);
       }
     }
-    base += J * K;
     rings += J;
   }
+  const positions = Float32Array.from(pos);
   // Volume con segno (tetraedri dall'origine): se è negativo le facce guardano dentro e si rovesciano
   let vol = 0;
   for (let i = 0; i < indices.length; i += 3) {
     const a = indices[i] * 3, b = indices[i + 1] * 3, c = indices[i + 2] * 3;
-    vol += (positions[a] * (positions[b + 1] * positions[c + 2] - positions[b + 2] * positions[c + 1])
-      - positions[a + 1] * (positions[b] * positions[c + 2] - positions[b + 2] * positions[c])
-      + positions[a + 2] * (positions[b] * positions[c + 1] - positions[b + 1] * positions[c])) / 6;
+    vol += (pos[a] * (pos[b + 1] * pos[c + 2] - pos[b + 2] * pos[c + 1])
+      - pos[a + 1] * (pos[b] * pos[c + 2] - pos[b + 2] * pos[c])
+      + pos[a + 2] * (pos[b] * pos[c + 1] - pos[b + 1] * pos[c])) / 6;
   }
   if (vol < 0) for (let i = 0; i < indices.length; i += 3) [indices[i + 1], indices[i + 2]] = [indices[i + 2], indices[i + 1]];
   if (!isFinite(min[0])) {

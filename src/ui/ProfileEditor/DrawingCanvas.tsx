@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { FlipHorizontal2, Maximize, ZoomIn, ZoomOut } from 'lucide-react';
+import { TrianglesCenterlineDashedVertical, Maximize, ZoomIn, ZoomOut } from 'lucide-react';
 import { MAX_PATH_CONTOURS, cubicPoint, segmentOf } from '../../scene/bezier';
 import type { PathContour, PathNode, Vec2 } from '../../scene/types';
 import { appendPenNode, baseShapeContour, contourContains, cycleKind, gridStep, insertNode, joinContours, moveHandle, moveNodes, nearestSegment, resumeContour, setNodeKind, snapPoint } from './model';
@@ -893,7 +893,7 @@ export function DrawingCanvas({ paths, rotate, label, closedOnly, onClosedOnly, 
       {rotate && outsideWidth >= OUTSIDE_LABEL_MIN && (
         <div className="profile-editor__flip" style={{ left: outsideX + outsideWidth / 2, top: size.h / 2 + 14 }}>
           <button type="button" title="Specchia la vista in orizzontale: la parte non ruotata passa dall'altro lato dell'asse, il disegno resta com'è" onClick={onFlip}>
-            <FlipHorizontal2 size={14} />
+            <TrianglesCenterlineDashedVertical size={14} />
             <span>Inverti asse di simmetria</span>
           </button>
         </div>

@@ -120,7 +120,6 @@ test('l\'anteprima 3D segue la sagoma: più triangoli dello squircle che del cer
   const circle = await triangles(page);
   await preset(page, 'Stella');
   await expect.poll(() => triangles(page)).not.toBe(circle);
-  await expect(editor(page).getByText(/Sagoma sperimentale/)).toBeVisible();
 });
 
 test('il primo ritocco rompe la forma parametrica; Torna ai parametri e Reset la riportano indietro', async ({ page }) => {
@@ -269,4 +268,51 @@ test('«Mostra la sezione» spenta nasconde linea, anelli ed etichetta', async (
   await expect(planCanvas(page).locator('.profile-editor__plan-slice-label')).toHaveCount(0);
   await editor(page).getByLabel('Mostra la sezione').check();
   await expect(editor(page).locator('[data-section]')).toHaveCount(1);
+});
+
+test('OK salva la sagoma nel Profilo: il solido della scena è quello dell\'anteprima', async ({ page }) => {
+  const id = await openCup(page, 'Sagoma');
+  const before = await page.evaluate(() => window.__construct!.results.getState().meshes[0].volume);
+  await preset(page, 'Squircle');
+  await expect(editor(page).getByLabel('Anteprima 3D')).toHaveAttribute('data-state', 'ready');
+  const previewVolume = Number(await editor(page).getByLabel('Anteprima 3D').getAttribute('data-volume'));
+  await editor(page).getByRole('button', { name: 'OK', exact: true }).click();
+  await expect(editor(page)).toHaveCount(0);
+  await settled(page);
+  const node = await page.evaluate((nodeId) => window.__construct!.store.getState().scene.nodes[nodeId] as unknown as { plan?: { kind: string; base: string } }, id);
+  expect(node.plan?.kind).toBe('rect');
+  const after = await page.evaluate(() => window.__construct!.results.getState().meshes[0].volume);
+  expect(after).toBeGreaterThan(before * 1.05);
+  expect(after).toBeCloseTo(previewVolume, 0);
+  // Riaprendo la modale la sagoma è quella salvata
+  await page.evaluate((nodeId) => window.__construct!.profileEditor.getState().open({ nodeId }), id);
+  await view(page, 'Sagoma').click();
+  await expect(editor(page).getByRole('group', { name: 'Forma della sagoma' }).getByRole('button', { name: 'Rettangolo' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('angolo parziale con la sagoma: a 180° il volume è la metà', async ({ page }) => {
+  await openCup(page, 'Sagoma');
+  const card = editor(page).getByLabel('Anteprima 3D');
+  const volume = async () => Number(await card.getAttribute('data-volume'));
+  await expect.poll(volume).toBeGreaterThan(0);
+  const circle = await volume();
+  await preset(page, 'Squircle');
+  // Si aspetta la mesh dello squircle (più grande di quella circolare) prima di misurare il giro intero
+  await expect.poll(volume).toBeGreaterThan(circle * 1.05);
+  const full = await volume();
+  // L'angolo sta nella colonna del profilo
+  await view(page, 'Profilo').click();
+  const angle = editor(page).locator('.slider-field').filter({ hasText: 'Angolo' }).locator('.number-field__input');
+  await angle.fill('180');
+  await angle.press('Enter');
+  await expect.poll(async () => Number(await card.getAttribute('data-volume')) / full).toBeCloseTo(0.5, 2);
+});
+
+test('l\'anteprima 3D mostra gli anelli della quota di sezione', async ({ page }) => {
+  await openCup(page, 'Sagoma');
+  const card = editor(page).getByLabel('Anteprima 3D');
+  // Il bicchiere a metà altezza ha due anelli: esterno e interno della parete
+  await expect(card).toHaveAttribute('data-rings', '2');
+  await editor(page).getByLabel('Mostra la sezione').uncheck();
+  await expect(card).toHaveAttribute('data-rings', '0');
 });

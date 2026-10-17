@@ -110,7 +110,7 @@ export function SettingsPanel({ run }: { run: (action: () => void | Promise<void
 
       <section>
         <h3>Funzioni sperimentali</h3>
-        <Toggle id="set-experimental-plan" label="Sagoma di rotazione del Profilo" hint="Nella modale del Profilo compare la vista Sagoma: la rotazione segue una forma vista dall'alto (poligoni, stelle, squircle, forme libere con simmetria). Per ora è solo un'anteprima: con OK la sagoma non viene salvata." checked={ui.experimentalPlan} onChange={set('experimentalPlan')} />
+        <Toggle id="set-experimental-plan" label="Sagoma di rotazione del Profilo" hint="Nella modale del Profilo compare la vista Sagoma: la rotazione segue una forma vista dall'alto (poligoni, stelle, squircle, forme libere con simmetria). Con OK la sagoma si salva nel Profilo e il solido la segue (anche nel codice OpenSCAD, come poliedro)." checked={ui.experimentalPlan} onChange={set('experimentalPlan')} />
       </section>
 
       <section>

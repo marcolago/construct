@@ -14,19 +14,19 @@ import { applySymmetry, deletePlanNodes, symmetrizePlan } from './planEdit';
  * a mano dei nodi passano da `editPaths`: una forma parametrica diventa libera al primo ritocco, i contorni restano chiusi
  * e, con una simmetria, speculari.
  */
-export function usePlanState(rtFor: (plan: PlanDraft) => number) {
-  const [plan, setPlan] = useState<PlanDraft>(DEFAULT_PLAN);
+export function usePlanState(rtFor: (plan: PlanDraft) => number, initial: PlanDraft = DEFAULT_PLAN) {
+  const [plan, setPlan] = useState<PlanDraft>(initial);
   const [selection, setSelection] = useState<NodeRef[]>([]);
   // Vero finché un gesto è in corso: il calcolo dell'anteprima usa una qualità ridotta
   const [dragging, setDragging] = useState(false);
   const history = useRef<History<PlanDraft>>(null);
   if (!history.current) {
     history.current = createHistory<PlanDraft>();
-    history.current.reset(DEFAULT_PLAN);
+    history.current.reset(initial);
   }
   /** Ultimo stato concluso: è la base delle modifiche in corso (la simmetria si riporta rispetto a lui). */
-  const committed = useRef(DEFAULT_PLAN);
-  const latest = useRef(DEFAULT_PLAN);
+  const committed = useRef(initial);
+  const latest = useRef(initial);
   const pending = useRef(false);
   const rtRef = useRef(rtFor);
   rtRef.current = rtFor;

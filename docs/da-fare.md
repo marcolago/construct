@@ -172,17 +172,18 @@ Chiusi dalla fase 2: modale di disegno con Penna e Seleziona, anteprima 3D, voce
 
 ## Sagoma di rotazione: punti aperti dalla prima versione (0.70.0)
 
-Studio e prototipo: `docs/prototipi/profilo-sagoma.html` (geometria) e la modale del Profilo con la funzione sperimentale (interfaccia). Restano:
+Studio e prototipo: `docs/prototipi/profilo-sagoma.html` (geometria) e la modale del Profilo con la funzione sperimentale (interfaccia). Il solido è salvato e costruito dal kernel (`src/scene/planSolid.ts`, la stessa mesh del codice OpenSCAD). Restano:
 
-- **Kernel e OpenSCAD**: la sagoma vive solo nella modale. Servono `Manifold.revolve` più `warpBatch` (o una mesh a mano) nel kernel, un `polyhedron` con commento `construct:plan` per il codice, i campi nel nodo `path` e la lettura dei file; prima uno spike di manifold sulla validità dei solidi con anelli collassati (angoli vivi, creste).
-- **Creste**: nel prototipo le facce di un bordo inclinato oltre il raggio inscritto (cupola su un rettangolo) sono a ventaglio; nel kernel vanno costruite piane, o la sagoma va tagliata al raggio inscritto.
-- **Forme non stellate**: oggi si rifiutano con un avviso e si tiene l'ultima valida; il campo di distanza completo le accetterebbe ma è lento.
+- **Ritorno da OpenSCAD**: il codice ha la sagoma nel commento `construct:plan`, ma l'import non legge `polyhedron` né ricostruisce il Profilo; riletto, il solido si perde (come oggi per le forme non gestite).
+- **Peso del codice**: il poliedro ha un punto per ogni raggio (da 128 a 720, secondo i segmenti) e ogni vertice del profilo: con profili curvi il file arriva a decine di migliaia di punti.
+- **Contorno 2D (`offset`)**: con la sagoma non si applica (né nel kernel né nel codice).
+- **Forme non stellate**: oggi si rifiutano con un avviso e si tiene l'ultima valida; nel kernel la sagoma non valida torna al giro circolare.
 - **Larghezza e spessori**: con «Profilo segue sagoma» e il modello equidistante le pareti si scalano con la larghezza (2 mm diventano 3,6 mm a ×1,79): serve una variante a spessori fissi in mm?
-- **Bozza**: la sagoma non entra nella bozza di `localStorage` e si perde alla chiusura della modale.
+- **Bozza**: la sagoma non entra nella bozza di `localStorage` e si perde se la modale si chiude senza OK.
 - **Cronologia per vista**: Annulla agisce sul disegno su cui si è lavorato per ultimo; con due disegni visibili non c'è un passo comune.
-- **Angolo parziale e profili oltre l'asse** con la sagoma non sono definiti.
-- **Gizmo e Proprietà** con una sagoma non circolare: larghezza e profondità del nodo non descrivono ancora la forma.
-- **Mesh dell'anteprima**: costruita in TypeScript dagli anelli; l'angolo continuo è una cubica, non l'algoritmo esatto di Figma.
+- **Gizmo e Proprietà** con una sagoma non circolare: larghezza e profondità del nodo non descrivono ancora la forma vista dall'alto, e le Proprietà non mostrano la sagoma.
+- **Angolo continuo**: è una cubica con tangenti lunghe 1,5 volte, non l'algoritmo esatto di Figma.
+- **Icona di Specchia** nella barra della scena: usa ancora `FlipHorizontal2`, che in lucide 1.52 ha l'asse orizzontale.
 
 ## Font non presenti su Google Fonts
 

@@ -2,12 +2,10 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import type { KeyboardEvent } from 'react';
 import { ImportError } from '../../import/types';
 import { readSvgPaths } from '../../import/svgPaths';
-import type { NodeMesh } from '../../kernel/evaluate';
 import { MAX_PATH_CONTOURS, samplePaths, selfIntersections } from '../../scene/bezier';
-import { shape2dDefaults } from '../../scene/defaults';
-import { crossingsAt, preparePlan, revolveMesh, ringCache, ridgeRadius, wallThickness } from '../../scene/planRevolve';
+import { crossingsAt, preparePlan, ringCache, ridgeRadius, wallThickness } from '../../scene/planRevolve';
 import type { PlanPrep } from '../../scene/planRevolve';
-import { featureAngles, isDefaultPlan, isPlainCircle, PLAN_PRESETS, planOutline, planPaths, planTolerance } from '../../scene/planShape';
+import { cleanPlan, DEFAULT_PLAN, featureAngles, isDefaultPlan, isPlainCircle, PLAN_PRESETS, planOutline, planPaths, planTolerance } from '../../scene/planShape';
 import type { PlanDraft } from '../../scene/planShape';
 import { hasBoundDimension } from '../../scene/resize';
 import { pathNaturalBox } from '../../scene/shapes2d';
@@ -185,7 +183,8 @@ function Editor({ target }: { target: ProfileTarget }) {
   const planDisabled = !isRotate ? 'La sagoma vale solo per la rotazione: scegli Rotazionale' : !profileGeo ? 'Disegna prima il profilo' : undefined;
   const rmaxP = profileGeo?.rmaxP ?? 30;
   const rtFor = (p: PlanDraft) => (p.fit === 'profileToPlan' ? p.planW / 2 : rmaxP);
-  const planState = usePlanState(rtFor);
+  const [initialPlan] = useState(() => (init.node?.plan ? cleanPlan(init.node.plan) : DEFAULT_PLAN));
+  const planState = usePlanState(rtFor, initialPlan);
   const { plan } = planState;
   const rt = rtFor(plan);
   const k = rt / rmaxP;
@@ -213,7 +212,6 @@ function Editor({ target }: { target: ProfileTarget }) {
     return { eff, outline, limited: eff.limited, valid, shown: lastGood.current };
   }, [planAvailable, plan, rt, planState.dragging]);
   const shown = planGeo?.shown ?? null;
-  const planActive = planAvailable && shown !== null && !isDefaultPlan(plan);
   /** Profilo scalato in X quando è lui a seguire la sagoma. */
   const scaled = useMemo(() => (profileGeo ? profileGeo.polys.map((c) => c.map(([x, y]): Vec2 => [x * k, y])) : []), [profileGeo, k]);
   const zs = profileGeo ? profileGeo.zmin + section * (profileGeo.zmax - profileGeo.zmin) : 0;
@@ -229,11 +227,32 @@ function Editor({ target }: { target: ProfileTarget }) {
     }
     return { wall, ridge, width: x1 - x0, depth: y1 - y0, halfY: Math.max(Math.abs(y0), Math.abs(y1)) };
   }, [shown, profileGeo, plan.model, rt, scaled, sliceXs]);
-  const planMesh: NodeMesh | null = useMemo(() => {
-    if (!planActive || !shown) return null;
-    const m = revolveMesh(shown.prep, plan.model, scaled, rt);
-    return { id: 'preview', rootId: 'preview', path: ['preview'], color: init.node?.color ?? shape2dDefaults('path').color, isHole: false, positions: m.positions, indices: m.indices, volume: m.volume, bbox: m.bbox, status: 'NoError', empty: m.indices.length === 0 };
-  }, [planActive, shown, plan.model, scaled, rt, init.node]);
+  /**
+   * Sagoma da salvare con OK e da mandare al kernel per l'anteprima: quella della modale se la funzione sperimentale è
+   * attiva (nessuna se è il cerchio), altrimenti quella che il nodo aveva già.
+   */
+  const planForSave = useMemo(() => (planAvailable ? (isDefaultPlan(plan) ? undefined : plan) : init.node?.plan), [planAvailable, plan, init.node]);
+  const planDirty = JSON.stringify(planForSave ?? null) !== JSON.stringify(init.node?.plan ?? null);
+  const planDirtyRef = useRef(planDirty);
+  planDirtyRef.current = planDirty;
+  /**
+   * Anelli della sezione nell'anteprima 3D, nel sistema della mesh del kernel: raggio dalla sagoma, quota riferita al
+   * centro del riquadro naturale del disegno (il kernel lo porta nell'origine). Con un angolo parziale solo l'arco ruotato.
+   */
+  const sectionRings = useMemo(() => {
+    if (!planAvailable || !showSection || !shown || !profileGeo) return [];
+    const box = pathNaturalBox(draft);
+    const z = zs - (box?.cy ?? 0);
+    const ring = ringCache(shown.prep, plan.model, rt);
+    const limit = ((draft.revolveAngle ?? 360) * Math.PI) / 180 + 1e-9;
+    const full = (draft.revolveAngle ?? 360) >= 360;
+    return sliceXs.map((x) => {
+      const r = ring(x);
+      const pts: number[] = [];
+      for (let k = 0; k < shown.prep.K; k++) if (full || shown.prep.th[k] <= limit) pts.push(r[k] * shown.prep.cos[k], r[k] * shown.prep.sin[k], z);
+      return { points: Float32Array.from(pts), closed: full };
+    });
+  }, [planAvailable, showSection, shown, profileGeo, draft, zs, plan.model, rt, sliceXs]);
   /** Contorni effettivi della sagoma, quelli che il disegno mostra e modifica. */
   const planShown = useMemo(() => planGeo?.eff ?? { paths: [] as PathContour[], limited: false }, [planGeo]);
   const planSelected = planState.selection.length === 1 && planShown.paths[0]?.nodes[planState.selection[0].node] ? planState.selection[0] : null;
@@ -461,7 +480,7 @@ function Editor({ target }: { target: ProfileTarget }) {
     if (confirming.current) return;
     confirming.current = true;
     try {
-      if (stateRef.current.draft !== init.draft && !(await confirmDialog('Chiudere senza salvare il profilo?', 'Chiudi'))) return;
+      if ((stateRef.current.draft !== init.draft || planDirtyRef.current) && !(await confirmDialog('Chiudere senza salvare il profilo?', 'Chiudi'))) return;
       clearDraft(nodeId);
       close();
     } finally {
@@ -479,17 +498,18 @@ function Editor({ target }: { target: ProfileTarget }) {
   // OK solo con almeno un contorno che il kernel riempie davvero
   const canApply = contours.length > 0;
   // Durante un trascinamento il disegno non è ancora un passo concluso: l'anteprima si aggiorna al più ogni 100 ms; al rilascio subito
-  const kernelPreview = usePreviewMesh(draft, init.node, init.size, draft === committed.current, canApply && !planActive);
-  const preview = planActive && planMesh ? { state: 'ready' as const, mesh: planMesh } : kernelPreview;
+  // L'anteprima è il kernel vero anche con la sagoma: la stessa mesh che l'OK scrive nella scena
+  const previewDraft = useMemo(() => ({ ...draft, plan: planForSave }), [draft, planForSave]);
+  const preview = usePreviewMesh(previewDraft, init.node, init.size, draft === committed.current && !planState.dragging, canApply);
 
   /** OK: applica il disegno alla scena (un solo passo) e chiude. */
   const apply = () => {
     if (!canApply) return;
     // I contorni con un solo nodo (un tratto appena iniziato) non descrivono nulla
-    const final: Draft = { ...draft, paths: validContours };
+    const final: Draft = { ...draft, paths: validContours, plan: planForSave };
     if (nodeId) {
       // Senza modifiche e senza scala da incorporare non c'è niente da scrivere
-      if (dirty || init.baked) {
+      if (dirty || planDirty || init.baked) {
         if (!useSceneStore.getState().commitProfile(nodeId, final, { before: init.before, after: pathCenter(final) })) {
           notify.error('Il profilo è bloccato: sbloccalo per modificarlo');
           return;
@@ -603,7 +623,6 @@ function Editor({ target }: { target: ProfileTarget }) {
     if (planGeo && !planGeo.valid) chips.push({ kind: 'err', text: 'Sagoma non stellata: il centro non vede tutto il bordo. Si usa l\'ultima valida' });
     if (planGeo?.limited) chips.push({ kind: 'warn', text: 'Raggio angoli ridotto: i lati non bastano' });
     if (planExtras?.ridge != null) chips.push({ kind: 'warn', text: `Cresta: il profilo scende sotto il raggio inscritto (${fmt(planExtras.ridge)} mm)` });
-    if (planActive) chips.push({ kind: 'warn', text: 'Sagoma sperimentale: l\'anteprima la mostra, ma con OK non viene salvata' });
   }
   if (!chips.length && contours.length) chips.push({ kind: 'ok', text: 'Nessun avviso' });
 
@@ -718,7 +737,7 @@ function Editor({ target }: { target: ProfileTarget }) {
               )}
             </div>
           </div>
-          <ProfilePreview {...preview} mode={previewMode} onMode={setPreviewMode} fitSignal={fitSignal} onFit={() => setFitSignal((n) => n + 1)} />
+          <ProfilePreview {...preview} rings={sectionRings} mode={previewMode} onMode={setPreviewMode} fitSignal={fitSignal} onFit={() => setFitSignal((n) => n + 1)} />
           {planAvailable && active === 'plan' ? (
             <PlanSidebar
               plan={plan}
