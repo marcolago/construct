@@ -72,8 +72,18 @@ export function orientEvenOdd(polys: Vec2[][]): Vec2[][] {
   });
 }
 
-/** Raggi della mesh per un numero di segmenti (`$fn`): più fitti del giro circolare, perché la sagoma ha angoli. */
-export const planRays = (segments: number) => Math.min(720, Math.max(128, 4 * segments));
+/**
+ * Raggi della mesh: i segmenti del giro intero, come `$fn` per il cerchio (lo slider Segmenti vale anche per la sagoma).
+ * I raggi dei nodi della sagoma ci sono sempre (sostituiscono quelli uniformi più vicini), così gli spigoli restano vivi.
+ */
+export const planRays = (segments: number) => Math.min(720, Math.max(3, Math.round(segments)));
+
+/**
+ * Errore di corda ammesso (mm) con `segments` segmenti e raggio `r`: quello di un cerchio dello stesso raggio. Dove la
+ * sagoma curva di più si aggiungono raggi fino a questo errore, così gli angoli arrotondati sono lisci quanto un cerchio
+ * con gli stessi segmenti (e la vista non vi disegna spigoli di selezione).
+ */
+export const planChordTolerance = (segments: number, r: number) => r * (1 - Math.cos(Math.PI / Math.max(3, segments)));
 
 /** Settore da 0 a `angle` gradi, di raggio `r`, con un punto ogni grado al più. */
 export function sectorPolygon(angle: number, r: number): Vec2[] {
@@ -105,7 +115,7 @@ export function planSolid(p: Shape2DNode): PlanSolid | null {
   const { paths } = planPaths(plan, rt);
   const outline = planOutline(paths, planTolerance(rt));
   if (outline.length < 3) return null;
-  const prep = preparePlan(outline, featureAngles(paths), planRays(segments), 160, rt, isPlainCircle(plan));
+  const prep = preparePlan(outline, featureAngles(paths), planRays(segments), 160, rt, isPlainCircle(plan), planChordTolerance(segments, rt));
   if (!prep.ok) return null;
   const mesh = revolveMesh(prep, plan.model, scaled, rt);
   if (!mesh.indices.length) return null;

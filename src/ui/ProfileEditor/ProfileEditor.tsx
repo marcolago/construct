@@ -21,7 +21,7 @@ import type { GridSettings, Tool } from './DrawingCanvas';
 import { clearDraft, flushDrafts, loadDraft, saveDraft } from './draft';
 import { createHistory } from './history';
 import type { History } from './history';
-import { POLYGON_SIDES, canCloseContour, closeContour, contourHoles, deleteNodes, draftContours, draftFromNode, dropLastNode, emptyDraft, moveHandle, moveNodes, pathCenter, setNodeKind, trimDuplicateTail } from './model';
+import { POLYGON_SIDES, canCloseContour, closeContour, contourHoles, deleteNodes, draftContours, draftFromNode, dropLastNode, emptyDraft, moveHandle, moveNodes, pathCenter, setNodesKind, trimDuplicateTail } from './model';
 import type { Draft, NodeRef } from './model';
 import { insertPlanNode } from './planEdit';
 import { PlanSidebar } from './PlanSidebar';
@@ -48,7 +48,7 @@ interface EditorState {
 
 type Action =
   // Un nuovo disegno (passo concluso, annulla, ripeti, ripristino): la Penna non ha più un contorno in corso
-  | { type: 'replace'; draft: Draft; selection?: NodeRef[] }
+  | { type: 'replace'; draft: Draft; selection?: NodeRef[]; pen?: number | null }
   // Modifica in corso (trascinamento, Penna): `pen` cambia solo se indicato
   | { type: 'paths'; paths: PathContour[]; selection?: NodeRef[]; pen?: number | null }
   | { type: 'select'; selection: NodeRef[] }
@@ -58,7 +58,7 @@ type Action =
 function reducer(state: EditorState, action: Action): EditorState {
   switch (action.type) {
     case 'replace':
-      return { ...state, draft: action.draft, selection: action.selection ?? state.selection, pen: null };
+      return { ...state, draft: action.draft, selection: action.selection ?? state.selection, pen: action.pen ?? null };
     case 'paths':
       return { ...state, draft: { ...state.draft, paths: action.paths }, selection: action.selection ?? state.selection, pen: action.pen === undefined ? state.pen : action.pen };
     case 'select':
@@ -384,16 +384,12 @@ function Editor({ target }: { target: ProfileTarget }) {
       planState.undo();
       return;
     }
-    // Con un contorno della Penna a metà, annulla quel contorno (non è ancora un passo)
-    if (stateRef.current.pen !== null) {
-      dispatch({ type: 'replace', draft: committed.current, selection: [] });
-      return;
-    }
     settle();
     const prev = history.current!.undo();
     if (prev) {
       committed.current = prev;
-      dispatch({ type: 'replace', draft: prev, selection: [] });
+      // Con la Penna a metà contorno ogni nodo è un passo: si toglie l'ultimo e la Penna resta sullo stesso contorno
+      dispatch({ type: 'replace', draft: prev, selection: [], pen: penStillOpen(prev) });
     }
   };
   const redo = () => {
@@ -405,14 +401,30 @@ function Editor({ target }: { target: ProfileTarget }) {
     const next = history.current!.redo();
     if (next) {
       committed.current = next;
-      dispatch({ type: 'replace', draft: next, selection: [] });
+      dispatch({ type: 'replace', draft: next, selection: [], pen: penStillOpen(next) });
     }
+  };
+  /** Il contorno della Penna in corso, se nel disegno `d` c'è ancora ed è aperto (allora la Penna lo continua). */
+  const penStillOpen = (d: Draft): number | null => {
+    const index = stateRef.current.pen;
+    if (index === null || stateRef.current.tool !== 'pen') return null;
+    const c = d.paths[index];
+    return c && !c.closed && c.nodes.length > 0 ? index : null;
   };
 
   // --- Penna ----------------------------------------------------------------------------------------------------------
   /** Contorni subito dopo la ripresa di un contorno: se alla fine sono ancora quelli, il disegno non è cambiato. */
   const resumedPaths = useRef<PathContour[] | null>(null);
-  /** Termina il contorno della Penna in corso: un solo passo di cronologia per tutto il contorno. Con meno di 2 nodi sparisce. */
+  /** Nodo della Penna aggiunto (al rilascio): un passo della cronologia, la Penna resta sul contorno. */
+  const penStep = (paths: PathContour[]) => {
+    settle();
+    const next = { ...stateRef.current.draft, paths };
+    history.current!.push(next);
+    committed.current = next;
+    resumedPaths.current = null;
+    setSettled((n) => n + 1);
+  };
+  /** Termina il contorno della Penna in corso (i nodi sono già passi della cronologia). Con meno di 2 nodi sparisce. */
   const finishPen = () => {
     const { draft: current, pen: index } = stateRef.current;
     if (index === null) return;
@@ -422,10 +434,12 @@ function Editor({ target }: { target: ProfileTarget }) {
       dispatch({ type: 'replace', draft: committed.current, selection: [] });
       return;
     }
-    const paths = trimDuplicateTail(current.paths, index);
-    if ((paths[index]?.nodes.length ?? 0) < 2) {
-      // Il contorno è l'unica cosa che la Penna aveva aggiunto: si torna all'ultimo disegno concluso
-      dispatch({ type: 'replace', draft: committed.current, selection: [] });
+    let paths = trimDuplicateTail(current.paths, index);
+    // Un contorno di un solo nodo non descrive nulla: sparisce (un passo, che Annulla riporta)
+    if ((paths[index]?.nodes.length ?? 0) < 2) paths = paths.filter((_, i) => i !== index);
+    // Nulla da togliere e l'ultimo nodo è già un passo: si esce dalla Penna senza un passo in più
+    if (paths.length === current.paths.length && paths.every((c, i) => c === current.paths[i]) && current.paths === committed.current.paths) {
+      dispatch({ type: 'replace', draft: current, selection: [] });
       return;
     }
     commitDraft({ ...current, paths }, []);
@@ -444,9 +458,13 @@ function Editor({ target }: { target: ProfileTarget }) {
     const { draft: current, pen: index } = stateRef.current;
     if (index === null) return;
     const paths = dropLastNode(current.paths, index);
-    // Se il contorno sparisce la Penna non aveva aggiunto altro: si torna all'ultimo disegno concluso
-    if (paths.length < current.paths.length) dispatch({ type: 'replace', draft: committed.current, selection: [] });
-    else dispatch({ type: 'paths', paths, selection: [], pen: index });
+    // Un passo della cronologia, come ogni nodo della Penna; se il contorno sparisce la Penna non ha più nulla da continuare
+    const gone = paths.length < current.paths.length;
+    const next = { ...current, paths };
+    settle();
+    history.current!.push(next);
+    committed.current = next;
+    dispatch({ type: 'replace', draft: next, selection: [], pen: gone ? null : index });
   };
   const changeTool = (next: Tool) => {
     finishPen();
@@ -681,6 +699,7 @@ function Editor({ target }: { target: ProfileTarget }) {
                     }}
                     onPenClose={closePen}
                     onPenFinish={finishPen}
+                    onPenStep={penStep}
                     onPenLimit={() => notify.info('Limite raggiunto: al massimo 500 nodi per contorno e 100 contorni. Termina il contorno (Invio) o chiudilo')}
                   />
                 </div>
@@ -751,7 +770,7 @@ function Editor({ target }: { target: ProfileTarget }) {
               onSym={planState.setSym}
               onToParams={planState.toParams}
               onReset={planState.reset}
-              onNodeKind={(kind) => planSelected && planState.editPaths(setNodeKind(planShown.paths, planSelected, kind), 'commit', planState.selection)}
+              onNodeKind={(kind) => planState.selection.length && planState.editPaths(setNodesKind(planShown.paths, planState.selection, kind), 'commit', planState.selection)}
               onCoordinate={(axis, value) => {
                 const p = planSelected && planShown.paths[0]?.nodes[planSelected.node].p;
                 if (planSelected && p) planState.editPaths(moveNodes(planShown.paths, [planSelected], axis === 0 ? [value - p[0], 0] : [0, value - p[1]]), 'commit', planState.selection);
@@ -777,7 +796,7 @@ function Editor({ target }: { target: ProfileTarget }) {
               onExtrusion={(mode) => commitDraft({ ...draft, extrusion: mode })}
               onLive={liveDraft}
               onPatch={(patch) => commitDraft({ ...draft, ...patch })}
-              onKind={(kind: PathNode['kind']) => selected && commitPaths(setNodeKind(draft.paths, selected, kind), selection)}
+              onKind={(kind: PathNode['kind']) => selection.length && commitPaths(setNodesKind(draft.paths, selection, kind), selection)}
               onCoordinate={(axis, value) => {
                 const p = selected && draft.paths[selected.path].nodes[selected.node].p;
                 if (selected && p) commitPaths(moveNodes(draft.paths, [selected], axis === 0 ? [value - p[0], 0] : [0, value - p[1]]), selection);

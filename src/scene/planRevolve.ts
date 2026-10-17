@@ -65,12 +65,71 @@ export interface PlanPrep {
   exact: boolean;
 }
 
-/** Prepara la sagoma (poligono antiorario) con `K` raggi uniformi più quelli degli angoli `feats` e `M` campioni per raggio. */
-export function preparePlan(pts: Vec2[], feats: number[], K: number, M: number, size: number, exact = false): PlanPrep {
-  const all = Array.from({ length: K }, (_, i) => (i * TAU) / K).concat(feats.map((a) => ((a % TAU) + TAU) % TAU)).sort((a, b) => a - b);
+/**
+ * Prepara la sagoma (poligono antiorario) con `K` raggi uniformi e `M` campioni per raggio. I raggi degli angoli `feats`
+ * (i nodi della sagoma) prendono il posto del raggio uniforme più vicino, invece di aggiungersi accanto: due raggi quasi
+ * coincidenti farebbero triangoli lunghissimi e sottili, che la vista ombreggia con righe bianche. Così due raggi distano
+ * almeno mezzo passo (salvo nodi più fitti del passo, che si aggiungono).
+ */
+/** Raggi al massimo, anche con l'infittimento: protegge kernel e codice da sagome con molte curve strette. */
+const MAX_RAYS = 1440;
+
+/**
+ * Infittisce i raggi dove la sagoma curva: tra due raggi vicini si aggiunge quello di mezzo finché il punto del bordo a
+ * metà dista dalla corda meno di `tol` (mm). I lati dritti non ne ricevono, gli spigoli restano sui raggi dei nodi.
+ */
+function refineRays(pts: Vec2[], th: number[], tol: number): number[] {
+  let list = th.slice();
+  for (let pass = 0; pass < 6 && list.length < MAX_RAYS; pass++) {
+    const next: number[] = [];
+    let added = 0;
+    for (let k = 0; k < list.length; k++) {
+      const a = list[k];
+      const b = k + 1 < list.length ? list[k + 1] : list[0] + TAU;
+      next.push(a);
+      const m = (a + b) / 2;
+      const ra = radialAt(pts, a);
+      const rb = radialAt(pts, b);
+      const rm = radialAt(pts, m);
+      const A: Vec2 = [ra * Math.cos(a), ra * Math.sin(a)];
+      const B: Vec2 = [rb * Math.cos(b), rb * Math.sin(b)];
+      const P: Vec2 = [rm * Math.cos(m), rm * Math.sin(m)];
+      const len = Math.hypot(B[0] - A[0], B[1] - A[1]);
+      const dev = len > 1e-12 ? Math.abs(cross(B[0] - A[0], B[1] - A[1], P[0] - A[0], P[1] - A[1])) / len : 0;
+      if (dev > tol && list.length + added < MAX_RAYS) {
+        next.push(m % TAU);
+        added++;
+      }
+    }
+    list = next.sort((x, y) => x - y);
+    if (!added) break;
+  }
+  return list;
+}
+
+export function preparePlan(pts: Vec2[], feats: number[], K: number, M: number, size: number, exact = false, refineTol = 0): PlanPrep {
+  const step = TAU / K;
+  const grid = Array.from({ length: K }, (_, i) => i * step);
+  const taken = new Uint8Array(K);
+  const extra: number[] = [];
+  for (const raw of feats) {
+    const a = ((raw % TAU) + TAU) % TAU;
+    const i = Math.round(a / step) % K;
+    if (!taken[i]) {
+      grid[i] = a;
+      taken[i] = 1;
+    } else extra.push(a);
+  }
+  const all = grid.concat(extra).sort((a, b) => a - b);
   const th: number[] = [];
   for (const a of all) if (!th.length || a - th[th.length - 1] > 1e-5) th.push(a);
   if (th.length > 1 && th[0] + TAU - th[th.length - 1] < 1e-5) th.pop();
+  // Con una tolleranza (il kernel) i raggi si infittiscono dove la sagoma curva
+  if (refineTol > 0 && !exact && pts.length >= 3) {
+    const rays = refineRays(pts, th, refineTol);
+    th.length = 0;
+    th.push(...rays);
+  }
   const n = th.length;
   const R = new Float64Array(n);
   const cos = new Float64Array(n);

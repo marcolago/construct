@@ -77,6 +77,8 @@ interface Props {
   onPenFinish: () => void;
   /** Penna: raggiunto il limite di nodi o di contorni. */
   onPenLimit: () => void;
+  /** Penna: un nodo aggiunto (al rilascio del mouse) è un passo della cronologia; il contorno resta in corso. */
+  onPenStep?: (paths: PathContour[]) => void;
   /** Forme base: raggiunto il limite di contorni. */
   onShapeLimit: () => void;
   /** Forme base: il gesto è finito senza una forma dopo averne mostrata una in anteprima; il disegno torna all'ultimo concluso. */
@@ -165,7 +167,7 @@ type Drag =
   | { type: 'resume'; ref: HandleRef; current: number; close: boolean; base: PathContour[]; last: PathContour[]; frozen: PathContour[]; to: Vec2 | null; sx: number; sy: number; moved: boolean; alt: boolean }
   // Penna: lo stato di partenza serve a ricalcolare il nodo (e la sua maniglia) a ogni movimento del trascinamento
   // Alt è momentaneo: `keepIn` è la maniglia in entrata che il nodo aveva quando è stato premuto, `out` la maniglia trascinata
-  | { type: 'pen'; base: PathContour[]; current: number | null; p: Vec2; sx: number; sy: number; moved: boolean; alt: boolean; keepIn: Vec2 | undefined; out: Vec2 | undefined };
+  | { type: 'pen'; base: PathContour[]; current: number | null; p: Vec2; sx: number; sy: number; moved: boolean; alt: boolean; keepIn: Vec2 | undefined; out: Vec2 | undefined; last: PathContour[] };
 
 /**
  * Disegno 2D del profilo (SVG) con lo strumento Seleziona: clic, Maiusc, riquadro, trascinamento di nodi e maniglie
@@ -175,7 +177,7 @@ type Drag =
  * zoom sul puntatore, Spazio o tasto centrale per la panoramica. Le modifiche passano da `onLive` (durante il gesto) e
  * `onCommit` (al rilascio): un gesto è un solo passo della cronologia.
  */
-export function DrawingCanvas({ paths, rotate, label, closedOnly, onClosedOnly, insertOverride, underlay, fitBox, section, onSection, refit, contours, crossings, holes, selection, grid, spaceDown, onLive, onCommit, onSelect, tool, flip, onFlip, pen, onPenLive, onPenResume, onPenClose, onPenFinish, onPenLimit, onShapeLimit, onShapeCancel, fitRequest, sides }: Props) {
+export function DrawingCanvas({ paths, rotate, label, closedOnly, onClosedOnly, insertOverride, underlay, fitBox, section, onSection, refit, contours, crossings, holes, selection, grid, spaceDown, onLive, onCommit, onSelect, tool, flip, onFlip, pen, onPenLive, onPenResume, onPenClose, onPenFinish, onPenLimit, onPenStep, onShapeLimit, onShapeCancel, fitRequest, sides }: Props) {
   const wrap = useRef<HTMLDivElement>(null);
   const svg = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState({ w: 600, h: 400 });
@@ -493,7 +495,7 @@ export function DrawingCanvas({ paths, rotate, label, closedOnly, onClosedOnly, 
         return;
       }
       onPenLive(added.paths, added.current, [added.node]);
-      drag.current = { type: 'pen', base: paths, current: activePen ? pen : null, p, sx, sy, moved: false, alt: false, keepIn: undefined, out: undefined };
+      drag.current = { type: 'pen', base: paths, current: activePen ? pen : null, p, sx, sy, moved: false, alt: false, keepIn: undefined, out: undefined, last: added.paths };
       // Alt già premuto prima del nodo: nessuna maniglia in entrata da conservare
       if (e.altKey) setAlt(drag.current, true);
       return;
@@ -535,7 +537,9 @@ export function DrawingCanvas({ paths, rotate, label, closedOnly, onClosedOnly, 
   /** Rifà il nodo della Penna dallo stato di partenza: con Alt è uno spigolo (in conservata, out al puntatore), senza è simmetrico. */
   const applyPen = (d: Extract<Drag, { type: 'pen' }>) => {
     const next = appendPenNode(d.base, d.current, d.p, d.out, d.alt ? { keepIn: d.keepIn } : undefined);
-    if (next) onPenLive(next.paths, next.current, [next.node]);
+    if (!next) return;
+    d.last = next.paths;
+    onPenLive(next.paths, next.current, [next.node]);
   };
   /** Rifà la maniglia trascinata: con Alt dallo stato in cui è stato premuto (spigolo, l'altra resta), senza dallo stato di partenza (il tipo di prima). */
   const applyResume = (d: Extract<Drag, { type: 'resume' }>) => {
@@ -692,7 +696,10 @@ export function DrawingCanvas({ paths, rotate, label, closedOnly, onClosedOnly, 
       setSectionHot(false);
       return;
     }
-    // Penna: niente da fare al rilascio, il passo di cronologia lo fa il termine del contorno
+    // Penna: il nodo appena aggiunto (con la maniglia del trascinamento) è un passo della cronologia; anche la ripresa
+    // di un estremo con una maniglia disegnata
+    if (d.type === 'pen') onPenStep?.(d.last);
+    else if (d.type === 'resume' && !d.close && d.moved) onPenStep?.(d.last);
     if (d.type === 'node') {
       if (d.moved) onCommit(d.last, d.refs);
       else if (d.collapse) onSelect([d.collapse]);

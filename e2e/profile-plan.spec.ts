@@ -114,12 +114,17 @@ test('equidistante: la parete resta di 2 mm anche con lo squircle; omotetico: ca
   await expect.poll(() => wallMax(page)).toBeGreaterThan(2.2);
 });
 
-test('l\'anteprima 3D segue la sagoma: più triangoli dello squircle che del cerchio', async ({ page }) => {
+test('l\'anteprima 3D segue la sagoma: la stella ha un volume diverso dal cerchio', async ({ page }) => {
   await openCup(page, 'Sagoma');
-  await expect(editor(page).getByLabel('Anteprima 3D')).toHaveAttribute('data-state', 'ready');
-  const circle = await triangles(page);
+  const card = editor(page).getByLabel('Anteprima 3D');
+  await expect(card).toHaveAttribute('data-state', 'ready');
+  const volume = async () => Number(await card.getAttribute('data-volume'));
+  await expect.poll(volume).toBeGreaterThan(0);
+  const circle = await volume();
+  // Con gli stessi segmenti la stella ha tanti raggi quanti il cerchio (e spesso gli stessi triangoli): cambia il volume
   await preset(page, 'Stella');
-  await expect.poll(() => triangles(page)).not.toBe(circle);
+  await expect.poll(async () => Math.abs((await volume()) / circle - 1)).toBeGreaterThan(0.02);
+  expect(await triangles(page)).toBeGreaterThan(0);
 });
 
 test('il primo ritocco rompe la forma parametrica; Torna ai parametri e Reset la riportano indietro', async ({ page }) => {

@@ -4,9 +4,10 @@ import type { ManifoldToplevel } from 'manifold-3d';
 import { Evaluator } from './evaluate';
 import { shape2dDefaults } from '../scene/defaults';
 import { sceneToOpenScad } from '../codegen/openscad';
-import { DEFAULT_PLAN } from '../scene/planShape';
+import { DEFAULT_PLAN, featureAngles, planOutline, planPaths, planTolerance } from '../scene/planShape';
 import type { PlanDraft } from '../scene/planShape';
-import { planSolid } from '../scene/planSolid';
+import { planChordTolerance, planSolid } from '../scene/planSolid';
+import { preparePlan } from '../scene/planRevolve';
 import type { PathContour, Scene, Shape2DNode, Vec2 } from '../scene/types';
 
 let wasm: ManifoldToplevel;
@@ -66,6 +67,68 @@ describe('rotazione lungo una sagoma nel kernel', () => {
     const m = mesh(cup({ plan: bad } as Partial<Shape2DNode>));
     expect(performance.now() - t).toBeLessThan(5000);
     expect(m.status).toBe('NoError');
+  });
+});
+
+describe('raggi e segmenti', () => {
+  /** Angolo minimo (gradi) tra i triangoli della mesh. */
+  const minAngle = (m: { positions: Float32Array; indices: Uint32Array }) => {
+    let min = 180;
+    const P = m.positions;
+    const I = m.indices;
+    for (let t = 0; t < I.length; t += 3) {
+      const v = [0, 1, 2].map((j) => [P[I[t + j] * 3], P[I[t + j] * 3 + 1], P[I[t + j] * 3 + 2]]);
+      for (let j = 0; j < 3; j++) {
+        const [a, b, c] = [v[j], v[(j + 1) % 3], v[(j + 2) % 3]];
+        const u = b.map((x, i) => x - a[i]);
+        const w = c.map((x, i) => x - a[i]);
+        const cos = (u[0] * w[0] + u[1] * w[1] + u[2] * w[2]) / (Math.hypot(...u) * Math.hypot(...w));
+        min = Math.min(min, (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI);
+      }
+    }
+    return min;
+  };
+
+  it('i raggi dei nodi prendono il posto di quelli uniformi: nessun triangolo sottilissimo (le righe bianche nella vista)', () => {
+    const m = planSolid(cup({ plan: squircle } as Partial<Shape2DNode>))!.mesh;
+    expect(minAngle(m)).toBeGreaterThan(1);
+  });
+
+  it('dove la sagoma curva si aggiungono raggi: due facce vicine piegano meno di 20° (la vista non vi disegna spigoli)', () => {
+    const { paths } = planPaths(squircle, 30);
+    const outline = planOutline(paths, planTolerance(30));
+    const plain = preparePlan(outline, featureAngles(paths), 64, 40, 30);
+    const fine = preparePlan(outline, featureAngles(paths), 64, 40, 30, false, planChordTolerance(64, 30));
+    const maxTurn = (prep: ReturnType<typeof preparePlan>) => {
+      const p = Array.from({ length: prep.K }, (_, k) => [prep.R[k] * prep.cos[k], prep.R[k] * prep.sin[k]]);
+      let max = 0;
+      for (let k = 0; k < p.length; k++) {
+        const [a, b, c] = [p[(k + p.length - 1) % p.length], p[k], p[(k + 1) % p.length]];
+        const t1 = Math.atan2(b[1] - a[1], b[0] - a[0]);
+        const t2 = Math.atan2(c[1] - b[1], c[0] - b[0]);
+        let d = Math.abs(t2 - t1);
+        if (d > Math.PI) d = 2 * Math.PI - d;
+        max = Math.max(max, (d * 180) / Math.PI);
+      }
+      return max;
+    };
+    expect(maxTurn(plain)).toBeGreaterThan(20);
+    expect(maxTurn(fine)).toBeLessThan(20);
+    expect(fine.K).toBeGreaterThan(plain.K);
+  });
+
+  it('lo slider Segmenti cambia la mesh anche con la sagoma', () => {
+    const few = planSolid(cup({ plan: squircle, revolveSegments: 16 } as Partial<Shape2DNode>))!.mesh;
+    const many = planSolid(cup({ plan: squircle, revolveSegments: 128 } as Partial<Shape2DNode>))!.mesh;
+    expect(few.points).toBeLessThan(many.points);
+    expect(few.points).toBeGreaterThanOrEqual(16);
+  });
+
+  it('con pochi segmenti gli spigoli vivi della sagoma restano: il quadrato ha lo stesso volume con 8 o con 128', () => {
+    const square: PlanDraft = { ...DEFAULT_PLAN, kind: 'rect', base: 'rect', cornerR: 0 };
+    const v8 = mesh(cup({ plan: square, revolveSegments: 8 } as Partial<Shape2DNode>)).volume;
+    const v128 = mesh(cup({ plan: square, revolveSegments: 128 } as Partial<Shape2DNode>)).volume;
+    expect(v8).toBeCloseTo(v128, 0);
   });
 });
 

@@ -83,7 +83,23 @@ export function NodeSection({ paths, selection, onKind, onCoordinate, onHandle }
           })}
         </>
       ) : (
-        <p className="profile-editor__hint">{selection.length > 1 ? `${selection.length} nodi selezionati.` : 'Seleziona un nodo per leggerne e cambiarne le coordinate. Doppio clic su un nodo: cambia il tipo.'}</p>
+        selection.length > 1 ? (
+          <>
+            <p className="profile-editor__hint">{selection.length} nodi selezionati: il tipo vale per tutti.</p>
+            <div className="profile-editor__segmented" role="group" aria-label="Tipo dei nodi selezionati">
+              {KINDS.map((k) => {
+                const kinds = selection.map((r) => paths[r.path]?.nodes[r.node]?.kind);
+                return (
+                  <button key={k.kind} type="button" aria-pressed={kinds.every((x) => x === k.kind)} onClick={() => onKind(k.kind)}>
+                    <span aria-hidden="true">{k.symbol}</span> {k.label}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <p className="profile-editor__hint">Seleziona un nodo per leggerne e cambiarne le coordinate. Doppio clic su un nodo: cambia il tipo.</p>
+        )
       )}
     </section>
   );

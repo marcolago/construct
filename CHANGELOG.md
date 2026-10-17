@@ -29,8 +29,14 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 - **Con OK la sagoma si salva nel Profilo** (campo `plan`, i progetti già salvati restano validi) e il solido della scena segue profilo, sagoma e angolo: il kernel costruisce la mesh ad anelli (vertici uniti per posizione, verificata come varietà da manifold) e il codice OpenSCAD scrive lo stesso solido come `polyhedron`, con la sagoma in un commento `construct:plan`. L'anteprima 3D della modale è il kernel vero anche con la sagoma.
 - **Angolo di rotazione con qualunque sagoma**: il solido si taglia con un settore i cui piani passano per l'asse agli angoli 0° e all'angolo scelto, come per un giro circolare (360° chiuso, 180° metà, 90° un quarto).
 - Anteprima 3D: gli **anelli della quota di sezione** nel colore della quota, anche con il giro parziale.
+- **Segmenti con la sagoma**: lo slider Segmenti vale anche per le sagome non circolari, come `$fn` per il cerchio. I raggi passano sempre per i nodi della sagoma (gli spigoli vivi restano vivi) e dove la sagoma curva se ne aggiungono finché l'errore di corda è quello di un cerchio dello stesso raggio con gli stessi segmenti.
+- **Tipo di più nodi insieme**: con più nodi selezionati (nel profilo e nella sagoma) «Punto selezionato» mostra Spigolo, Liscio e Simmetrico per tutti; un clic li cambia in un solo passo di Annulla, e il pulsante è acceso se tutti i nodi hanno già quel tipo.
+- **Penna, un passo per punto**: ogni punto aggiunto con la Penna (anche con la maniglia trascinata), la chiusura e Backspace sono passi della cronologia della modale. A metà contorno ⌘Z toglie l'ultimo punto e la Penna continua lo stesso contorno, ⇧⌘Z lo rimette (prima ⌘Z toglieva tutto il contorno in corso).
 - Modale del Profilo: **Annulla** e **Ripeti** (icone a destra degli strumenti, ⌘Z e ⌘⇧Z) con una cronologia per disegno; la barra degli strumenti sta ora sopra il disegno invece che sovrapposta.
 - Nuove funzioni pure e testate: `src/scene/planShape.ts` (forme e rottura), `planRevolve.ts` (anelli, mesh, sezione, spessore), `planSolid.ts` (solido condiviso da kernel e codice OpenSCAD) e `src/ui/ProfileEditor/planEdit.ts` (simmetria, eliminazione e inserimento).
+
+### Corretto
+- Righe bianche sul solido ruotato lungo una sagoma: i raggi dei nodi cadevano a pochi centesimi di grado da quelli uniformi e facevano triangoli lunghissimi e sottili (angolo minimo 0,11°), mal ombreggiati; ora il raggio di un nodo sostituisce quello uniforme più vicino. Sugli angoli arrotondati, con pochi raggi, due facce vicine piegavano più di 20° e la vista vi disegnava gli spigoli di selezione; ora lì i raggi si infittiscono.
 
 ### Modificato
 - Pulsante **Inverti asse di simmetria**: l'icona ha l'asse verticale (in lucide 1.52 `FlipHorizontal2` è diventata un'icona con l'asse orizzontale).
