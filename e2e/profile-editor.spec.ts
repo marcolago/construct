@@ -1614,7 +1614,8 @@ test('Rettangolo (R): trascinando dal centro nasce un contorno di 4 spigoli sele
   await openNewDrawing(page);
   await page.keyboard.press('r');
   await expect(toolButton(page, 'Rettangolo')).toHaveAttribute('aria-pressed', 'true');
-  await drag(page, await at(page, -150, -20), await at(page, -50, 60));
+  // Larghezza e profondità ben diverse: con l'aggancio alla griglia (5 mm a questo zoom) il rettangolo non deve diventare un quadrato per caso
+  await drag(page, await at(page, -150, -20), await at(page, -30, 30));
   await expect(nodes(page)).toHaveCount(4);
   await expect(editor(page).locator('[data-path="0"]')).toContainText('Chiuso');
   // Il contorno nuovo resta selezionato e lo strumento resta attivo

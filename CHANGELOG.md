@@ -18,6 +18,21 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.70.0] - 2026-10-17
+
+### Aggiunto
+- **Sagoma di rotazione del Profilo (sperimentale, Impostazioni > Funzioni sperimentali)**: nella modale del Profilo rotazionale compare il selettore **Profilo · Sagoma · Entrambe**. La sagoma è la forma che il solido ha visto dall'alto: cerchio o ellisse, poligono con 3-16 lati, rettangolo, stella, o forma libera, con raggio degli angoli ad arco o **continuo** (stile Apple), scale X e Y e rotazione. Le forme parametriche sono contorni di Bézier, quindi si modificano con gli stessi strumenti del profilo: Seleziona sposta nodi e maniglie e la Penna inserisce nodi sulla curva; il primo ritocco rompe la forma in una forma libera (un solo passo annullabile). La sagoma resta sempre chiusa (togliere nodi si ferma a tre).
+- Due modelli per ruotare lungo la sagoma: **equidistante** (pareti di spessore costante, angoli che diventano vivi verso il centro) e **omotetico** (la sagoma si riduce in scala), e due adattamenti: la sagoma segue il raggio del profilo oppure il profilo si scala in X alla larghezza della sagoma.
+- Forma libera con **simmetria** verticale, orizzontale o a quattro quarti: spostando, inserendo o togliendo un nodo si muovono anche i suoi speculari, e i nodi sugli assi restano sugli assi.
+- **Quota di sezione**: una linea ciano (colore proprio, diverso da quello dell'asse di rotazione) con una pastiglia «↕ quota z = … mm» da trascinare nel profilo con Seleziona, e un cursore **Quota** con la casella **Mostra la sezione** nella colonna di destra, sia della sagoma sia del profilo. La sagoma mostra l'ingombro del profilo (area più scura), i livelli a passo costante, la sezione alla quota con la sua etichetta, e le Misure riportano lo spessore della parete.
+- Pulsanti **Reset sagoma** e **Torna ai parametri**.
+- L'anteprima 3D della modale mostra la sagoma. Con OK la sagoma non viene ancora salvata: il kernel e il codice OpenSCAD non la conoscono.
+- Modale del Profilo: **Annulla** e **Ripeti** (icone a destra degli strumenti, ⌘Z e ⌘⇧Z) con una cronologia per disegno; la barra degli strumenti sta ora sopra il disegno invece che sovrapposta.
+- Nuove funzioni pure e testate: `src/scene/planShape.ts` (forme e rottura), `planRevolve.ts` (anelli, mesh, sezione, spessore) e `src/ui/ProfileEditor/planEdit.ts` (simmetria, eliminazione e inserimento).
+
+### Modificato
+- `DrawingCanvas` riceve i contorni invece del `Draft` e ha il sottofondo, la quota di sezione e la modalità «solo contorni chiusi» come opzioni; «Punto selezionato» e «Griglia e snap» sono componenti condivisi tra profilo e sagoma.
+
 ## [0.69.1] - 2026-10-17
 
 ### Aggiunto

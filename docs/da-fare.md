@@ -170,6 +170,20 @@ Chiusi dalla fase 2: modale di disegno con Penna e Seleziona, anteprima 3D, voce
 - **Fori**: `contourHoles` usa il primo punto campionato di ogni contorno; se due contorni si toccano proprio lì l'esito è ambiguo.
 - **Chiusura dei sottotracciati SVG**: la tolleranza di 1e-4 della diagonale guarda solo i nodi e non le maniglie; una "goccia" fatta di una sola curva chiusa con un piccolo errore resta di 2 nodi.
 
+## Sagoma di rotazione: punti aperti dalla prima versione (0.70.0)
+
+Studio e prototipo: `docs/prototipi/profilo-sagoma.html` (geometria) e la modale del Profilo con la funzione sperimentale (interfaccia). Restano:
+
+- **Kernel e OpenSCAD**: la sagoma vive solo nella modale. Servono `Manifold.revolve` più `warpBatch` (o una mesh a mano) nel kernel, un `polyhedron` con commento `construct:plan` per il codice, i campi nel nodo `path` e la lettura dei file; prima uno spike di manifold sulla validità dei solidi con anelli collassati (angoli vivi, creste).
+- **Creste**: nel prototipo le facce di un bordo inclinato oltre il raggio inscritto (cupola su un rettangolo) sono a ventaglio; nel kernel vanno costruite piane, o la sagoma va tagliata al raggio inscritto.
+- **Forme non stellate**: oggi si rifiutano con un avviso e si tiene l'ultima valida; il campo di distanza completo le accetterebbe ma è lento.
+- **Larghezza e spessori**: con «Profilo segue sagoma» e il modello equidistante le pareti si scalano con la larghezza (2 mm diventano 3,6 mm a ×1,79): serve una variante a spessori fissi in mm?
+- **Bozza**: la sagoma non entra nella bozza di `localStorage` e si perde alla chiusura della modale.
+- **Cronologia per vista**: Annulla agisce sul disegno su cui si è lavorato per ultimo; con due disegni visibili non c'è un passo comune.
+- **Angolo parziale e profili oltre l'asse** con la sagoma non sono definiti.
+- **Gizmo e Proprietà** con una sagoma non circolare: larghezza e profondità del nodo non descrivono ancora la forma.
+- **Mesh dell'anteprima**: costruita in TypeScript dagli anelli; l'angolo continuo è una cubica, non l'algoritmo esatto di Figma.
+
 ## Font non presenti su Google Fonts
 
 Dalla cartella `C:\Users\maurizio.MAVIDA\Dropbox\openscad\fonts` (0.30.0) sono entrati nel catalogo i font che si trovano su Google Fonts (Bilbo Swash Caps, Boogaloo, Calistoga, Dancing Script Regular, Marck Script, Meow Script, Modak, Niconne, Playfair Display Regular, Roboto Black, Sriracha; Pacifico c'era già). Questi no, perché non risultano su Google Fonts:
