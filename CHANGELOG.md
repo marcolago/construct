@@ -18,6 +18,18 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 
 ## [Non rilasciato]
 
+## [0.69.1] - 2026-10-17
+
+### Aggiunto
+- Documentazione: **viti, dadi e fori filettati ISO** nello studio delle deformazioni (`docs/studio-deformazioni.md`, sezione 11 e Appendice B). Primitiva parametrica **Vite** (M3-M12, passo grosso) con quattro teste (cilindrica ISO 4762, bombata ISO 7380, esagonale ISO 4017, svasata ISO 10642) e cinque impronte (nessuna, esagono incassato, taglio, Phillips, Torx); il **foro filettato** è la variante `tapped` della stessa primitiva, che nasce con il modo Foro, più foro passante ISO 273, sede della testa e **Madrevite** (ISO 4032) con la sua sede. Confronto con Fusion 360, SolidWorks, FreeCAD, Onshape, BOSL2, rcolyer, NopSCADlib, Tinkercad, Shapr3D e i generatori online, con il livello di verifica di ogni fonte; modello dati, geometria, codice OpenSCAD con il ritorno dall'import, interfaccia, stampa FDM, rischi e domande aperte. Tabelle ISO copiabili con il livello di verifica di ogni valore (le norme non sono state lette direttamente: cataloghi che le riproducono) e le lacune dichiarate (ISO 15065, ISO 4753, inserti a caldo, PH4, T45, T50, T55).
+- Prototipo: terza scheda **Viti** in `docs/prototipi/deformazioni.html` (vite, foro filettato, foro passante e madrevite, con sezione e piastra) calcolata da `manifold-3d` 3.5.4 vero; sei schermate `docs/images/viti-*.png` e il file delle misure `docs/prototipi/misure-viti.txt`. Misurato su M3-M12: tutte le combinazioni valide con stato `NoError`, una componente e genere atteso; il costo sta nel filetto (una M3 × 60 pesa 93 mila triangoli e circa un secondo), non nella testa o nell'impronta; vite e foro non si compenetrano con gioco positivo.
+- `docs/fonti.md`: sezione su viti, dadi e fori filettati, con le fonti lette direttamente separate da quelle solo da anteprima.
+
+### Modificato
+- Studio delle deformazioni: la **fase 4** diventa "Viti e fori filettati" (4a filetto, gambo e foro filettato; 4b teste e impronte; 4c Madrevite e sede del dado) e la molla resta un preset dell'elica; la domanda aperta «preset o nodo» è chiusa a favore del nodo.
+- Studio delle deformazioni, **correzioni per le versioni 0.67.0 e 0.68.0**: i segmenti di `revolve` per la rotazione parziale sono già allineati a OpenSCAD (l'Appendice A lo registra come risolto); il tetto di 360 strati della torsione lineare è misurato e non è un difetto, quindi il budget di triangoli riguarda solo il nuovo gruppo Deforma; il file di progetto è alla versione 7 e l'autosalvataggio è versionato (serve la 8 per i tipi nuovi); «Dado» è il solido a facce, quindi il dado a vite si chiama Madrevite. Riferimenti `file:riga` riverificati.
+- `docs/da-fare.md`: punto 7 con la nuova fase 4; precisazione sulla riga della torsione oltre 720°; intestazione aggiornata.
+
 ## [0.69.0] - 2026-10-17
 
 ### Aggiunto
@@ -29,6 +41,7 @@ I messaggi di commit seguono i [Conventional Commits](https://www.conventionalco
 ### Modificato
 - La chiusura di un sottotracciato SVG usa una tolleranza relativa alla misura del disegno: le coordinate relative arrotondate dei file di Inkscape e Illustrator non lasciano più un nodo doppio.
 - `unitScale` di `src/import/svg.ts` è esportata; il codice OpenSCAD, il kernel e il formato del file di progetto non cambiano.
+
 
 ## [0.68.0] - 2026-10-16
 

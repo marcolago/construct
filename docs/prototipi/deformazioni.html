@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<title>Deformazioni ed elica</title>
+<title>Deformazioni, elica e viti</title>
 </head>
 <body>
 <style>
@@ -107,7 +107,12 @@ input[type="range"] { width: 100%; accent-color: var(--accent); min-width: 0; ma
 .stat b { color: var(--text); font-weight: 600; }
 .stat .ok { color: var(--ok); } .stat .bad { color: var(--danger); } .stat .warn { color: var(--warn); }
 
+.pair { display: flex; gap: 6px; min-width: 0; }
+.pair select { flex: 1 1 auto; min-width: 0; }
+.pair input[type="number"] { flex: none; }
+
 @media (max-width: 900px) {
+  .pair input[type="number"] { width: 84px; }
   .frame { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 56vh auto auto; grid-template-areas: "tabs" "view" "panel" "stat"; height: auto; }
   .panel { border-left: 0; border-top: 1px solid var(--border); overflow: visible; }
   .row, .row--num { grid-template-columns: 96px minmax(0, 1fr); }
@@ -118,9 +123,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); min-width: 0; ma
 <div class="page">
   <header class="top">
     <div class="top__titles">
-      <h1>Deformazioni ed elica</h1>
-      <p>Prototipo per lo studio <code>docs/studio-deformazioni.md</code>: due schede, <b>Elica</b> (rotazione con passo) e <b>Deforma</b> (Torsione, Rastremazione, Piega).
-        La geometria è calcolata da <code>manifold-3d</code> 3.5.4, la stessa versione dell'app, caricata dalla rete; le funzioni di calcolo sono pure e pronte da portare in <code>src/kernel/deform.ts</code>. L'interfaccia, invece, è solo un disegno.</p>
+      <h1>Deformazioni, elica e viti</h1>
+      <p>Prototipo per lo studio <code>docs/studio-deformazioni.md</code>: tre schede, <b>Elica</b> (rotazione con passo), <b>Deforma</b> (Torsione, Rastremazione, Piega) e <b>Viti</b> (viti, fori filettati, fori passanti e madreviti ISO metrici con scelta di testa e impronta).
+        La geometria è calcolata da <code>manifold-3d</code> 3.5.4, la stessa versione dell'app, caricata dalla rete; le funzioni di calcolo sono pure e pronte da portare nel kernel (<code>src/kernel/deform.ts</code> e un modulo per la viteria). L'interfaccia, invece, è solo un disegno.</p>
     </div>
     <label class="lbl">Tema
       <select id="theme" aria-label="Tema">
@@ -134,6 +139,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); min-width: 0; ma
       <div class="seg" role="group" aria-label="Scheda" data-k="tab">
         <button type="button" data-v="helix" aria-pressed="true">Elica</button>
         <button type="button" data-v="def" aria-pressed="false">Deforma</button>
+        <button type="button" data-v="screw" aria-pressed="false">Viti</button>
       </div>
       <small id="tabNote"></small>
     </div>
@@ -221,6 +227,56 @@ input[type="range"] { width: 100%; accent-color: var(--accent); min-width: 0; ma
           <label class="chk"><input type="checkbox" data-k="d.guides"> Mostra asse e piani dei limiti</label>
         </div>
         <div class="foot"><button type="button" class="btn" id="dCancel">Annulla</button><button type="button" class="btn btn--primary" id="dOk">OK</button></div>
+      </div>
+
+      <!-- ============ VITI ============ -->
+      <div id="pScrew" hidden>
+        <h2>Viti e fori <span>Viteria ISO metrica, passo grosso</span></h2>
+        <div class="sec">
+          <div class="row"><label for="sVar">Tipo</label>
+            <select id="sVar" data-k="s.variant"><option value="screw">Vite</option><option value="tapped">Foro filettato</option><option value="clearance">Foro passante</option><option value="nut">Madrevite</option></select></div>
+          <div class="row"><label for="sSize">Misura</label>
+            <select id="sSize" data-k="s.size"><option value="3">M3 (passo 0,5)</option><option value="4">M4 (0,7)</option><option value="5">M5 (0,8)</option><option value="6">M6 (1,0)</option><option value="8">M8 (1,25)</option><option value="10">M10 (1,5)</option><option value="12">M12 (1,75)</option></select></div>
+          <div class="row" data-show="s.variant=screw|tapped|clearance"><label for="sLenSel">Lunghezza</label>
+            <div class="pair">
+              <select id="sLenSel" data-k="s.length" aria-label="Lunghezza in serie normalizzata"><option value="6">6</option><option value="8">8</option><option value="10">10</option><option value="12">12</option><option value="16">16</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="50">50</option><option value="60">60</option><option value="">Altra</option></select>
+              <input type="number" min="2" max="120" step="1" data-k="s.length" aria-label="Lunghezza in mm">
+            </div></div>
+        </div>
+        <div class="sec" data-show="s.variant=screw|tapped|clearance">
+          <h3>Testa</h3>
+          <div class="row"><label for="sHead">Testa</label>
+            <select id="sHead" data-k="s.head"><option value="cylinder">Cilindrica (ISO 4762)</option><option value="button">Bombata (ISO 7380)</option><option value="hex">Esagonale (ISO 4017)</option><option value="countersunk">Svasata 90° (ISO 10642)</option></select></div>
+          <div class="row"><label for="sDrive">Impronta</label>
+            <select id="sDrive" data-k="s.drive"><option value="none">Nessuna</option><option value="hex">Esagono incassato</option><option value="slot">Taglio</option><option value="phillips">Phillips</option><option value="torx">Torx</option></select></div>
+          <div class="row" data-show="s.variant=screw"><span class="l">Filetto</span><div class="seg seg--full" data-k="s.thread"><button type="button" data-v="full">Intero</button><button type="button" data-v="partial">Parziale (b)</button></div></div>
+        </div>
+        <div class="sec" data-show="s.variant=tapped|clearance">
+          <h3>Foro</h3>
+          <div class="row"><label for="sRec">Sede testa</label>
+            <select id="sRec" data-k="s.recess"><option value="none">Nessuna</option><option value="counterbore">Lamatura</option><option value="countersink">Svasatura 90°</option><option value="hex">Esagonale</option></select></div>
+          <div class="row"><span class="l">Corsa</span><div class="seg seg--full" data-k="s.travel"><button type="button" data-v="through">Passante</button><button type="button" data-v="blind">Cieco</button></div></div>
+          <div class="row" data-show="s.variant=clearance"><span class="l">Gioco ISO 273</span><div class="seg seg--full" data-k="s.fit"><button type="button" data-v="0">Fine</button><button type="button" data-v="1">Medio</button><button type="button" data-v="2">Largo</button></div></div>
+        </div>
+        <div class="sec" data-show="s.variant=screw|tapped|nut">
+          <h3>Filetto</h3>
+          <div class="row row--num" data-show="s.variant=tapped|nut"><label for="sGap">Gioco foro</label><input type="range" min="0" max="0.4" step="0.01" data-k="s.gap" id="sGap"><input type="number" min="-0.2" max="1" step="0.01" data-k="s.gap" aria-label="Gioco in mm, normale al fianco, solo per foro filettato e madrevite"></div>
+          <p class="note" data-show="s.variant=screw">La vite ha le misure nominali: il gioco vale solo per foro filettato e madrevite (il foro passante usa la serie ISO 273 e la sede esagonale è s + 0,3 mm).</p>
+          <div class="row"><span class="l">Verso</span><div class="seg seg--full" data-k="s.hand"><button type="button" data-v="right">Destro</button><button type="button" data-v="left">Sinistro</button></div></div>
+        </div>
+        <div class="sec">
+          <h3>Qualità e vista</h3>
+          <div class="row row--num"><label for="sFn">Segmenti/giro</label><input type="range" min="24" max="96" step="2" data-k="s.fn" id="sFn"><input type="number" min="16" max="144" step="2" data-k="s.fn" aria-label="Segmenti per giro"></div>
+          <label class="chk"><input type="checkbox" data-k="s.section"> Sezione (taglia sull'asse)</label>
+          <div data-show="s.variant=tapped|clearance" class="sec" style="padding:0;border:0">
+            <label class="chk"><input type="checkbox" data-k="s.plate"> In piastra (30 × 30 × 15 mm)</label>
+            <label class="chk" data-show="s.plate=true"><input type="checkbox" data-k="s.inside"> Con la vite dentro</label>
+          </div>
+        </div>
+        <div class="sec">
+          <p class="msg" id="sInfo"></p>
+          <p class="note" id="sNote"></p>
+        </div>
       </div>
     </aside>
 
@@ -311,7 +367,7 @@ function makeWarp(kind, a, bb, o) {
 // Registro dei temporanei: la memoria WASM non la libera il garbage collector in tempo, ogni passaggio intermedio si cancella con delete()
 function scope() {
   const list = [];
-  return { own: (m) => (list.push(m), m), free: (keep) => list.forEach((m) => { if (m !== keep) m.delete(); }) };
+  return { own: (m) => (list.push(m), m), free: (...keep) => list.forEach((m) => { if (!keep.includes(m)) m.delete(); }) };
 }
 
 // Raffinamento a due lunghezze: lato `edge` lungo l'asse e lato `lat` nel piano della sezione. Si dilata l'asse di lam volte e si taglia a
@@ -476,6 +532,350 @@ function buildHelix(M, p) {
   free(result);
   return out;
 }
+/* ---------- Viti, fori filettati, fori passanti e dadi ISO metrici ---------- */
+// Convenzione: il piano sottotesta è z = 0, il gambo sale verso +Z e la testa sta sotto (z da -k a 0), così sul piatto la testa poggia a terra.
+// Livello di verifica dei dati (vedi docs/studio-deformazioni.md): [L] letto da catalogo, [C] calcolato da formula, [M] a memoria o stimato.
+const SIZES = [3, 4, 5, 6, 8, 10, 12];
+const EXT = 1; // mm: gli operandi da sottrarre sporgono di 1 mm dalle facce del pezzo, così il taglio è netto e non ci sono facce coincidenti
+const ix = (size) => { const i = SIZES.indexOf(size); if (i < 0) throw new Error('Misura non tabellata: M' + size); return i; };
+// I profili da ruotare devono essere antiorari, altrimenti CrossSection li considera vuoti: si inverte l'ordine se l'area con segno è negativa
+const ccw = (pts) => { let a = 0; for (let i = 0; i < pts.length; i++) { const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % pts.length]; a += x1 * y2 - x2 * y1; } return a < 0 ? pts.slice().reverse() : pts; };
+// Rivoluzione completa di un profilo (raggio, quota) intorno a Z; `own` registra i temporanei
+const revolveProfile = (M, own, pts, fn) => own(M.Manifold.revolve(own(new M.CrossSection([ccw(pts)])), fn));
+
+// Filetto ISO metrico, passo grosso. Passi [L] Wikipedia ISO 262; d3 = d - 1,22687 P [C] (17H/24); D1 = d - 1,082532 P [C]; punta del maschio [L] Engineering Toolbox, Optimas
+const ISO_TIP = { 3: 2.5, 4: 3.3, 5: 4.2, 6: 5.0, 8: 6.8, 10: 8.5, 12: 10.2 };
+const ISO_THREAD = Object.fromEntries(SIZES.map((d) => { const P = ISO_PITCH[d]; return [d, { P, d3: d - 1.22687 * P, D1: d - 1.082532 * P, tip: ISO_TIP[d] }]; }));
+
+// Teste (M3 M4 M5 M6 M8 M10 M12). dk diametro, k altezza, s apertura (esagono incassato o della testa), t profondità minima dell'esagono incassato, b lunghezza filettata
+const HEADS = {
+  // ISO 4762, testa cilindrica con esagono incassato [L] fasteners.eu
+  cylinder: { std: 'ISO 4762', dk: [5.5, 7, 8.5, 10, 13, 16, 18], k: [3, 4, 5, 6, 8, 10, 12], s: [2.5, 3, 4, 5, 6, 8, 10], t: [1.3, 2, 2.5, 3, 4, 5, 6], b: [18, 20, 22, 24, 28, 32, 36] },
+  // ISO 7380-1, testa bombata con esagono incassato [L] fasten.it; b non trovato per la ISO 7380: si usa 2d + 12 come la ISO 4762 [M]
+  button: { std: 'ISO 7380-1', dk: [5.7, 7.6, 9.5, 10.5, 14, 17.5, 21], k: [1.65, 2.2, 2.75, 3.3, 4.4, 5.5, 6.6], s: [2, 2.5, 3, 4, 5, 6, 8], t: [1.04, 1.3, 1.56, 2.08, 2.6, 3.12, 4.16], b: [18, 20, 22, 24, 28, 32, 36] },
+  // ISO 4017 / 4014, testa esagonale [L] fasteners.eu; s è l'apertura della testa, e la diagonale minima; b = 2d + 6 della ISO 4014 [L]
+  hex: { std: 'ISO 4017', s: [5.5, 7, 8, 10, 13, 16, 18], k: [2, 2.8, 3.5, 4, 5.3, 6.4, 7.5], e: [6.01, 7.66, 8.79, 11.05, 14.38, 17.77, 20.03], b: [12, 14, 16, 18, 22, 26, 30] },
+  // ISO 10642, testa svasata a 90° con esagono incassato [L] fasten.it; dk è il valore TEORICO massimo (la DIN 7991 ha altri numeri)
+  countersunk: { std: 'ISO 10642', dk: [6.72, 8.96, 11.2, 13.44, 17.92, 22.4, 26.88], k: [1.86, 2.48, 3.1, 3.72, 4.96, 6.2, 7.44], s: [2, 2.5, 3, 4, 5, 6, 8], t: [1.1, 1.4, 1.75, 2.2, 2.9, 3.5, 4.3], b: [18, 20, 22, 24, 28, 32, 36] },
+};
+// Dado ISO 4032 [L] fasten.it e fasteners.eu (M6: m = 5,2 massimo, fasten.it indica 5,0)
+const NUT_4032 = { s: [5.5, 7, 8, 10, 13, 16, 18], m: [2.4, 3.2, 4.7, 5.2, 6.8, 8.4, 10.8], e: [6.01, 7.66, 8.79, 11.05, 14.38, 17.77, 20.03] };
+// Fori passanti ISO 273 [L] Optimas: fine, medio, largo
+const CLEARANCE_273 = { 3: [3.2, 3.4, 3.6], 4: [4.3, 4.5, 4.8], 5: [5.3, 5.5, 5.8], 6: [6.4, 6.6, 7], 8: [8.4, 9, 10], 10: [10.5, 11, 12], 12: [13, 14, 15] };
+// Taglio: larghezza n uguale per tutte le teste [L] fasten.it (ISO 1207, 1580, 2009) fino a M10; M12 = 3 [M] (stima, non tabellata)
+const SLOT_N = { 3: 0.8, 4: 1.2, 5: 1.2, 6: 1.6, 8: 2, 10: 2.5, 12: 3 };
+// Profondità del taglio: ISO 1207 (cilindrica) e ISO 2009 (svasata) t min [L]; M12 = 0,4 k [M]; per la bombata si usa la t della ISO 7380
+const SLOT_T = { cylinder: [0.85, 1.1, 1.3, 1.6, 2, 2.4, 4.8], countersunk: [0.6, 1, 1.1, 1.2, 1.8, 2, 2.98] };
+// Torx: A esterno, B interno, re raggio dei lobi, ri raggio degli incavi. Solo T10 T20 T25 T30 (M3-M6), valori tabulati [L] Engineers Edge e BOSL2.
+// Da M8 in su (T45, T50, T55) non ci sono valori tabulati: il Torx è disattivato, senza estrapolazioni.
+const TORX = {
+  3: { T: 'T10', A: 2.8, B: 2.05, re: 0.229, ri: 0.598, lvl: 'L' }, 4: { T: 'T20', A: 3.95, B: 2.85, re: 0.305, ri: 0.859, lvl: 'L' },
+  5: { T: 'T25', A: 4.5, B: 3.25, re: 0.375, ri: 0.92, lvl: 'L' }, 6: { T: 'T30', A: 5.6, B: 4.05, re: 0.451, ri: 1.194, lvl: 'L' },
+};
+// Profondità del Torx per famiglia di testa [L] fasten.it: ISO 14579 t max (cilindrica), ISO 14583 t max (pan, usata per la bombata), ISO 14582 t min (svasata)
+const TORX_T = { cylinder: [1.27, 1.8, 2.03, 2.42], button: [1.27, 1.66, 1.91, 2.42], countersunk: [0.92, 1.3, 1.5, 1.83] };
+// Phillips tipo H (ISO 4757) [L] fasteners.eu e BOSL2: b larghezza dei bracci, g diametro sul fondo, m apertura in superficie (pan ISO 7045 e svasata ISO 7046) [L]; da M8 PH4 non tabellato
+const PHILLIPS = {
+  3: { ph: 'PH1', b: 0.97, g: 1.27, m: 3.0, mc: 3.2 }, 4: { ph: 'PH2', b: 1.47, g: 2.29, m: 4.4, mc: 4.6 },
+  5: { ph: 'PH2', b: 1.47, g: 2.29, m: 4.9, mc: 5.2 }, 6: { ph: 'PH3', b: 2.41, g: 3.81, m: 6.9, mc: 6.8 },
+};
+
+// Dati della testa per una misura
+function headDims(head, size) {
+  const h = HEADS[head], i = ix(size);
+  return { std: h.std, dk: h.dk ? h.dk[i] : null, k: h.k[i], s: h.s[i], t: h.t ? h.t[i] : null, b: h.b[i], e: h.e ? h.e[i] : null };
+}
+
+// Impronta valida per testa e misura? norm: la combinazione esiste in una norma ISO; why: motivo del rifiuto o della nota
+function driveInfo(head, drive, size) {
+  if (drive === 'none') return { ok: true, norm: true };
+  if (head === 'hex') return { ok: false, why: 'La testa esagonale ISO 4017 non ha impronta.' };
+  if (drive === 'phillips' && !PHILLIPS[size]) return { ok: false, why: 'PH4 non tabellato: la croce è disponibile solo fino a M6.' };
+  if (drive === 'torx' && !TORX[size]) return { ok: false, why: 'T45, T50 e T55 non tabellati: il Torx è disponibile solo fino a M6.' };
+  // Combinazioni normalizzate: esagono incassato (4762, 7380, 10642), Torx e taglio sulla cilindrica (14579, 1207). Le altre sono consentite ma fuori norma
+  const norm = drive === 'hex' || (head === 'cylinder' && (drive === 'torx' || drive === 'slot'));
+  return { ok: true, norm };
+}
+
+// Profondità e quota di riferimento dell'impronta. Phillips: profondità a cui il cono a 26,5° raggiunge il diametro m (BOSL2), h1 = (g/2) tan 28° è l'altezza della punta
+const PH_TAN = Math.tan(26.5 * DEG);
+function phillipsGeom(head, size) {
+  const ph = PHILLIPS[size], m = head === 'countersunk' ? ph.mc : ph.m, h1 = (ph.g / 2) * Math.tan(28 * DEG);
+  return { ...ph, m, h1, depth: h1 + (m - ph.g) / (2 * PH_TAN) };
+}
+function driveDepth(head, drive, size) {
+  const i = ix(size);
+  if (drive === 'hex') return HEADS[head].t[i];
+  if (drive === 'slot') return head === 'button' ? HEADS.button.t[i] : SLOT_T[head][i];
+  if (drive === 'torx') return TORX_T[head][i];
+  return phillipsGeom(head, size).depth;
+}
+
+// Testa: piano sottotesta a z = 0, faccia d'appoggio al piatto a z = -k
+function headSolid(M, head, size, fn = 48) {
+  const { own, free } = scope(), hd = headDims(head, size), k = hd.k;
+  let h;
+  if (head === 'cylinder') {
+    // cilindro dk x k con smusso a 45° sullo spigolo d'appoggio (limita il piede d'elefante)
+    const r = hd.dk / 2, c = Math.min(0.5, 0.1 * k);
+    h = revolveProfile(M, own, [[0, -k], [r - c, -k], [r, -k + c], [r, 0], [0, 0]], fn);
+  } else if (head === 'button') {
+    // calotta sferica di altezza k - hr su un piccolo bordo cilindrico alto hr (approssimazione del profilo ISO 7380)
+    const a = hd.dk / 2, hr = 0.2 * k, sag = k - hr, Rs = (a * a + sag * sag) / (2 * sag), zc = -k + Rs, nA = Math.max(8, Math.round(fn / 4));
+    const phiMax = Math.asin(Math.min(1, a / Rs)), pts = [[0, 0], [a, 0], [a, -hr]];
+    for (let i = 1; i <= nA; i++) { const phi = phiMax * (1 - i / nA); pts.push([Rs * Math.sin(phi), zc - Rs * Math.cos(phi)]); }
+    h = revolveProfile(M, own, pts, fn);
+  } else if (head === 'hex') {
+    // prisma con apertura s (raggio circoscritto s/sqrt3, primo vertice su +X) e smusso a 30° sul lato d'appoggio, per intersezione con un cono
+    const prism = own(own(M.Manifold.extrude(own(M.CrossSection.circle(hd.s / Math.sqrt(3), 6)), k)).translate([0, 0, -k]));
+    const rt = 0.95 * (hd.s / 2), cone = revolveProfile(M, own, [[0, -k], [rt, -k], [rt + k * Math.sqrt(3), 0], [0, 0]], fn);
+    h = own(prism.intersect(cone));
+  } else {
+    // tronco di cono a 90° dal diametro teorico dk (sul piano d'appoggio) al diametro nominale d (sul piano sottotesta)
+    h = revolveProfile(M, own, [[0, -k], [hd.dk / 2, -k], [size / 2, 0], [0, 0]], fn);
+  }
+  free(h);
+  return h;
+}
+
+// Contorno Torx come BOSL2: cerchio base di diametro A - 2re unito con 6 lobi di raggio re (inviluppo convesso), meno 6 incavi di raggio ri ruotati di 30°
+function torxSection(M, own, T) {
+  const rb = (T.A - 2 * T.re) / 2, lobes = [];
+  const base = own(M.CrossSection.circle(rb, 48));
+  for (let i = 0; i < 6; i++) lobes.push(own(M.CrossSection.circle(T.re, 16).translate([rb * Math.cos(i * 60 * DEG), rb * Math.sin(i * 60 * DEG)])));
+  let shape = own(M.CrossSection.hull([base, ...lobes]));
+  for (let i = 0; i < 6; i++) {
+    const a = (30 + 60 * i) * DEG, rr = T.B / 2 + T.ri;
+    shape = own(shape.subtract(own(M.CrossSection.circle(T.ri, 24).translate([rr * Math.cos(a), rr * Math.sin(a)]))));
+  }
+  return shape;
+}
+
+// Impronta da sottrarre dalla testa. Si taglia dalla faccia d'appoggio (z = -k) verso l'alto; sporge di EXT sotto il piano. La profondità si limita a 0,8 k
+// per lasciare sempre una parete (testa bombata e svasata sono sottili). Restituisce { manifold, depth, clipped }
+function driveCutter(M, drive, size, head) {
+  const { own, free } = scope(), hd = headDims(head, size), k = hd.k, z0 = -k, limit = 0.8 * k;
+  let cut, depth = driveDepth(head, drive, size);
+  const lift = (m, z) => own(m.translate([0, 0, z]));
+  if (drive === 'hex') {
+    // esagono incassato: prisma di apertura s e profondità t, fondo conico a 118° (cono sulla circonferenza inscritta)
+    const s = hd.s, t = hd.t, prism = lift(own(M.Manifold.extrude(own(M.CrossSection.circle(s / Math.sqrt(3), 6)), t + EXT)), z0 - EXT);
+    // il cono parte da un cilindretto di raggio 0,97 s/2 (appena dentro l'esagono) che entra nel prisma: niente facce coincidenti né contatti tangenti, che lasciavano una cavità
+    const rb = 0.97 * (s / 2), coneH = rb / Math.tan(59 * DEG), cone = revolveProfile(M, own, [[0, z0 + t - 0.3], [rb, z0 + t - 0.3], [rb, z0 + t], [0, z0 + t + coneH]], 24);
+    cut = own(M.Manifold.union([prism, cone])); depth = t + coneH;
+  } else if (drive === 'slot') {
+    // taglio largo n, profondo t, lungo tutta la testa
+    const n = SLOT_N[size], len = (hd.dk || hd.e) + 2;
+    cut = lift(own(M.Manifold.cube([len, n, depth + EXT], false)), z0 - EXT);
+    cut = own(cut.translate([-len / 2, -n / 2, 0]));
+  } else if (drive === 'torx') {
+    cut = lift(own(M.Manifold.extrude(torxSection(M, own, TORX[size]), depth + EXT)), z0 - EXT);
+  } else {
+    // Phillips (approssimazione): cono centrale con la punta a 28° e quattro bracci di larghezza b dentro il cono a 26,5° che arriva al diametro m
+    const g = phillipsGeom(head, size), zA = z0 + g.depth, rc = 0.32 * g.m;
+    const core = revolveProfile(M, own, [[0, zA], [g.g / 2, zA - g.h1], [rc, z0], [rc, z0 - EXT], [0, z0 - EXT]], 32);
+    const env = revolveProfile(M, own, [[0, zA], [g.g / 2, zA - g.h1], [g.m / 2, z0], [g.m / 2, z0 - EXT], [0, z0 - EXT]], 32);
+    const bar = own(M.Manifold.cube([g.m * 1.2, g.b, g.depth + EXT + 1], true)), bar2 = own(bar.rotate([0, 0, 90]));
+    const cross = lift(own(M.Manifold.union([bar, bar2])), z0 - EXT + (g.depth + EXT + 1) / 2);
+    cut = own(M.Manifold.union([core, own(env.intersect(cross))]));
+  }
+  let clipped = false, tipTrimmed = false;
+  if (depth > limit + 1e-9) { // taglia l'operando a 0,8 k dalla faccia d'appoggio
+    // per l'esagono incassato conta la t tabellata: se è dentro il limite si tronca solo la punta conica del fondo
+    clipped = drive !== 'hex' || hd.t > limit + 1e-9; tipTrimmed = !clipped;
+    const slab = own(M.Manifold.cube([200, 200, limit + EXT + 1], false));
+    cut = own(cut.intersect(lift(own(slab.translate([-100, -100, 0])), z0 - EXT - 1)));
+  }
+  free(cut);
+  return { manifold: cut, depth: Math.min(depth, limit), clipped, tipTrimmed };
+}
+
+// Profilo del filetto nel piano (raggio, quota). Esterno (vite): sempre nominale, il gioco non lo tocca: cresta piatta P/8 a r = d/2, fianchi a 30° fino al fondo
+// a r = d3/2 (profondità 17H/24 = 0,6134 P, base del dente 5P/6, vano piatto P/6) e nucleo d3/2.
+// Interno (utensile del foro e della madrevite): profilo base ISO (cresta P/8 a d, fondo piatto P/4 a D1, profondità 5H/8); il gioco si aggiunge dopo con un offset normale al profilo.
+function threadProfile(size, gap, internal) {
+  const { P, D1 } = ISO_THREAD[size], H = 0.8660254 * P, t30 = Math.tan(30 * DEG), hc = P / 16;
+  const rMaj = size / 2, rRoot = internal ? D1 / 2 : rMaj - (17 * H) / 24; // il gioco non entra qui: la vite è nominale
+  const hb = hc + (rMaj - rRoot) * t30, rIn = rRoot - Math.min(0.4, rRoot * 0.4);
+  return { poly: [[rIn, -hb], [rRoot, -hb], [rMaj, -hc], [rMaj, hc], [rRoot, hb], [rIn, hb]], rMaj, rRoot, hb };
+}
+
+// Filetto ISO da z = 0 a z = length. Il dente ha sempre il centro a z multiplo di P sull'angolo 0 (qualunque lunghezza e verso),
+// così vite, foro e dado hanno la stessa fase e si possono traslare solo di multipli del passo. Il risultato va cancellato da chi lo riceve.
+// internal: operando da sottrarre per il foro (contiene la vite nominale se gap >= 0). Il gioco vale solo per l'utensile interno: la vite lo ignora.
+function threadSolid(M, { size, length, hand = 'right', gap = 0.15, internal = false, fn = 48 }) {
+  const { own, free } = scope(), T = {}, t00 = now(), { P, D1 } = ISO_THREAD[size], sgn = hand === 'left' ? -1 : 1, pr = threadProfile(size, gap, internal);
+  let cs = own(new M.CrossSection([pr.poly]));
+  if (internal && gap !== 0) cs = own(cs.offset(gap, 'Miter')); // gioco normale al fianco: il dente si allarga di `gap` perpendicolarmente alla superficie
+  const turns = Math.ceil(length / P) + 2, n = turns * 2; // giri interi: ogni mezzo giro è lo stesso solido
+
+  // 1. Mezzo giro: rivoluzione di 180° (i segmenti di revolve in 3.5.4 valgono per l'arco intero: si scalano) e sollevamento proporzionale all'angolo
+  let t = now();
+  const half = own(own(M.Manifold.revolve(cs, Math.max(2, Math.round(fn / 2)), 180)).warpBatch((v, cnt) => {
+    for (let i = 0; i < cnt; i++) {
+      let th = Math.atan2(v[3 * i + 1], v[3 * i]);
+      if (th < -1e-9) th += TAU; // l'estremo a 180° può uscire come -180°
+      v[3 * i + 2] += (sgn * P * th) / TAU;
+    }
+  }));
+  const pieces = [];
+  for (let k = 0; k < n; k++) pieces.push(own(own(half.rotate([0, 0, 180 * k])).translate([0, 0, (sgn * P * k) / 2])));
+  pieces.forEach((q) => q.numTri()); T.pieces = now() - t;
+
+  // 2. Unione dei mezzi giri e spostamento di un multiplo di P perché copra z da 0 a length
+  t = now();
+  let helix = own(M.Manifold.union(pieces));
+  helix = own(helix.translate([0, 0, sgn > 0 ? -P : (turns - 1) * P]));
+  helix.numTri(); T.union = now() - t;
+
+  // 3. Nucleo (vite: d3; foro: D1 + gioco) e taglio a filo alle due estremità
+  t = now();
+  const rCore = internal ? D1 / 2 + gap : pr.rRoot, rTrim = size / 2 + (internal ? Math.abs(gap) : 0) + 1;
+  const core = own(M.Manifold.cylinder(length, rCore, rCore, fn, false)), trim = own(M.Manifold.cylinder(length, rTrim, rTrim, fn, false));
+  const result = own(own(M.Manifold.union([core, helix])).intersect(trim));
+  result.numTri(); T.finish = now() - t; T.total = now() - t00;
+  free(result);
+  return { manifold: result, T, rRoot: pr.rRoot, rMaj: pr.rMaj, rCore, turns };
+}
+
+// Operando filettato del foro (o del dado): nucleo e dente da z = zb (multiplo di P) a z = z1, con smusso d'ingresso a 45° in basso (z = 0), in alto e fondo conico a 118° se cieco
+function tappedOperand(M, own, o, T) {
+  const { size, gap, hand, fn, zb, z1, zt = z1, entryTop = false, blind = false } = o, { P, D1 } = ISO_THREAD[size], rCore = D1 / 2 + gap, c = Math.min(1.5, Math.max(0.6, P));
+  const thr = threadSolid(M, { size, length: z1 - zb, hand, gap, internal: true, fn }); own(thr.manifold);
+  T.pieces += thr.T.pieces; T.union += thr.T.union; T.finish += thr.T.finish;
+  const parts = [zb ? own(thr.manifold.translate([0, 0, zb])) : thr.manifold];
+  parts.push(revolveProfile(M, own, [[0, zb], [rCore + c - zb, zb], [rCore, c], [0, c]], fn)); // imbocco: cono a 45° che parte da z = zb
+  if (entryTop) parts.push(revolveProfile(M, own, [[0, zt - c], [rCore, zt - c], [rCore + c + (z1 - zt), z1], [0, z1]], fn)); // stesso imbocco sulla faccia superiore (zt)
+  if (blind) parts.push(own(own(M.Manifold.cylinder(rCore / Math.tan(59 * DEG), rCore, 0, fn, false)).translate([0, 0, z1]))); // fondo del foro cieco, punta del trapano a 118°
+  return own(M.Manifold.union(parts));
+}
+
+// Costruzione completa. p: { variant: 'screw'|'tapped'|'clearance'|'nut', size, length, head, drive, threadLength ('full' o mm), gap, hand, segments,
+//   recess ('none'|'counterbore'|'countersink'|'hex'), fit (0 fine, 1 medio, 2 largo: ISO 273), through, plate (foro dentro una piastra 30x30x15), inside (vite dentro il foro) }
+// Restituisce { manifold, inner, T, tri, V, status, comps, genus, bb, notes }; manifold e inner vanno cancellati da chi li riceve.
+function buildScrew(M, p0) {
+  const p = { variant: 'screw', size: 5, length: 16, head: 'cylinder', drive: 'hex', threadLength: 'full', gap: 0.15, hand: 'right', segments: 48, recess: 'none', fit: 1, through: true, plate: false, inside: false, ...p0 };
+  const { own, free } = scope(), T = { pieces: 0, union: 0, finish: 0 }, t00 = now(), notes = [];
+  const d = p.size, th = ISO_THREAD[d], P = th.P, fn = p.segments, gap = p.gap, hd = headDims(p.head, d), L = p.length, i = ix(d);
+  const isHole = p.variant === 'tapped' || p.variant === 'clearance';
+  const di = driveInfo(p.head, p.drive, d);
+  if ((p.variant === 'screw' || (isHole && p.plate && p.inside)) && !di.ok) return { error: di.why };
+  if (p.variant !== 'nut' && !(L > 0)) return { error: 'La lunghezza deve essere positiva.' };
+
+  // ---- Vite: testa + gambo, impronta sottratta ----
+  const makeScrew = () => {
+    const tl = p.threadLength === 'full' ? L : Math.min(L, Number(p.threadLength)), partial = tl < L - 1e-9, k = hd.k;
+    const z0 = partial ? Math.floor((L - tl) / P + 1e-9) * P : 0; // inizio del filetto: multiplo di P, così la fase resta quella del foro
+    const thr = threadSolid(M, { size: d, length: L - z0, hand: p.hand, gap: 0, internal: false, fn }); own(thr.manifold); // la vite ha sempre le misure nominali
+    T.pieces += thr.T.pieces; T.union += thr.T.union; T.finish += thr.T.finish;
+    const t = now(), parts = [z0 ? own(thr.manifold.translate([0, 0, z0])) : thr.manifold];
+    // ponte nel nucleo: un cilindro più stretto del nucleo che entra nella testa e nel filetto, così l'unione ha sempre volume in comune
+    const rb = 0.9 * thr.rRoot;
+    parts.push(own(own(M.Manifold.cylinder(z0 + P / 2 + k / 2, rb, rb, fn, false)).translate([0, 0, -k / 2])));
+    if (partial) { const rs = d / 2; parts.push(own(own(M.Manifold.cylinder(z0 + k / 2, rs, rs, fn, false)).translate([0, 0, -k / 2]))); } // fusto liscio di diametro d (nominale)
+    // smusso di punta a 45° fino al nucleo (intersezione con un cono); il cono parte sotto la testa ma non tocca la testa, che si aggiunge dopo
+    const rTip = thr.rRoot, rBig = d / 2 + 1, hC = rBig - rTip;
+    const tip = revolveProfile(M, own, [[0, -k - 1], [rBig, -k - 1], [rBig, L - hC], [rTip, L], [0, L]], fn);
+    const shaft = own(own(M.Manifold.union(parts)).intersect(tip));
+    let s = own(M.Manifold.union([own(headSolid(M, p.head, d, fn)), shaft]));
+    if (p.drive !== 'none') {
+      const cut = driveCutter(M, p.drive, d, p.head); own(cut.manifold);
+      if (cut.clipped) notes.push(`Profondità dell'impronta limitata a 0,8 k (${fmtN(0.8 * k)} mm) per lasciare una parete.`);
+      s = own(s.subtract(cut.manifold));
+    }
+    if (partial) notes.push(`Filetto parziale: inizia a ${fmtN(z0)} mm dal sottotesta (multiplo del passo), lungo ${fmtN(L - z0)} mm.`);
+    T.finish += now() - t;
+    return s;
+  };
+
+  // ---- Sede della testa nel foro: da z = -depth a 0 (sporge di ext sotto il piano) ----
+  const seatInfo = () => {
+    if (p.recess === 'counterbore') return { kind: 'cyl', r: ((hd.dk || hd.e) + 0.6) / 2, depth: hd.k + 0.3 }; // lamatura: dk + 0,6, profondità k + 0,3
+    if (p.recess === 'countersink') { const c = headDims('countersunk', d); return { kind: 'cone', R0: d / 2 + 0.15, depth: c.k }; } // svasatura 90°: dk teorico + 0,3
+    if (p.recess === 'hex') return { kind: 'hex', R: (HEADS.hex.s[i] + 0.3) / Math.sqrt(3), depth: HEADS.hex.k[i] + 0.2 }; // sede esagonale: s + 0,3, profondità k + 0,2
+    return null;
+  };
+  const makeSeat = (seat, ext) => {
+    const dep = seat.depth + ext;
+    if (seat.kind === 'cyl') return own(own(M.Manifold.cylinder(dep, seat.r, seat.r, fn, false)).translate([0, 0, -dep]));
+    if (seat.kind === 'cone') return revolveProfile(M, own, [[0, -dep], [seat.R0 + dep, -dep], [seat.R0, 0], [0, 0]], fn);
+    return own(own(M.Manifold.extrude(own(M.CrossSection.circle(seat.R, 6)), dep)).translate([0, 0, -dep]));
+  };
+
+  // ---- Operando del foro (filettato o passante): piano d'ingresso z = 0, foro verso +Z ----
+  const makeHole = (inPlate, depth) => {
+    const ext = inPlate ? EXT : 0, zb = inPlate ? -P : 0, seat = seatInfo(), z1 = depth + (p.through ? ext : 0), t = now();
+    let hole;
+    if (p.variant === 'tapped') {
+      hole = tappedOperand(M, own, { size: d, gap, hand: p.hand, fn, zb, z1, blind: !p.through }, T);
+    } else {
+      const dh = CLEARANCE_273[d][p.fit], zc = inPlate ? -EXT : 0, cyl = own(own(M.Manifold.cylinder(z1 - zc, dh / 2, dh / 2, fn, false)).translate([0, 0, zc]));
+      hole = cyl;
+    }
+    if (seat) hole = own(M.Manifold.union([hole, makeSeat(seat, ext)]));
+    T.finish += now() - t;
+    return { hole, seat };
+  };
+
+  // ---- Dado ISO 4032: prisma esagonale con smusso a 30° sui due lati meno il foro filettato ----
+  const makeNut = () => {
+    const s = NUT_4032.s[i], m = NUT_4032.m[i], R = s / Math.sqrt(3), t = now();
+    const prism = own(M.Manifold.extrude(own(M.CrossSection.circle(R, 6)), m));
+    const rt = 0.95 * (s / 2), rBig = R + 0.5, dz = (rBig - rt) * Math.tan(30 * DEG);
+    const ch = revolveProfile(M, own, [[0, 0], [rt, 0], [rBig, dz], [rBig, m - dz], [rt, m], [0, m]], fn);
+    const body = own(prism.intersect(ch));
+    const hole = tappedOperand(M, own, { size: d, gap, hand: p.hand, fn, zb: -P, z1: m + P, zt: m, entryTop: true }, T);
+    T.finish += now() - t;
+    return own(body.subtract(hole));
+  };
+
+  let main, inner = null, plateH = null;
+  if (p.variant === 'screw') main = makeScrew();
+  else if (p.variant === 'nut') main = makeNut();
+  else if (!p.plate) { main = makeHole(false, L).hole; }
+  else {
+    // piastra 30 x 30 x 15 con la faccia d'ingresso a z = -profondità della sede; per il foro cieco la piastra si alza se serve
+    const seat = seatInfo(), sd = seat ? seat.depth : 0, rCore = th.D1 / 2 + gap, coneH = p.variant === 'tapped' && !p.through ? rCore / Math.tan(59 * DEG) : 0;
+    const H = p.through ? 15 : Math.max(15, sd + L + coneH + 2), depth = p.through ? H - sd : L;
+    if (H > 15) notes.push(`Piastra alzata a ${fmtN(H)} mm perché il foro cieco non la attraversi.`);
+    plateH = H;
+    const hole = makeHole(true, depth).hole, t = now();
+    const plate = own(own(M.Manifold.cube([30, 30, H], false)).translate([-15, -15, -sd]));
+    main = own(plate.subtract(hole));
+    T.finish += now() - t;
+    if (p.inside && di.ok) inner = makeScrew();
+  }
+  // ---- Misure del risultato ----
+  main.numTri(); T.total = now() - t00; T.finish = T.total - T.pieces - T.union; // la finitura è tutto il resto: nucleo, taglio, testa, impronta, sottrazioni
+  const comps = main.decompose(), nc = comps.length; comps.forEach((c) => c.delete());
+  const out = { manifold: main, inner, T, tri: main.numTri(), V: main.volume(), status: String(main.status()), comps: nc, genus: main.genus(), bb: main.boundingBox(), notes, plateH };
+  if (inner) { out.innerV = inner.volume(); const x = own(main.intersect(inner)); out.interference = x.volume(); }
+  free(main, inner); // della vite nel foro si tiene anche `inner`
+  return out;
+}
+const fmtN = (x) => Number(x).toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
+
+// Sezione: tiene la metà y >= 0 (piano XZ, contiene l'asse) per mostrare filetto interno e impronta. Il solido di partenza resta di chi chiama.
+function sectionHalf(M, m) { const [hi, lo] = m.splitByPlane([0, 1, 0], 0); lo.delete(); return hi; }
+
+// Prova di accoppiamento: vite (L = 20, filetto intero) nel foro di una piastra 30x30x15 e nel dado. La vite è sempre nominale: il gioco vale solo per il foro e il dado.
+// interfPlate = volume di vite ∩ (piastra - foro): 0 con gioco >= 0, positivo con gioco negativo (la fase del filetto è la stessa per costruzione).
+// engPlate / engNut = stesso volume con la vite spostata di P/2: se è > 0 i denti della vite entrano davvero nel materiale del foro (la vite non scivola via);
+// con 0 il foro è più largo della cresta e il filetto non trattiene. overlap = cresta vite - nucleo foro, in mm sul raggio.
+function fitTest(M, size, gap, fn = 48, hand = 'right') {
+  const { own, free } = scope(), { P, D1 } = ISO_THREAD[size], base = { size, length: 20, gap, segments: fn, hand, head: 'cylinder', drive: 'none', threadLength: 'full' };
+  const build = (o) => { const r = buildScrew(M, { ...base, ...o }); if (r.error) throw new Error(r.error); return r; };
+  const sc = build({ variant: 'screw' }), pl = build({ variant: 'tapped', plate: true, through: true }), nu = build({ variant: 'nut' });
+  [sc, pl, nu].forEach((r) => own(r.manifold));
+  const nutZ = P * Math.ceil(2 / P), nutM = own(nu.manifold.translate([0, 0, nutZ])); // il dado sale di un multiplo di P: stessa fase
+  const half = own(sc.manifold.translate([0, 0, P / 2])); // vite spostata di mezzo passo: i denti cadono sul materiale
+  const ip = own(sc.manifold.intersect(pl.manifold)), inut = own(sc.manifold.intersect(nutM)), ep = own(half.intersect(pl.manifold)), en = own(half.intersect(nutM));
+  const out = { interfPlate: ip.volume(), interfNut: inut.volume(), engPlate: ep.volume(), engNut: en.volume(), overlap: size / 2 - (D1 / 2 + gap), screwV: sc.V, plateV: pl.V, nutV: nu.V, status: [sc.status, pl.status, nu.status, String(ip.status()), String(inut.status()), String(ep.status()), String(en.status())], genusPlate: pl.genus, genusNut: nu.genus, compsPlate: pl.comps, compsNut: nu.comps, compsScrew: sc.comps };
+  free();
+  return out;
+}
+
+
 /* CORE-END */
 
 /* ---------- Stato e controlli ---------- */
@@ -489,12 +889,14 @@ const HELIX_PRESETS = {
 const S = {
   tab: 'helix',
   h: { ...HELIX_PRESETS.molla, size: 8, gap: 0.15, w: 2.5, h: 2 },
+  s: { variant: 'screw', size: 5, length: 16, head: 'cylinder', drive: 'hex', thread: 'full', gap: 0.15, hand: 'right', fn: 48, recess: 'none', travel: 'through', fit: 1, section: false, plate: false, inside: true },
   d: { obj: 'star', kind: 'twist', axis: 2, twist: 180, scale: 40, bend: 90, dir: 0, from: 0, to: 100, qmode: 'auto', edge: 1, lat: 6, iso: false, orig: false, guides: true },
 };
 const DEF_DEFAULT = { ...S.d };
 const getPath = (path) => path.split('.').reduce((o, k) => o[k], S);
 const setPath = (path, v) => { const ks = path.split('.'), last = ks.pop(); ks.reduce((o, k) => o[k], S)[last] = v; };
 const TYPES = { 'h.size': Number, 'h.R': Number, 'h.wire': Number, 'h.w': Number, 'h.h': Number, 'h.gap': Number, 'h.pitch': Number, 'h.turns': Number, 'h.fn': Number,
+  's.size': Number, 's.length': Number, 's.gap': Number, 's.fn': Number, 's.fit': Number,
   'd.axis': Number, 'd.dir': Number, 'd.twist': Number, 'd.scale': Number, 'd.bend': Number, 'd.from': Number, 'd.to': Number, 'd.edge': Number, 'd.lat': Number };
 const AXN = ['X', 'Y', 'Z'];
 
@@ -506,11 +908,14 @@ function sync() { // dal modello ai controlli
     else if (document.activeElement !== el) el.value = v;
   });
   document.querySelectorAll('[data-show]').forEach((el) => { const [k, vals] = el.dataset.show.split('='); el.hidden = !vals.split('|').includes(String(getPath(k))); });
-  $('pHelix').hidden = S.tab !== 'helix'; $('pDef').hidden = S.tab !== 'def';
+  $('pHelix').hidden = S.tab !== 'helix'; $('pDef').hidden = S.tab !== 'def'; $('pScrew').hidden = S.tab !== 'screw';
+  // viti: le impronte non valide per testa e misura si disattivano (con il motivo nel tooltip); la lunghezza fuori serie mostra "Altra"
+  document.querySelectorAll('#sDrive option').forEach((o) => { const di = driveInfo(S.s.head, o.value, S.s.size); o.disabled = !di.ok; o.title = di.ok ? '' : di.why; });
+  const ls = $('sLenSel'); if (ls.value !== String(S.s.length)) ls.value = '';
   // direzione della piega: i due assi perpendicolari
   const a = S.d.axis, dirs = [AXN[(a + 1) % 3], AXN[(a + 2) % 3]], sel = $('dDir');
   if (sel.options.length !== 2 || sel.options[0].textContent !== dirs[0]) { sel.innerHTML = `<option value="0">${dirs[0]}</option><option value="1">${dirs[1]}</option>`; sel.value = S.d.dir; }
-  $('tabNote').textContent = S.tab === 'helix' ? 'Scheda Proprietà della forma in rotazione: passo, giri e verso' : 'Strumento a pannello, come Guscio e Pattern';
+  $('tabNote').textContent = S.tab === 'helix' ? 'Scheda Proprietà della forma in rotazione: passo, giri e verso' : S.tab === 'def' ? 'Strumento a pannello, come Guscio e Pattern' : 'Forme di viteria: il foro filettato è una forma in modalità Foro';
 }
 document.addEventListener('input', (e) => change(e.target));
 document.addEventListener('click', (e) => {
@@ -519,8 +924,13 @@ document.addEventListener('click', (e) => {
 function change(el, forced) {
   const k = el.dataset && el.dataset.k; if (!k) return;
   let v = forced !== undefined ? forced : el.type === 'checkbox' ? el.checked : el.value;
+  if (k === 's.length' && v === '') return; // la voce "Altra" della serie non cambia il valore
   if (TYPES[k]) v = TYPES[k](v);
+  const prevHead = S.s.head;
   setPath(k, v);
+  if (k === 's.head') S.s.drive = S.s.head === 'hex' ? 'none' : prevHead === 'hex' ? 'hex' : S.s.drive; // la testa esagonale non ha impronta; uscendone si riparte dall'esagono incassato
+  if (k.startsWith('s.') && !driveInfo(S.s.head, S.s.drive, S.s.size).ok) S.s.drive = S.s.head === 'hex' ? 'none' : 'hex'; // impronta non più valida: si torna all'esagono
+  if (k === 's.section' && S.s.section) { orbit.th = -Math.PI / 2; orbit.ph = 1.3; needFit = true; } // la sezione si guarda da -Y, dalla parte tagliata
   if (k === 'd.from' && S.d.from >= S.d.to) S.d.to = Math.min(100, S.d.from + 1);
   if (k === 'd.to' && S.d.to <= S.d.from) S.d.from = Math.max(0, S.d.to - 1);
   if (k === 'h.size') S.h.pitch = ISO_PITCH[S.h.size];
@@ -551,9 +961,9 @@ function extract(m) { // copia i buffer fuori dalla memoria WASM
 let lastKey = '';
 function rebuild() {
   if (!M) return;
-  const key = S.tab === 'helix' ? 'h' + S.h.profile + S.h.size : 'd' + S.d.obj + S.d.axis; // si reinquadra quando cambia la forma, non a ogni cursore
+  const key = S.tab === 'helix' ? 'h' + S.h.profile + S.h.size : S.tab === 'screw' ? 's' + S.s.variant + S.s.size + S.s.head + S.s.plate : 'd' + S.d.obj + S.d.axis; // si reinquadra quando cambia la forma, non a ogni cursore
   if (key !== lastKey) { lastKey = key; needFit = true; }
-  try { S.tab === 'helix' ? runHelix() : runDeform(); }
+  try { S.tab === 'helix' ? runHelix() : S.tab === 'screw' ? runScrew() : runDeform(); }
   catch (err) { $('stat').innerHTML = chip('Errore', String(err && err.message || err), 'bad'); console.error(err); }
 }
 
@@ -611,12 +1021,69 @@ function runDeform() {
     dv === null ? chip('Atteso', 'non calcolabile') : chip('Scarto dal volume atteso', `${fmt(dv, 2)}%`, Math.abs(dv) < 1 ? 'ok' : Math.abs(dv) < 3 ? 'warn' : 'bad'),
   ].join('');
 }
+/* ---------- Viti ---------- */
+const HEAD_LBL = { cylinder: 'cilindrica', button: 'bombata', hex: 'esagonale', countersunk: 'svasata a 90°' };
+const DRIVE_LBL = { none: 'nessuna', hex: 'esagono incassato', slot: 'taglio', phillips: 'Phillips', torx: 'Torx' };
+const m2 = (x, d = 2) => fmt(x, d); // numero con la virgola
+
+// Note con i dati usati e il loro livello di verifica ([L] letto, [C] calcolato, [M] a memoria o stimato)
+function screwNote(s) {
+  const d = s.size, th = ISO_THREAD[d], i = SIZES.indexOf(d), out = [];
+  const thr = `Filetto M${d} × ${m2(th.P)}: d3 ${m2(th.d3, 3)}, D1 ${m2(th.D1, 3)} mm [C].`;
+  if (s.variant === 'nut') return [`Madrevite ISO 4032: apertura ${m2(NUT_4032.s[i], 1)}, altezza ${m2(NUT_4032.m[i], 1)} mm [L]${d === 6 ? ' (m = 5,2, il massimo)' : ''}. ${thr} Il foro è l'offset normale del profilo: gioco ${m2(s.gap)} mm sul fianco.`];
+  if (s.variant === 'clearance') out.push(`Foro passante ISO 273 ${['fine', 'medio', 'largo'][s.fit]}: Ø ${m2(CLEARANCE_273[d][s.fit], 1)} mm [L].`);
+  if (s.variant === 'tapped') out.push(`${thr} Nucleo di raggio D1/2 + gioco, dente allargato con un offset normale al fianco: il foro contiene la vite nominale con un gioco di ${m2(s.gap)} mm sul fianco.`);
+  const hd = headDims(s.head, d), di = driveInfo(s.head, s.drive, d);
+  if (s.recess !== 'none' && s.variant !== 'screw') out.push({ counterbore: 'Lamatura Ø dk + 0,6, profonda k + 0,3 [M, regola per la stampa].', countersink: 'Svasatura a 90° con dk teorico + 0,3 [M, regola per la stampa].', hex: 'Sede esagonale s + 0,3, profonda k + 0,2 [M, regola per la stampa].' }[s.recess]);
+  if (s.variant !== 'screw' && !(s.plate && s.inside)) return out;
+  if (s.variant === 'screw') out.push('La vite ha le misure nominali: il gioco vale solo per foro filettato e madrevite (il foro passante usa la serie ISO 273 e la sede esagonale è s + 0,3 mm).');
+  const hl = [`Testa ${hd.std} ${HEAD_LBL[s.head]}`];
+  hl.push(s.head === 'hex' ? `s ${m2(hd.s, 1)}, k ${m2(hd.k, 1)} mm [L]` : `dk ${m2(hd.dk)}${s.head === 'countersunk' ? ' (teorico)' : ''}, k ${m2(hd.k)} mm [L]`);
+  out.push(hl.join(', ') + '.');
+  if (s.drive !== 'none') {
+    if (s.drive === 'hex') out.push(`Esagono incassato s ${m2(hd.s, 1)}, t ${m2(hd.t)} mm [L].`);
+    else if (s.drive === 'slot') out.push(`Taglio n ${m2(SLOT_N[d], 1)}, t ${m2(driveDepth(s.head, 'slot', d))} mm [L]${d === 12 ? ', M12 stimato [M]' : ''}${s.head === 'button' ? ', t della ISO 7380 [L]' : ''}.`);
+    else if (s.drive === 'torx') { const T = TORX[d]; out.push(`${T.T}: A ${m2(T.A)}, B ${m2(T.B)}, re ${m2(T.re, 3)}, ri ${m2(T.ri, 3)} mm [${T.lvl}].`); }
+    else { const g = phillipsGeom(s.head, d); out.push(`${g.ph}: b ${m2(g.b)}, g ${m2(g.g)}, m ${m2(g.m, 1)} mm [L]; forma ricavata come in BOSL2, approssimata (bracci dritti, cono a 26,5°) [M].`); }
+    if (!di.norm) out.push('Combinazione di testa e impronta non normalizzata.');
+  }
+  if (s.variant === 'screw' && s.thread === 'partial') out.push(s.length > hd.b ? `Filetto parziale b ${m2(hd.b, 0)} mm${s.head === 'button' ? ' (ISO 7380: 2d + 12 a memoria [M])' : ' [L]'}, fusto liscio di diametro d.` : `La lunghezza non supera b (${m2(hd.b, 0)} mm): il filetto resta intero.`);
+  return out;
+}
+
+function runScrew() {
+  const s = S.s, info = $('sInfo'), note = $('sNote'), hd = headDims(s.head, s.size);
+  const p = { variant: s.variant, size: s.size, length: s.length, head: s.head, drive: s.drive, threadLength: s.thread === 'partial' ? hd.b : 'full', gap: s.gap, hand: s.hand, segments: s.fn, recess: s.recess, fit: s.fit, through: s.travel === 'through', plate: s.plate, inside: s.plate && s.inside };
+  const r = buildScrew(M, p);
+  if (r.error) { info.className = 'msg msg--err'; info.textContent = r.error; $('stat').innerHTML = chip('Errore', r.error, 'bad'); return; }
+  let main = r.manifold, inner = r.inner;
+  if (s.section) { // sezione sul piano XZ: si tiene la metà y >= 0
+    const a = sectionHalf(M, main); main.delete(); main = a;
+    if (inner) { const b = sectionHalf(M, inner); inner.delete(); inner = b; }
+  }
+  const ex = extract(main), exI = inner ? extract(inner) : null;
+  main.delete(); if (inner) inner.delete(); // i buffer sono già copiati: la memoria WASM si libera subito
+  show({ pos: ex.pos, idx: ex.idx, inner: exI });
+  const norm = s.variant !== 'screw' || driveInfo(s.head, s.drive, s.size).norm, warn = !norm || r.notes.length;
+  const name = { screw: 'Vite', tapped: 'Foro filettato', clearance: 'Foro passante', nut: 'Madrevite' }[s.variant];
+  info.className = 'msg' + (warn ? ' msg--warn' : ' msg--ok');
+  info.textContent = `${name} M${s.size}${s.variant === 'nut' ? '' : ` × ${s.length}`}` + (s.variant === 'screw' ? `, testa ${HEAD_LBL[s.head]}, impronta ${DRIVE_LBL[s.drive]}` : '') + (norm ? '.' : '. Combinazione non normalizzata.') + (r.notes.length ? ' ' + r.notes.join(' ') : '');
+  note.textContent = screwNote(s).join(' ');
+  // genere atteso: madrevite 1, piastra con foro passante 1, il resto 0 (una vite con impronta cieca non ha buchi passanti)
+  const gExp = s.variant === 'nut' || (s.plate && s.travel === 'through' && s.variant !== 'screw') ? 1 : 0;
+  $('stat').innerHTML = [
+    chip('Triangoli', fmt(r.tri, 0)), chip('Pezzi', ms(r.T.pieces)), chip('Unione', ms(r.T.union)), chip('Finitura', ms(r.T.finish)), chip('Totale', ms(r.T.total)),
+    chip('Stato', r.status, r.status === 'NoError' ? 'ok' : 'bad'), chip('Componenti', r.comps, r.comps === 1 ? 'ok' : 'bad'), chip('Genere', `${r.genus} (atteso ${gExp})`, r.genus === gExp ? 'ok' : 'bad'),
+    chip('Volume', `${fmt(r.V, 0)} mm³`),
+    r.interference !== undefined ? chip('Interferenza vite e foro', `${fmt(r.interference, 3)} mm³`, r.interference < 0.005 ? 'ok' : 'bad') : '',
+  ].join('');
+}
 // per gli script di misura e le schermate
 window.__proto = { S, sync, schedule, rebuild, get ready() { return !!M; }, get orbit() { return orbit; }, redraw() { dirty = true; draw(); } };
 
 /* ---------- Anteprima 3D (three.js) ---------- */
 let T3 = null, renderer, scene3, camera, grid, dirty = false;
-const objs = { mesh: null, edges: null, orig: null, axis: null, planes: [] };
+const objs = { mesh: null, edges: null, orig: null, axis: null, inner: null, planes: [] };
 const orbit = { th: -0.8, ph: 1.15, r: 100, c: [0, 0, 0] };
 const view = $('view');
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
@@ -627,6 +1094,7 @@ function applyTheme() {
   if (objs.edges) objs.edges.material.color.set(css('--mesh-edge'));
   if (objs.orig) objs.orig.material.color.set(css('--muted'));
   if (objs.axis) objs.axis.material.color.set(css('--accent'));
+  if (objs.inner) objs.inner.material.color.set(css('--warn'));
   objs.planes.forEach((p) => p.children.forEach((c) => c.material.color.set(css('--accent'))));
   grid.material.color.set(css('--grid-major')); dirty = true; draw();
 }
@@ -658,12 +1126,12 @@ function draw() {
 }
 function fit3d() {
   if (!objs.mesh) return; objs.mesh.geometry.computeBoundingSphere();
-  const b = objs.mesh.geometry.boundingSphere; orbit.c = [b.center.x, b.center.y, b.center.z]; orbit.r = Math.max(15, b.radius * 3.1); dirty = true; draw();
+  const b = objs.mesh.geometry.boundingSphere; orbit.c = [b.center.x, b.center.y, b.center.z]; orbit.r = Math.max(15, b.radius * (S.tab === 'screw' ? 3.6 : 3.1)); dirty = true; draw();
 }
 function geo(ex) { const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.BufferAttribute(ex.pos, 3)); g.setIndex(new T3.BufferAttribute(ex.idx, 1)); return g; }
-function show({ pos, idx, orig, axis, planes }) {
+function show({ pos, idx, orig, axis, planes, inner }) {
   if (!T3) return;
-  [objs.mesh, objs.edges, objs.orig, objs.axis].forEach(clearObj); objs.planes.forEach(clearGroup); objs.planes = [];
+  [objs.mesh, objs.edges, objs.orig, objs.axis, objs.inner].forEach(clearObj); objs.planes.forEach(clearGroup); objs.planes = [];
   const g = geo({ pos, idx });
   objs.mesh = new T3.Mesh(g, new T3.MeshStandardMaterial({ color: css('--mesh'), flatShading: true, roughness: 0.6, metalness: 0.05 }));
   scene3.add(objs.mesh);
@@ -671,6 +1139,8 @@ function show({ pos, idx, orig, axis, planes }) {
   if (objs.edges) scene3.add(objs.edges);
   objs.orig = orig ? new T3.LineSegments(new T3.EdgesGeometry(geo(orig), 15), new T3.LineBasicMaterial({ color: css('--muted'), transparent: true, opacity: 0.8 })) : null;
   if (objs.orig) scene3.add(objs.orig);
+  objs.inner = inner ? new T3.Mesh(geo(inner), new T3.MeshStandardMaterial({ color: css('--warn'), flatShading: true, roughness: 0.55, metalness: 0.1 })) : null; // la vite nel foro, di un altro colore (ambra)
+  if (objs.inner) scene3.add(objs.inner);
   if (axis) {
     const ag = new T3.BufferGeometry(); ag.setAttribute('position', new T3.BufferAttribute(axis, 3));
     objs.axis = new T3.Line(ag, new T3.LineBasicMaterial({ color: css('--accent') })); scene3.add(objs.axis);

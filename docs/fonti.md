@@ -121,7 +121,7 @@ Lette direttamente (manuale o pagina ufficiale):
 - https://github.com/openscad/openscad/blob/master/src/core/CurveDiscretizer.cc (`getCircularSegmentCount`: `$fn` si scala con l'angolo)
 - https://github.com/openscad/openscad/blob/master/src/geometry/rotate_extrude.cc
 - https://en.wikipedia.org/wiki/ISO_metric_screw_thread
-- https://www.sovol3d.com/blogs/news/3d-printing-threads-and-screws-how-to-design-reliable-fdm-fasteners (gioco per FDM: 0,1-0,2 mm sul raggio)
+- https://www.sovol3d.com/blogs/news/3d-printing-threads-and-screws-how-to-design-reliable-fdm-fasteners (gioco per FDM: 0,1-0,2 mm per lato)
 
 Solo anteprima dei risultati di ricerca, forum o fonti senza data (da riverificare prima di citarle come manuale):
 - https://help.solidworks.com/2023/English/SolidWorks/Sldworks/HIDD_DVE_FEAT_BENDING.htm (SolidWorks Flex: pagina non leggibile, parametri dall'anteprima)
@@ -133,3 +133,67 @@ Solo anteprima dei risultati di ricerca, forum o fonti senza data (da riverifica
 - https://forum.onshape.com/discussion/30911/deform-new-custom-feature-twist-bend-scale-morph-wrap-flex
 - https://hackaday.com/blog/page/1621/?tag=led (fine degli Shape Generators di Tinkercad: post senza data)
 - https://forum.bambulab.com/t/how-can-i-bend-a-model-into-a-slight-curve/82998 e https://help.prusa3d.com/article/cut-tool_1779 (gli slicer non deformano; Cut con connettori)
+
+## Viti, dadi e fori filettati (17 ottobre 2026)
+
+Le norme ISO non sono gratuite e non sono state lette direttamente: le tabelle vengono da cataloghi e siti che le riproducono (fasteners.eu, fasten.it, Wikipedia, Optimas, Engineering Toolbox, BOSL2).
+
+Lette direttamente (pagine di catalogo, manuali e codice sorgente):
+- https://en.wikipedia.org/wiki/ISO_metric_screw_thread
+- https://www.fasteners.eu/standards/ISO/4762/
+- https://www.fasteners.eu/standards/ISO/7380/
+- https://www.fasteners.eu/standards/ISO/10642/ (la pagina riporta i valori della DIN 7991)
+- https://www.fasteners.eu/standards/ISO/4017/
+- https://www.fasteners.eu/standards/ISO/4014/
+- https://www.fasteners.eu/standards/ISO/4032/
+- https://www.fasteners.eu/standards/ISO/7045/ (riporta i valori della DIN 7985)
+- https://www.fasteners.eu/tech-info/ISO/4757/
+- https://fasten.it/en/norms/norm/din_en_iso_7380-1
+- https://fasten.it/en/norms/norm/din_en_iso_10642
+- https://fasten.it/en/norms/norm/din_en_iso_1207
+- https://fasten.it/en/norms/norm/din_en_iso_1580
+- https://fasten.it/en/norms/norm/din_en_iso_2009
+- https://fasten.it/en/norms/norm/din_en_iso_7045
+- https://fasten.it/en/norms/norm/din_en_iso_7046
+- https://fasten.it/en/norms/norm/din_en_iso_14579
+- https://fasten.it/en/norms/norm/din_en_iso_14583
+- https://fasten.it/en/norms/norm/din_en_iso_14582
+- https://fasten.it/en/norms/norm/din_en_iso_4032
+- https://optimas.com/technical-resources/tapping-sizes/
+- https://amesweb.info/Screws/Metric-Counterbore-Hole-Dimensions-Chart.aspx
+- https://www.engineersedge.com/hardware/torx_head_fastener_basic_dimensions_15261.htm
+- https://ssi-wiki.stanford.edu/Metric_Fasteners
+- https://www.sovol3d.com/blogs/news/3d-printing-threads-and-screws-how-to-design-reliable-fdm-fasteners
+- https://www.cnckitchen.com/blog/tipps-amp-tricks-fr-gewindeeinstze-im-3d-druck-3awey
+- https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/GUID-0DFCBD4F-5130-4CC9-B1A7-23C88147752A.htm (Fusion 360, Hole)
+- https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/GUID-C37E8172-DE94-4EB0-AFE3-9D3172328441.htm (Fusion 360, Thread)
+- https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-REF-INSERT-FASTENER.htm (Fusion 360, Insert Fastener)
+- https://github.com/DurbansPoison/Fusion-360-FDM-threads
+- https://github.com/shaise/FreeCAD_FastenersWB
+- https://cad.onshape.com/help/Content/PartStudio/hole.htm
+- https://cad.onshape.com/help/Content/Assembly/standard_content.htm
+- https://github.com/BelfrySCAD/BOSL2/wiki/screws.scad
+- https://github.com/BelfrySCAD/BOSL2/wiki/threading.scad
+- https://www.onshape.com/en/resource-center/tech-tips/create-threads-custom-feature-manual-modeling
+- https://raw.githubusercontent.com/BelfrySCAD/BOSL2/master/screw_drive.scad
+- https://github.com/rcolyer/threads-scad
+- https://raw.githubusercontent.com/nophead/NopSCADlib/master/readme.md
+- https://hydraraptor.blogspot.com/2020/12/sinkholes.html
+- https://jpralves.net/post/2016/09/22/nut-job-nut-bolt-washer-and-threaded-rod-factory.html
+- https://github.com/openscad/openscad/blob/master/src/core/CurveDiscretizer.cc (`$fn` si scala con l'angolo)
+
+Solo anteprima dei risultati di ricerca, forum o pagine non leggibili (da riverificare prima di citarle come manuale):
+- https://help.solidworks.com/2024/English/SolidWorks/sldworks/c_Hole_Wizard_Overview.htm (SolidWorks, Hole Wizard)
+- https://help.solidworks.com/2024/English/SolidWorks/Sldworks/c_cosmetic_threads.htm
+- https://wiki.freecad.org/PartDesign_Hole (pagina non leggibile)
+- https://onshape.com/en/resource-center/what-is-new/cosmetic-threads-routing-curve-constrained-surface
+- https://forum.onshape.com/discussion/25343/new-featurescript-plastic-threads
+- https://forums.autodesk.com/t5/fusion-api-and-scripts-forum/bolt-generator-add-in/td-p/8402185
+- https://boisestate.edu/library-makerlab/?p=969 (Tinkercad, generatore di filetto)
+- https://forum.prusa3d.com/forum/prusaslicer/tinkercad-iso-metric-thread-problems/
+- https://discourse.shapr3d.com/t/thread-tool/23669 (Shapr3D: nessuno strumento nativo)
+- https://makerworld.com/en/models/1073355
+- https://makerworld.com/en/models/2918031
+- https://makerworld.com/en/models/2858734
+- https://www.albanycountyfasteners.com/media/64/3d/5a/1764619189/heat-set-insert-specs.pdf
+- https://uoy.atlassian.net/wiki/x/OYDcAg (pagina letta ma vuota: valori solo dall'anteprima)

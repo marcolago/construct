@@ -1,0 +1,550 @@
+Misure della scheda "Viti" del prototipo docs/prototipi/deformazioni.html (17 ottobre 2026)
+Generate con manifold-3d 3.5.4 in Node, estraendo il blocco CORE-BEGIN / CORE-END del prototipo.
+Convenzione: la vite ha sempre le misure nominali; il gioco (0,15 mm se non indicato) vale solo per foro filettato e madrevite. Il foro passante usa la serie ISO 273 media e la sede esagonale ha s + 0,3 mm fissi; la variante "sede del dado" dello studio non è nel prototipo.
+Nelle righe di accoppiamento "des" indica il verso destro e "SIN" il sinistro (il sinistro è misurato solo con gioco 0,15). Il punto decimale è quello dei numeri grezzi; le note dello studio usano la virgola.
+L'ingaggio è un volume e include gli smussi d'imbocco a 45° (due facce nel dado, una nella piastra): va letto come rapporto rispetto al gioco 0, non come confronto in mm3 tra misure diverse.
+Ogni riga: stato di manifold, componenti, genere (atteso), triangoli, millisecondi (mediana su 5 prove per M3, M5, M8 e M12; una prova per M4, M6, M10), volume in mm3.
+I tempi sono indicativi (macchina condivisa, variano di 2 o 3 volte): i triangoli sono la misura affidabile.
+Gli script di misura non sono nel repository. Analisi e commento: docs/studio-deformazioni.md, sezione 11.5.
+==============================================================================================
+=== A. Teste x impronte (vite L=16, filetto intero, vite nominale, 48 segmenti), mediana su 5
+M3 cylinder none                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  25276 |   258 ms | V    160.9
+M3 cylinder hex                                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri  25348 |   266 ms | V    152.7
+M3 cylinder slot                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  25286 |   253 ms | V    157.2
+M3 cylinder phillips (non norm.)                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  25484 |   257 ms | V    155.3
+M3 cylinder torx                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  25578 |   250 ms | V    155.1
+M3 button none                                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri  26236 |   231 ms | V    116.9
+M3 button hex                                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri  26186 |   247 ms | V    113.1
+M3 button slot (non norm.)                       | stato NoError  | comp 1 | genere 0 (att. 0) | tri  26134 |   248 ms | V    114.0
+M3 button phillips (non norm.)                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri  26186 |   255 ms | V    112.8 | Profondità dell'impronta limitata a 0,8 k (1,32 mm) per lasciare una parete.
+M3 button torx (non norm.)                       | stato NoError  | comp 1 | genere 0 (att. 0) | tri  26290 |   249 ms | V    111.6
+M3 hex none                                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri  25190 |   228 ms | V    142.5
+M3 hex hex                                       non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M3 hex slot                                      non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M3 hex phillips                                  non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M3 hex torx                                      non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M3 countersunk none                              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  25166 |   236 ms | V    126.6
+M3 countersunk hex                               | stato NoError  | comp 1 | genere 0 (att. 0) | tri  25332 |   247 ms | V    122.3
+M3 countersunk slot (non norm.)                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri  25196 |   244 ms | V    123.7
+M3 countersunk phillips (non norm.)              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  25388 |   256 ms | V    120.9 | Profondità dell'impronta limitata a 0,8 k (1,49 mm) per lasciare una parete.
+M3 countersunk torx (non norm.)                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri  25468 |   249 ms | V    122.5
+M4 cylinder none                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  18264 |   163 ms | V    310.9
+M4 cylinder hex                                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri  18336 |   178 ms | V    293.4
+M4 cylinder slot                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  18274 |   178 ms | V    301.9
+M4 cylinder phillips (non norm.)                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  18472 |   182 ms | V    294.1
+M4 cylinder torx                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  18566 |   176 ms | V    295.0
+M4 button none                                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri  19224 |   164 ms | V    221.5
+M4 button hex                                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri  19198 |   182 ms | V    213.9
+M4 button slot (non norm.)                       | stato NoError  | comp 1 | genere 0 (att. 0) | tri  19090 |   177 ms | V    214.4
+M4 button phillips (non norm.)                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri  19142 |   182 ms | V    209.2 | Profondità dell'impronta limitata a 0,8 k (1,76 mm) per lasciare una parete.
+M4 button torx (non norm.)                       | stato NoError  | comp 1 | genere 0 (att. 0) | tri  19218 |   196 ms | V    208.3
+M4 hex none                                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri  18180 |   201 ms | V    276.9
+M4 hex hex                                       non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M4 hex slot                                      non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M4 hex phillips                                  non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M4 hex torx                                      non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M4 countersunk none                              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  18154 |   167 ms | V    244.6
+M4 countersunk hex                               | stato NoError  | comp 1 | genere 0 (att. 0) | tri  18320 |   174 ms | V    235.9
+M4 countersunk slot (non norm.)                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri  18168 |   176 ms | V    235.1
+M4 countersunk phillips (non norm.)              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  18376 |   188 ms | V    227.8 | Profondità dell'impronta limitata a 0,8 k (1,98 mm) per lasciare una parete.
+M4 countersunk torx (non norm.)                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri  18456 |   188 ms | V    233.2
+M5 cylinder none                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12236 |   133 ms | V    533.2
+M5 cylinder hex                                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12308 |   141 ms | V    494.1
+M5 cylinder slot                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12246 |   142 ms | V    520.4
+M5 cylinder phillips (non norm.)                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12444 |   148 ms | V    510.2
+M5 cylinder torx                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12538 |   143 ms | V    509.9
+M5 button none                                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13196 |   134 ms | V    375.5
+M5 button hex                                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13158 |   145 ms | V    362.3
+M5 button slot (non norm.)                       | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13102 |   139 ms | V    365.0
+M5 button phillips (non norm.)                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13114 |   154 ms | V    357.6 | Profondità dell'impronta limitata a 0,8 k (2,2 mm) per lasciare una parete.
+M5 button torx (non norm.)                       | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13274 |   146 ms | V    355.4
+M5 hex none                                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12150 |   134 ms | V    446.0
+M5 hex hex                                       non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M5 hex slot                                      non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M5 hex phillips                                  non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M5 hex torx                                      non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M5 countersunk none                              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12130 |   136 ms | V    420.6
+M5 countersunk hex                               | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12248 |   147 ms | V    405.0
+M5 countersunk slot (non norm.)                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12160 |   140 ms | V    407.3
+M5 countersunk phillips (non norm.)              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12320 |   146 ms | V    396.3 | Profondità dell'impronta limitata a 0,8 k (2,48 mm) per lasciare una parete.
+M5 countersunk torx (non norm.)                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12432 |   141 ms | V    403.3
+M6 cylinder none                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12984 |   118 ms | V    827.7
+M6 cylinder hex                                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13056 |   125 ms | V    753.9
+M6 cylinder slot                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12994 |   125 ms | V    802.6
+M6 cylinder phillips (non norm.)                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13192 |   131 ms | V    763.5
+M6 cylinder torx                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13286 |   133 ms | V    784.7
+M6 button none                                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13944 |   121 ms | V    541.8
+M6 button hex                                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13810 |   129 ms | V    511.5
+M6 button slot (non norm.)                       | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13818 |   126 ms | V    520.1
+M6 button phillips (non norm.)                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13766 |   137 ms | V    496.4 | Profondità dell'impronta limitata a 0,8 k (2,64 mm) per lasciare una parete.
+M6 button torx (non norm.)                       | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13938 |   129 ms | V    503.0
+M6 hex none                                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12898 |   116 ms | V    705.1
+M6 hex hex                                       non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M6 hex slot                                      non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M6 hex phillips                                  non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M6 hex torx                                      non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M6 countersunk none                              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12874 |   115 ms | V    650.3
+M6 countersunk hex                               | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12992 |   125 ms | V    615.4
+M6 countersunk slot (non norm.)                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12904 |   126 ms | V    626.9
+M6 countersunk phillips (non norm.)              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13096 |   138 ms | V    593.0 | Profondità dell'impronta limitata a 0,8 k (2,98 mm) per lasciare una parete.
+M6 countersunk torx (non norm.)                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13176 |   127 ms | V    617.8
+M8 cylinder none                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8080 |    91 ms | V   1705.3
+M8 cylinder hex                                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8152 |    99 ms | V   1565.3
+M8 cylinder slot                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8090 |    93 ms | V   1654.1
+M8 cylinder phillips                             non disponibile: PH4 non tabellato: la croce è disponibile solo fino a M6.
+M8 cylinder torx                                 non disponibile: T45, T50 e T55 non tabellati: il Torx è disponibile solo fino a M6.
+M8 button none                                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9040 |    91 ms | V   1078.6
+M8 button hex                                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8990 |    97 ms | V   1018.4
+M8 button slot (non norm.)                       | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8938 |    97 ms | V   1034.8
+M8 button phillips                               non disponibile: PH4 non tabellato: la croce è disponibile solo fino a M6.
+M8 button torx                                   non disponibile: T45, T50 e T55 non tabellati: il Torx è disponibile solo fino a M6.
+M8 hex none                                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7996 |    90 ms | V   1420.8
+M8 hex hex                                       non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M8 hex slot                                      non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M8 hex phillips                                  non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M8 hex torx                                      non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M8 countersunk none                              | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7970 |    88 ms | V   1335.7
+M8 countersunk hex                               | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8088 |    95 ms | V   1264.3
+M8 countersunk slot (non norm.)                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8000 |    93 ms | V   1277.9
+M8 countersunk phillips                          non disponibile: PH4 non tabellato: la croce è disponibile solo fino a M6.
+M8 countersunk torx                              non disponibile: T45, T50 e T55 non tabellati: il Torx è disponibile solo fino a M6.
+M10 cylinder none                                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8868 |    83 ms | V   3024.6
+M10 cylinder hex                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8940 |    91 ms | V   2711.1
+M10 cylinder slot                                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8878 |    90 ms | V   2929.7
+M10 cylinder phillips                            non disponibile: PH4 non tabellato: la croce è disponibile solo fino a M6.
+M10 cylinder torx                                non disponibile: T45, T50 e T55 non tabellati: il Torx è disponibile solo fino a M6.
+M10 button none                                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9828 |    85 ms | V   1860.1
+M10 button hex                                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9754 |    93 ms | V   1755.3
+M10 button slot (non norm.)                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9730 |    91 ms | V   1779.5
+M10 button phillips                              non disponibile: PH4 non tabellato: la croce è disponibile solo fino a M6.
+M10 button torx                                  non disponibile: T45, T50 e T55 non tabellati: il Torx è disponibile solo fino a M6.
+M10 hex none                                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8784 |    91 ms | V   2433.0
+M10 hex hex                                      non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M10 hex slot                                     non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M10 hex phillips                                 non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M10 hex torx                                     non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M10 countersunk none                             | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8758 |   109 ms | V   2362.3
+M10 countersunk hex                              | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8876 |   116 ms | V   2238.0
+M10 countersunk slot (non norm.)                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8788 |    93 ms | V   2260.7
+M10 countersunk phillips                         non disponibile: PH4 non tabellato: la croce è disponibile solo fino a M6.
+M10 countersunk torx                             non disponibile: T45, T50 e T55 non tabellati: il Torx è disponibile solo fino a M6.
+M12 cylinder none                                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5964 |    70 ms | V   4522.6
+M12 cylinder hex                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6036 |    72 ms | V   3932.0
+M12 cylinder slot                                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5974 |    74 ms | V   4265.7
+M12 cylinder phillips                            non disponibile: PH4 non tabellato: la croce è disponibile solo fino a M6.
+M12 cylinder torx                                non disponibile: T45, T50 e T55 non tabellati: il Torx è disponibile solo fino a M6.
+M12 button none                                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6924 |    75 ms | V   2926.2
+M12 button hex                                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6790 |    77 ms | V   2684.0
+M12 button slot (non norm.)                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6822 |    76 ms | V   2763.7
+M12 button phillips                              non disponibile: PH4 non tabellato: la croce è disponibile solo fino a M6.
+M12 button torx                                  non disponibile: T45, T50 e T55 non tabellati: il Torx è disponibile solo fino a M6.
+M12 hex none                                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5878 |    70 ms | V   3572.2
+M12 hex hex                                      non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M12 hex slot                                     non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M12 hex phillips                                 non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M12 hex torx                                     non disponibile: La testa esagonale ISO 4017 non ha impronta.
+M12 countersunk none                             | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5854 |    70 ms | V   3794.0
+M12 countersunk hex                              | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5972 |    74 ms | V   3520.3
+M12 countersunk slot (non norm.)                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5884 |    73 ms | V   3581.3
+M12 countersunk phillips                         non disponibile: PH4 non tabellato: la croce è disponibile solo fino a M6.
+M12 countersunk torx                             non disponibile: T45, T50 e T55 non tabellati: il Torx è disponibile solo fino a M6.
+
+=== B. Filetto, fori, dado (L=16), mediana su 5 (M3 M5 M8 M12) o una sola prova (M4 M6 M10)
+M3 filetto esterno                               | stato NoError  | comp 1 | genere 0 (att. 0) | tri  24920 |   168 ms | V     90.7
+M3 filetto interno (operando)                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15658 |   232 ms | V    126.9
+M3 foro filettato passante, sede lamatura        | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15574 |   256 ms | V    224.0
+M3 foro filettato cieco, sede svasatura          | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15674 |   256 ms | V    169.9
+M3 foro filettato in piastra passante            | stato NoError  | comp 1 | genere 1 (att. 1) | tri  11468 |   228 ms | V  13310.2
+M3 foro filettato in piastra cieco, sede esagonale | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15520 |   291 ms | V  18732.4 | Piastra alzata a 21,03 mm perché il foro cieco non la attraversi.
+M3 foro passante ISO 273 medio                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V    144.9
+M3 foro passante in piastra, lamatura            | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |     2 ms | V  13297.9
+M3 foro passante in piastra, svasatura + vite    | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |   175 ms | V  13340.6
+M3 madrevite                                     | stato NoError  | comp 1 | genere 1 (att. 1) | tri   2442 |    83 ms | V     41.2
+M3 vite filetto parziale (b), L=40               | stato NoError  | comp 1 | genere 0 (att. 0) | tri  28598 |   301 ms | V    319.1 | Filetto parziale: inizia a 22 mm dal sottotesta (multiplo del passo), lungo 18 mm.
+M3 vite sinistra                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  25340 |   256 ms | V    152.7
+M4 filetto esterno                               | stato NoError  | comp 1 | genere 0 (att. 0) | tri  17912 |   117 ms | V    159.4
+M4 filetto interno (operando)                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13498 |   209 ms | V    207.6
+M4 foro filettato passante, sede lamatura        | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13398 |   229 ms | V    403.5
+M4 foro filettato cieco, sede svasatura          | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13498 |   241 ms | V    305.7
+M4 foro filettato in piastra passante            | stato NoError  | comp 1 | genere 1 (att. 1) | tri   9054 |   196 ms | V  13165.3
+M4 foro filettato in piastra cieco, sede esagonale | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13344 |   270 ms | V  19506.9 | Piastra alzata a 22,06 mm perché il foro cieco non la attraversi.
+M4 foro passante ISO 273 medio                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V    253.7
+M4 foro passante in piastra, lamatura            | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |     2 ms | V  13135.8
+M4 foro passante in piastra, svasatura + vite    | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |   120 ms | V  13208.1
+M4 madrevite                                     | stato NoError  | comp 1 | genere 1 (att. 1) | tri   2770 |    92 ms | V     89.5
+M4 vite filetto parziale (b), L=40               | stato NoError  | comp 1 | genere 0 (att. 0) | tri  23326 |   245 ms | V    582.8 | Filetto parziale: inizia a 19,6 mm dal sottotesta (multiplo del passo), lungo 20,4 mm.
+M4 vite sinistra                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  18328 |   198 ms | V    293.2
+M5 filetto esterno                               | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11876 |   111 ms | V    254.2
+M5 filetto interno (operando)                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11844 |   196 ms | V    314.5
+M5 foro filettato passante, sede lamatura        | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11754 |   213 ms | V    660.6
+M5 foro filettato cieco, sede svasatura          | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11852 |   212 ms | V    502.8
+M5 foro filettato in piastra passante            | stato NoError  | comp 1 | genere 1 (att. 1) | tri   7238 |   161 ms | V  12963.2
+M5 foro filettato in piastra cieco, sede esagonale | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11698 |   230 ms | V  20184.4 | Piastra alzata a 23,03 mm perché il foro cieco non la attraversi.
+M5 foro passante ISO 273 medio                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V    379.0
+M5 foro passante in piastra, lamatura            | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |     2 ms | V  12926.5
+M5 foro passante in piastra, svasatura + vite    | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |   106 ms | V  13038.9
+M5 madrevite                                     | stato NoError  | comp 1 | genere 1 (att. 1) | tri   3532 |   111 ms | V    160.4
+M5 vite filetto parziale (b), L=40               | stato NoError  | comp 1 | genere 0 (att. 0) | tri  17098 |   201 ms | V    940.3 | Filetto parziale: inizia a 17,6 mm dal sottotesta (multiplo del passo), lungo 22,4 mm.
+M5 vite sinistra                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12300 |   141 ms | V    493.9
+M6 filetto esterno                               | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12624 |    82 ms | V    362.7
+M6 filetto interno (operando)                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9540 |   147 ms | V    435.1
+M6 foro filettato passante, sede lamatura        | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9444 |   165 ms | V    994.2
+M6 foro filettato cieco, sede svasatura          | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9538 |   168 ms | V    756.9
+M6 foro filettato in piastra passante            | stato NoError  | comp 1 | genere 1 (att. 1) | tri   5262 |   124 ms | V  12704.3
+M6 foro filettato in piastra cieco, sede esagonale | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9384 |   187 ms | V  20553.9 | Piastra alzata a 23,77 mm perché il foro cieco non la attraversi.
+M6 foro passante ISO 273 medio                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V    545.8
+M6 foro passante in piastra, lamatura            | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |     2 ms | V  12648.8
+M6 foro passante in piastra, svasatura + vite    | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |    86 ms | V  12809.0
+M6 madrevite                                     | stato NoError  | comp 1 | genere 1 (att. 1) | tri   3130 |   105 ms | V    293.8
+M6 vite filetto parziale (b), L=40               | stato NoError  | comp 1 | genere 0 (att. 0) | tri  19378 |   198 ms | V   1386.3 | Filetto parziale: inizia a 16 mm dal sottotesta (multiplo del passo), lungo 24 mm.
+M6 vite sinistra                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13048 |   128 ms | V    753.6
+M8 filetto esterno                               | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7712 |    67 ms | V    653.9
+M8 filetto interno (operando)                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7706 |    88 ms | V    751.4
+M8 foro filettato passante, sede lamatura        | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7606 |   100 ms | V   1963.9
+M8 foro filettato cieco, sede svasatura          | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7694 |   107 ms | V   1502.8
+M8 foro filettato in piastra passante            | stato NoError  | comp 1 | genere 1 (att. 1) | tri   3336 |    87 ms | V  11972.9
+M8 foro filettato in piastra cieco, sede esagonale | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7540 |   132 ms | V  21397.8 | Piastra alzata a 25,59 mm perché il foro cieco non la attraversi.
+M8 foro passante ISO 273 medio                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V   1015.0
+M8 foro passante in piastra, lamatura            | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |     2 ms | V  11872.7
+M8 foro passante in piastra, svasatura + vite    | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |    81 ms | V  12146.6
+M8 madrevite                                     | stato NoError  | comp 1 | genere 1 (att. 1) | tri   3268 |    94 ms | V    642.8
+M8 vite filetto parziale (b), L=40               | stato NoError  | comp 1 | genere 0 (att. 0) | tri  14204 |   172 ms | V   2650.2 | Filetto parziale: inizia a 11,25 mm dal sottotesta (multiplo del passo), lungo 28,75 mm.
+M8 vite sinistra                                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8144 |    96 ms | V   1564.9
+M10 filetto esterno                              | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8512 |    56 ms | V   1030.2
+M10 filetto interno (operando)                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6476 |    57 ms | V   1153.6
+M10 foro filettato passante, sede lamatura       | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6376 |    71 ms | V   3395.3
+M10 foro filettato cieco, sede svasatura         | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6462 |    75 ms | V   2607.8
+M10 foro filettato in piastra passante           | stato NoError  | comp 1 | genere 1 (att. 1) | tri   2058 |    45 ms | V  10919.5
+M10 foro filettato in piastra cieco, sede esagonale | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6308 |    86 ms | V  21743.6 | Piastra alzata a 27,21 mm perché il foro cieco non la attraversi.
+M10 foro passante ISO 273 medio                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V   1516.2
+M10 foro passante in piastra, lamatura           | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |     2 ms | V  10831.8
+M10 foro passante in piastra, svasatura + vite   | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |    61 ms | V  11279.9
+M10 madrevite                                    | stato NoError  | comp 1 | genere 1 (att. 1) | tri   3364 |    70 ms | V   1195.4
+M10 vite filetto parziale (b), L=40              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  17566 |   177 ms | V   4360.9 | Filetto parziale: inizia a 7,5 mm dal sottotesta (multiplo del passo), lungo 32,5 mm.
+M10 vite sinistra                                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   8932 |    91 ms | V   2710.5
+M12 filetto esterno                              | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5600 |    49 ms | V   1491.8
+M12 filetto interno (operando)                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5600 |    51 ms | V   1641.6
+M12 foro filettato passante, sede lamatura       | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5602 |    62 ms | V   4994.7
+M12 foro filettato cieco, sede svasatura         | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5688 |    67 ms | V   4128.4
+M12 foro filettato in piastra passante           | stato NoError  | comp 1 | genere 1 (att. 1) | tri   1242 |    37 ms | V   9869.9
+M12 foro filettato in piastra cieco, sede esagonale | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5534 |    77 ms | V  21959.9 | Piastra alzata a 28,83 mm perché il foro cieco non la attraversi.
+M12 foro passante ISO 273 medio                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V   2456.0
+M12 foro passante in piastra, lamatura           | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |     2 ms | V   9753.0
+M12 foro passante in piastra, svasatura + vite   | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |    52 ms | V   9946.4
+M12 madrevite                                    | stato NoError  | comp 1 | genere 1 (att. 1) | tri   3892 |    73 ms | V   1847.8
+M12 vite filetto parziale (b), L=40              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  12974 |   148 ms | V   6238.0 | Filetto parziale: inizia a 3,5 mm dal sottotesta (multiplo del passo), lungo 36,5 mm.
+M12 vite sinistra                                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6028 |    74 ms | V   3931.2
+
+=== C. Casi limite di prestazione (una sola prova, ms indicativi)
+M3 x 60 vite, filetto intero                     | stato NoError | comp 1 | genere 0 | tri 92932 | 1038 ms (pezzi 5, unione 423, finitura 607) | RSS 184 MB
+M5 x 60 vite, filetto intero                     | stato NoError | comp 1 | genere 0 | tri 43988 | 528 ms (pezzi 3, unione 209, finitura 314) | RSS 184 MB
+M8 x 60 vite, filetto intero                     | stato NoError | comp 1 | genere 0 | tri 28426 | 323 ms (pezzi 2, unione 112, finitura 208) | RSS 184 MB
+M12 x 60 vite, filetto intero                    | stato NoError | comp 1 | genere 0 | tri 20520 | 287 ms (pezzi 2, unione 76, finitura 209) | RSS 184 MB
+M3 x 40 vite, filetto intero                     | stato NoError | comp 1 | genere 0 | tri 62212 | 660 ms (pezzi 4, unione 242, finitura 413) | RSS 184 MB
+
+=== D. Accoppiamento (vite L=20 filetto intero nel foro di una piastra 30x30x15 e nel dado, vite sempre nominale, gioco solo su foro e dado)
+M3 des gioco 0.15  | sovrapp. radiale  0.121 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra   4.127 dado   0.086 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 876 ms
+M3 des gioco 0.1   | sovrapp. radiale  0.171 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra   6.974 dado   0.348 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 961 ms
+M3 des gioco 0.075 | sovrapp. radiale  0.196 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra   8.750 dado   0.516 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 1019 ms
+M3 des gioco 0     | sovrapp. radiale  0.271 | interf. piastra   0.00542 dado   0.00050 | ingaggio (vite +P/2) piastra  14.893 dado   1.125 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 1470 ms
+M3 des gioco -0.1  | sovrapp. radiale  0.371 | interf. piastra  18.58066 dado   1.94071 | ingaggio (vite +P/2) piastra  25.378 dado   2.230 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 838 ms
+M3 SIN gioco 0.15  | sovrapp. radiale  0.121 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra   4.151 dado   0.089 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 883 ms
+M4 des gioco 0.15  | sovrapp. radiale  0.229 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  13.468 dado   0.839 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 773 ms
+M4 des gioco 0.1   | sovrapp. radiale  0.279 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  18.201 dado   1.497 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 760 ms
+M4 des gioco 0.075 | sovrapp. radiale  0.304 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  20.764 dado   1.862 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 663 ms
+M4 des gioco 0     | sovrapp. radiale  0.379 | interf. piastra   0.01058 dado   0.00146 | ingaggio (vite +P/2) piastra  29.184 dado   3.098 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 969 ms
+M4 des gioco -0.1  | sovrapp. radiale  0.479 | interf. piastra  24.56306 dado   3.78753 | ingaggio (vite +P/2) piastra  42.533 dado   5.147 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 670 ms
+M4 SIN gioco 0.15  | sovrapp. radiale  0.229 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  13.522 dado   0.846 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 733 ms
+M5 des gioco 0.15  | sovrapp. radiale  0.283 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  23.307 dado   2.536 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 673 ms
+M5 des gioco 0.1   | sovrapp. radiale  0.333 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  29.495 dado   3.950 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 693 ms
+M5 des gioco 0.075 | sovrapp. radiale  0.358 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  32.808 dado   4.719 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 600 ms
+M5 des gioco 0     | sovrapp. radiale  0.433 | interf. piastra   0.01373 dado   0.00318 | ingaggio (vite +P/2) piastra  43.573 dado   7.268 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 907 ms
+M5 des gioco -0.1  | sovrapp. radiale  0.533 | interf. piastra  30.80818 dado   7.66893 | ingaggio (vite +P/2) piastra  60.367 dado  11.365 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 609 ms
+M5 SIN gioco 0.15  | sovrapp. radiale  0.283 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  23.365 dado   2.549 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 688 ms
+M6 des gioco 0.15  | sovrapp. radiale  0.391 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  42.264 dado   5.303 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 600 ms
+M6 des gioco 0.1   | sovrapp. radiale  0.441 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  50.038 dado   7.195 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 522 ms
+M6 des gioco 0.075 | sovrapp. radiale  0.466 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  54.125 dado   8.204 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 562 ms
+M6 des gioco 0     | sovrapp. radiale  0.541 | interf. piastra   0.02120 dado   0.00520 | ingaggio (vite +P/2) piastra  67.146 dado  11.480 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 747 ms
+M6 des gioco -0.1  | sovrapp. radiale  0.641 | interf. piastra  35.88927 dado   9.58031 | ingaggio (vite +P/2) piastra  86.784 dado  16.564 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 601 ms
+M6 SIN gioco 0.15  | sovrapp. radiale  0.391 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  42.329 dado   5.318 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 628 ms
+M8 des gioco 0.15  | sovrapp. radiale  0.527 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  86.003 dado  14.319 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 468 ms
+M8 des gioco 0.1   | sovrapp. radiale  0.577 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  96.847 dado  17.851 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 525 ms
+M8 des gioco 0.075 | sovrapp. radiale  0.602 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra 102.483 dado  19.707 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 477 ms
+M8 des gioco 0     | sovrapp. radiale  0.677 | interf. piastra   0.03261 dado   0.01087 | ingaggio (vite +P/2) piastra 120.212 dado  25.632 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 616 ms
+M8 des gioco -0.1  | sovrapp. radiale  0.777 | interf. piastra  46.65214 dado  16.75348 | ingaggio (vite +P/2) piastra 146.342 dado  34.568 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 481 ms
+M8 SIN gioco 0.15  | sovrapp. radiale  0.527 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra  86.067 dado  14.337 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 481 ms
+M10 des gioco 0.15  | sovrapp. radiale  0.662 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra 148.912 dado  30.176 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 439 ms
+M10 des gioco 0.1   | sovrapp. radiale  0.712 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra 162.878 dado  35.870 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 396 ms
+M10 des gioco 0.075 | sovrapp. radiale  0.737 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra 170.083 dado  38.834 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 397 ms
+M10 des gioco 0     | sovrapp. radiale  0.812 | interf. piastra   0.04624 dado   0.01959 | ingaggio (vite +P/2) piastra 192.559 dado  48.196 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 590 ms
+M10 des gioco -0.1  | sovrapp. radiale  0.912 | interf. piastra  57.06626 dado  25.88395 | ingaggio (vite +P/2) piastra 225.145 dado  62.040 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 478 ms
+M10 SIN gioco 0.15  | sovrapp. radiale  0.662 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra 148.967 dado  30.194 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 396 ms
+M12 des gioco 0.15  | sovrapp. radiale  0.797 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra 218.044 dado  64.593 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 378 ms
+M12 des gioco 0.1   | sovrapp. radiale  0.847 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra 235.373 dado  74.422 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 386 ms
+M12 des gioco 0.075 | sovrapp. radiale  0.872 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra 244.260 dado  79.503 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 390 ms
+M12 des gioco 0     | sovrapp. radiale  0.947 | interf. piastra   0.06309 dado   0.03800 | ingaggio (vite +P/2) piastra 271.791 dado  95.407 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 548 ms
+M12 des gioco -0.1  | sovrapp. radiale  1.047 | interf. piastra  68.83342 dado  43.55628 | ingaggio (vite +P/2) piastra 311.195 dado 118.559 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 457 ms
+M12 SIN gioco 0.15  | sovrapp. radiale  0.797 | interf. piastra   0.00000 dado   0.00000 | ingaggio (vite +P/2) piastra 218.083 dado  64.609 mm3 | genere piastra 1 dado 1 | comp 1/1/1 | stati tutti NoError | 364 ms
+
+=== F. Sweep dei fori: tutte le misure x sede x corsa x (nudo, in piastra con vite), una prova
+M3 tapped none passante nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15388 |   265 ms | V    127.8
+M3 tapped none passante piastra+vite             | stato NoError  | comp 1 | genere 1 (att. 1) | tri  14442 |   444 ms | V  13380.1
+M3 tapped none cieco nudo                        | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15486 |   253 ms | V    129.4
+M3 tapped none cieco piastra+vite                | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15496 |   441 ms | V  16816.5 | Piastra alzata a 18,83 mm perché il foro cieco non la attraversi.
+M3 tapped counterbore passante nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15574 |   267 ms | V    224.0
+M3 tapped counterbore passante piastra+vite      | stato NoError  | comp 1 | genere 1 (att. 1) | tri  11468 |   414 ms | V  13310.2
+M3 tapped counterbore cieco nudo                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15672 |   403 ms | V    225.6
+M3 tapped counterbore cieco piastra+vite         | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15688 |   586 ms | V  19690.3 | Piastra alzata a 22,13 mm perché il foro cieco non la attraversi.
+M3 tapped countersink passante nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15576 |   263 ms | V    168.2
+M3 tapped countersink passante piastra+vite      | stato NoError  | comp 1 | genere 1 (att. 1) | tri  12852 |   426 ms | V  13352.3
+M3 tapped countersink cieco nudo                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15674 |   258 ms | V    169.9
+M3 tapped countersink cieco piastra+vite         | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15688 |   486 ms | V  18447.9 | Piastra alzata a 20,69 mm perché il foro cieco non la attraversi.
+M3 tapped hex passante nudo                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15406 |   289 ms | V    191.9
+M3 tapped hex passante piastra+vite              | stato NoError  | comp 1 | genere 1 (att. 1) | tri  12358 |   412 ms | V  13333.5
+M3 tapped hex cieco nudo                         | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15504 |   257 ms | V    193.5
+M3 tapped hex cieco piastra+vite                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  15520 |   458 ms | V  18732.4 | Piastra alzata a 21,03 mm perché il foro cieco non la attraversi.
+M3 clearance none passante nudo                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V    144.9
+M3 clearance none passante piastra+vite          | stato NoError  | comp 1 | genere 1 (att. 1) | tri    208 |   172 ms | V  13364.2
+M3 clearance none cieco nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V    144.9
+M3 clearance none cieco piastra+vite             | stato NoError  | comp 1 | genere 0 (att. 0) | tri    204 |   175 ms | V  16055.1 | Piastra alzata a 18 mm perché il foro cieco non la attraversi.
+M3 clearance counterbore passante nudo           | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     1 ms | V    241.0
+M3 clearance counterbore passante piastra+vite   | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |   181 ms | V  13297.9
+M3 clearance counterbore cieco nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     1 ms | V    241.0
+M3 clearance counterbore cieco piastra+vite      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    396 |   178 ms | V  18929.0 | Piastra alzata a 21,3 mm perché il foro cieco non la attraversi.
+M3 clearance countersink passante nudo           | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V    185.3
+M3 clearance countersink passante piastra+vite   | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |   176 ms | V  13340.6
+M3 clearance countersink cieco nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V    185.3
+M3 clearance countersink cieco piastra+vite      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    300 |   176 ms | V  17688.7 | Piastra alzata a 19,86 mm perché il foro cieco non la attraversi.
+M3 clearance hex passante nudo                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     1 ms | V    208.9
+M3 clearance hex passante piastra+vite           | stato NoError  | comp 1 | genere 1 (att. 1) | tri    232 |   174 ms | V  13320.0
+M3 clearance hex cieco nudo                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     1 ms | V    208.9
+M3 clearance hex cieco piastra+vite              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    228 |   184 ms | V  17971.1 | Piastra alzata a 20,2 mm perché il foro cieco non la attraversi.
+M4 tapped none passante nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13212 |   224 ms | V    208.9
+M4 tapped none passante piastra+vite             | stato NoError  | comp 1 | genere 1 (att. 1) | tri  12402 |   378 ms | V  13304.0
+M4 tapped none cieco nudo                        | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13310 |   231 ms | V    212.4
+M4 tapped none cieco piastra+vite                | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13320 |   387 ms | V  16945.3 | Piastra alzata a 19,06 mm perché il foro cieco non la attraversi.
+M4 tapped counterbore passante nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13398 |   255 ms | V    403.5
+M4 tapped counterbore passante piastra+vite      | stato NoError  | comp 1 | genere 1 (att. 1) | tri   9054 |   334 ms | V  13165.3
+M4 tapped counterbore cieco nudo                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13496 |   253 ms | V    406.9
+M4 tapped counterbore cieco piastra+vite         | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13512 |   513 ms | V  20620.8 | Piastra alzata a 23,36 mm perché il foro cieco non la attraversi.
+M4 tapped countersink passante nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13400 |   397 ms | V    302.2
+M4 tapped countersink passante piastra+vite      | stato NoError  | comp 1 | genere 1 (att. 1) | tri  10554 |   375 ms | V  13239.2
+M4 tapped countersink cieco nudo                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13498 |   274 ms | V    305.7
+M4 tapped countersink cieco piastra+vite         | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13512 |   426 ms | V  19080.3 | Piastra alzata a 21,54 mm perché il foro cieco non la attraversi.
+M4 tapped hex passante nudo                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13230 |   276 ms | V    347.4
+M4 tapped hex passante piastra+vite              | stato NoError  | comp 1 | genere 1 (att. 1) | tri   9954 |   385 ms | V  13204.5
+M4 tapped hex cieco nudo                         | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13328 |   266 ms | V    350.9
+M4 tapped hex cieco piastra+vite                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  13344 |   437 ms | V  19506.9 | Piastra alzata a 22,06 mm perché il foro cieco non la attraversi.
+M4 clearance none passante nudo                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V    253.7
+M4 clearance none passante piastra+vite          | stato NoError  | comp 1 | genere 1 (att. 1) | tri    208 |   136 ms | V  13262.1
+M4 clearance none cieco nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V    253.7
+M4 clearance none cieco piastra+vite             | stato NoError  | comp 1 | genere 0 (att. 0) | tri    204 |   130 ms | V  15946.3 | Piastra alzata a 18 mm perché il foro cieco non la attraversi.
+M4 clearance counterbore passante nudo           | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     1 ms | V    448.3
+M4 clearance counterbore passante piastra+vite   | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |   131 ms | V  13135.8
+M4 clearance counterbore cieco nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     1 ms | V    448.3
+M4 clearance counterbore cieco piastra+vite      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    396 |   144 ms | V  19621.7 | Piastra alzata a 22,3 mm perché il foro cieco non la attraversi.
+M4 clearance countersink passante nudo           | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V    347.0
+M4 clearance countersink passante piastra+vite   | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |   134 ms | V  13208.1
+M4 clearance countersink cieco nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V    347.0
+M4 clearance countersink cieco piastra+vite      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    300 |   127 ms | V  18084.9 | Piastra alzata a 20,48 mm perché il foro cieco non la attraversi.
+M4 clearance hex passante nudo                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     1 ms | V    392.2
+M4 clearance hex passante piastra+vite           | stato NoError  | comp 1 | genere 1 (att. 1) | tri    232 |   121 ms | V  13171.2
+M4 clearance hex cieco nudo                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     1 ms | V    392.2
+M4 clearance hex cieco piastra+vite              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    228 |   121 ms | V  18507.8 | Piastra alzata a 21 mm perché il foro cieco non la attraversi.
+M5 tapped none passante nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11568 |   197 ms | V    316.9
+M5 tapped none passante piastra+vite             | stato NoError  | comp 1 | genere 1 (att. 1) | tri  10862 |   322 ms | V  13202.7
+M5 tapped none cieco nudo                        | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11664 |   204 ms | V    323.8
+M5 tapped none cieco piastra+vite                | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11674 |   324 ms | V  17075.1 | Piastra alzata a 19,33 mm perché il foro cieco non la attraversi.
+M5 tapped counterbore passante nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11754 |   203 ms | V    660.6
+M5 tapped counterbore passante piastra+vite      | stato NoError  | comp 1 | genere 1 (att. 1) | tri   7238 |   271 ms | V  12963.2
+M5 tapped counterbore cieco nudo                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11850 |   207 ms | V    667.5
+M5 tapped counterbore cieco piastra+vite         | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11866 |   348 ms | V  21501.4 | Piastra alzata a 24,63 mm perché il foro cieco non la attraversi.
+M5 tapped countersink passante nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11756 |   208 ms | V    496.0
+M5 tapped countersink passante piastra+vite      | stato NoError  | comp 1 | genere 1 (att. 1) | tri   8822 |   300 ms | V  13078.7
+M5 tapped countersink cieco nudo                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11852 |   228 ms | V    502.8
+M5 tapped countersink cieco piastra+vite         | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11866 |   351 ms | V  19680.1 | Piastra alzata a 22,43 mm perché il foro cieco non la attraversi.
+M5 tapped hex passante nudo                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11586 |   232 ms | V    537.7
+M5 tapped hex passante piastra+vite              | stato NoError  | comp 1 | genere 1 (att. 1) | tri   8222 |   335 ms | V  13054.7
+M5 tapped hex cieco nudo                         | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11682 |   229 ms | V    544.5
+M5 tapped hex cieco piastra+vite                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri  11698 |   371 ms | V  20184.4 | Piastra alzata a 23,03 mm perché il foro cieco non la attraversi.
+M5 clearance none passante nudo                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     1 ms | V    379.0
+M5 clearance none passante piastra+vite          | stato NoError  | comp 1 | genere 1 (att. 1) | tri    208 |   130 ms | V  13144.6
+M5 clearance none cieco nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V    379.0
+M5 clearance none cieco piastra+vite             | stato NoError  | comp 1 | genere 0 (att. 0) | tri    204 |   107 ms | V  15821.0 | Piastra alzata a 18 mm perché il foro cieco non la attraversi.
+M5 clearance counterbore passante nudo           | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     1 ms | V    722.8
+M5 clearance counterbore passante piastra+vite   | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |   106 ms | V  12926.5
+M5 clearance counterbore cieco nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     1 ms | V    722.8
+M5 clearance counterbore cieco piastra+vite      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    396 |   103 ms | V  20247.2 | Piastra alzata a 23,3 mm perché il foro cieco non la attraversi.
+M5 clearance countersink passante nudo           | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V    558.1
+M5 clearance countersink passante piastra+vite   | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |   104 ms | V  13038.9
+M5 clearance countersink cieco nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V    558.1
+M5 clearance countersink cieco piastra+vite      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    300 |   103 ms | V  18431.8 | Piastra alzata a 21,1 mm perché il foro cieco non la attraversi.
+M5 clearance hex passante nudo                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     1 ms | V    599.8
+M5 clearance hex passante piastra+vite           | stato NoError  | comp 1 | genere 1 (att. 1) | tri    232 |   104 ms | V  13011.6
+M5 clearance hex cieco nudo                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     1 ms | V    599.8
+M5 clearance hex cieco piastra+vite              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    228 |   109 ms | V  18930.2 | Piastra alzata a 21,7 mm perché il foro cieco non la attraversi.
+M6 tapped none passante nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9258 |   161 ms | V    439.8
+M6 tapped none passante piastra+vite             | stato NoError  | comp 1 | genere 1 (att. 1) | tri   8696 |   287 ms | V  13087.4
+M6 tapped none cieco nudo                        | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9350 |   180 ms | V    451.0
+M6 tapped none cieco piastra+vite                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9360 |   291 ms | V  17159.8 | Piastra alzata a 19,57 mm perché il foro cieco non la attraversi.
+M6 tapped counterbore passante nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9444 |   181 ms | V    994.2
+M6 tapped counterbore passante piastra+vite      | stato NoError  | comp 1 | genere 1 (att. 1) | tri   5262 |   224 ms | V  12704.3
+M6 tapped counterbore cieco nudo                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9536 |   181 ms | V   1005.3
+M6 tapped counterbore cieco piastra+vite         | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9552 |   321 ms | V  22275.4 | Piastra alzata a 25,87 mm perché il foro cieco non la attraversi.
+M6 tapped countersink passante nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9446 |   178 ms | V    745.8
+M6 tapped countersink passante piastra+vite      | stato NoError  | comp 1 | genere 1 (att. 1) | tri   6750 |   244 ms | V  12871.4
+M6 tapped countersink cieco nudo                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9538 |   175 ms | V    756.9
+M6 tapped countersink cieco piastra+vite         | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9552 |   292 ms | V  20190.7 | Piastra alzata a 23,29 mm perché il foro cieco non la attraversi.
+M6 tapped hex passante nudo                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9276 |   169 ms | V    825.7
+M6 tapped hex passante piastra+vite              | stato NoError  | comp 1 | genere 1 (att. 1) | tri   6306 |   231 ms | V  12815.7
+M6 tapped hex cieco nudo                         | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9368 |   167 ms | V    836.8
+M6 tapped hex cieco piastra+vite                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri   9384 |   273 ms | V  20553.9 | Piastra alzata a 23,77 mm perché il foro cieco non la attraversi.
+M6 clearance none passante nudo                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V    545.8
+M6 clearance none passante piastra+vite          | stato NoError  | comp 1 | genere 1 (att. 1) | tri    208 |    85 ms | V  12988.3
+M6 clearance none cieco nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V    545.8
+M6 clearance none cieco piastra+vite             | stato NoError  | comp 1 | genere 0 (att. 0) | tri    204 |    94 ms | V  15654.2 | Piastra alzata a 18 mm perché il foro cieco non la attraversi.
+M6 clearance counterbore passante nudo           | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     1 ms | V   1100.2
+M6 clearance counterbore passante piastra+vite   | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |    87 ms | V  12648.8
+M6 clearance counterbore cieco nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     1 ms | V   1100.2
+M6 clearance counterbore cieco piastra+vite      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    396 |    87 ms | V  20769.8 | Piastra alzata a 24,3 mm perché il foro cieco non la attraversi.
+M6 clearance countersink passante nudo           | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V    851.8
+M6 clearance countersink passante piastra+vite   | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |    95 ms | V  12809.0
+M6 clearance countersink cieco nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V    851.8
+M6 clearance countersink cieco piastra+vite      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    300 |    90 ms | V  18696.0 | Piastra alzata a 21,72 mm perché il foro cieco non la attraversi.
+M6 clearance hex passante nudo                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     1 ms | V    931.7
+M6 clearance hex passante piastra+vite           | stato NoError  | comp 1 | genere 1 (att. 1) | tri    232 |    89 ms | V  12745.7
+M6 clearance hex cieco nudo                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     1 ms | V    931.7
+M6 clearance hex cieco piastra+vite              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    228 |    86 ms | V  19048.3 | Piastra alzata a 22,2 mm perché il foro cieco non la attraversi.
+M8 tapped none passante nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7420 |    99 ms | V    761.6
+M8 tapped none passante piastra+vite             | stato NoError  | comp 1 | genere 1 (att. 1) | tri   6972 |   186 ms | V  12785.3
+M8 tapped none cieco nudo                        | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7506 |   108 ms | V    787.9
+M8 tapped none cieco piastra+vite                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7516 |   236 ms | V  17290.4 | Piastra alzata a 20,09 mm perché il foro cieco non la attraversi.
+M8 tapped counterbore passante nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7606 |   123 ms | V   1963.9
+M8 tapped counterbore passante piastra+vite      | stato NoError  | comp 1 | genere 1 (att. 1) | tri   3336 |   143 ms | V  11972.9
+M8 tapped counterbore cieco nudo                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7692 |   108 ms | V   1990.2
+M8 tapped counterbore cieco piastra+vite         | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7708 |   195 ms | V  23558.1 | Piastra alzata a 28,39 mm perché il foro cieco non la attraversi.
+M8 tapped countersink passante nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7608 |   105 ms | V   1476.5
+M8 tapped countersink passante piastra+vite      | stato NoError  | comp 1 | genere 1 (att. 1) | tri   4878 |   161 ms | V  12280.7
+M8 tapped countersink cieco nudo                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7694 |   108 ms | V   1502.8
+M8 tapped countersink cieco piastra+vite         | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7708 |   193 ms | V  21016.8 | Piastra alzata a 25,05 mm perché il foro cieco non la attraversi.
+M8 tapped hex passante nudo                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7438 |   101 ms | V   1604.2
+M8 tapped hex passante piastra+vite              | stato NoError  | comp 1 | genere 1 (att. 1) | tri   4460 |   154 ms | V  12201.1
+M8 tapped hex cieco nudo                         | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7524 |   102 ms | V   1630.5
+M8 tapped hex cieco piastra+vite                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri   7540 |   188 ms | V  21397.8 | Piastra alzata a 25,59 mm perché il foro cieco non la attraversi.
+M8 clearance none passante nudo                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V   1015.0
+M8 clearance none passante piastra+vite          | stato NoError  | comp 1 | genere 1 (att. 1) | tri    208 |    68 ms | V  12548.5
+M8 clearance none cieco nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V   1015.0
+M8 clearance none cieco piastra+vite             | stato NoError  | comp 1 | genere 0 (att. 0) | tri    204 |    69 ms | V  15185.0 | Piastra alzata a 18 mm perché il foro cieco non la attraversi.
+M8 clearance counterbore passante nudo           | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     2 ms | V   2217.2
+M8 clearance counterbore passante piastra+vite   | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |   123 ms | V  11872.7
+M8 clearance counterbore cieco nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     2 ms | V   2217.2
+M8 clearance counterbore cieco piastra+vite      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    396 |    74 ms | V  21452.8 | Piastra alzata a 26,3 mm perché il foro cieco non la attraversi.
+M8 clearance countersink passante nudo           | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V   1729.8
+M8 clearance countersink passante piastra+vite   | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |    70 ms | V  12146.6
+M8 clearance countersink cieco nudo              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V   1729.8
+M8 clearance countersink cieco piastra+vite      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    300 |    69 ms | V  18932.5 | Piastra alzata a 22,96 mm perché il foro cieco non la attraversi.
+M8 clearance hex passante nudo                   | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     1 ms | V   1857.5
+M8 clearance hex passante piastra+vite           | stato NoError  | comp 1 | genere 1 (att. 1) | tri    232 |    75 ms | V  12054.8
+M8 clearance hex cieco nudo                      | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     2 ms | V   1857.5
+M8 clearance hex cieco piastra+vite              | stato NoError  | comp 1 | genere 0 (att. 0) | tri    228 |    72 ms | V  19292.5 | Piastra alzata a 23,5 mm perché il foro cieco non la attraversi.
+M10 tapped none passante nudo                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6190 |    67 ms | V   1172.5
+M10 tapped none passante piastra+vite            | stato NoError  | comp 1 | genere 1 (att. 1) | tri   5820 |   142 ms | V  12399.6
+M10 tapped none cieco nudo                       | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6274 |    70 ms | V   1223.7
+M10 tapped none cieco piastra+vite               | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6284 |   147 ms | V  17322.3 | Piastra alzata a 20,61 mm perché il foro cieco non la attraversi.
+M10 tapped counterbore passante nudo             | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6376 |    71 ms | V   3395.3
+M10 tapped counterbore passante piastra+vite     | stato NoError  | comp 1 | genere 1 (att. 1) | tri   2058 |   109 ms | V  10919.5
+M10 tapped counterbore cieco nudo                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6460 |    76 ms | V   3446.5
+M10 tapped counterbore cieco piastra+vite        | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6476 |   167 ms | V  24369.4 | Piastra alzata a 30,91 mm perché il foro cieco non la attraversi.
+M10 tapped countersink passante nudo             | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6378 |    73 ms | V   2556.6
+M10 tapped countersink passante piastra+vite     | stato NoError  | comp 1 | genere 1 (att. 1) | tri   3630 |   138 ms | V  11422.1
+M10 tapped countersink cieco nudo                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6462 |    88 ms | V   2607.8
+M10 tapped countersink cieco piastra+vite        | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6476 |   165 ms | V  21477.7 | Piastra alzata a 26,81 mm perché il foro cieco non la attraversi.
+M10 tapped hex passante nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6208 |    78 ms | V   2691.1
+M10 tapped hex passante piastra+vite             | stato NoError  | comp 1 | genere 1 (att. 1) | tri   3312 |   125 ms | V  11356.9
+M10 tapped hex cieco nudo                        | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6292 |    80 ms | V   2742.3
+M10 tapped hex cieco piastra+vite                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   6308 |   167 ms | V  21743.6 | Piastra alzata a 27,21 mm perché il foro cieco non la attraversi.
+M10 clearance none passante nudo                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V   1516.2
+M10 clearance none passante piastra+vite         | stato NoError  | comp 1 | genere 1 (att. 1) | tri    208 |    73 ms | V  12078.6
+M10 clearance none cieco nudo                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V   1516.2
+M10 clearance none cieco piastra+vite            | stato NoError  | comp 1 | genere 0 (att. 0) | tri    204 |   103 ms | V  14683.8 | Piastra alzata a 18 mm perché il foro cieco non la attraversi.
+M10 clearance counterbore passante nudo          | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     2 ms | V   3739.0
+M10 clearance counterbore passante piastra+vite  | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |    85 ms | V  10831.8
+M10 clearance counterbore cieco nudo             | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     1 ms | V   3739.0
+M10 clearance counterbore cieco piastra+vite     | stato NoError  | comp 1 | genere 0 (att. 0) | tri    396 |    73 ms | V  21731.0 | Piastra alzata a 28,3 mm perché il foro cieco non la attraversi.
+M10 clearance countersink passante nudo          | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V   2900.3
+M10 clearance countersink passante piastra+vite  | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |    86 ms | V  11279.9
+M10 clearance countersink cieco nudo             | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V   2900.3
+M10 clearance countersink cieco piastra+vite     | stato NoError  | comp 1 | genere 0 (att. 0) | tri    300 |    78 ms | V  18877.6 | Piastra alzata a 24,2 mm perché il foro cieco non la attraversi.
+M10 clearance hex passante nudo                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     1 ms | V   3034.8
+M10 clearance hex passante piastra+vite          | stato NoError  | comp 1 | genere 1 (att. 1) | tri    232 |    66 ms | V  11185.4
+M10 clearance hex cieco nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     1 ms | V   3034.8
+M10 clearance hex cieco piastra+vite             | stato NoError  | comp 1 | genere 0 (att. 0) | tri    228 |    64 ms | V  19105.2 | Piastra alzata a 24,6 mm perché il foro cieco non la attraversi.
+M12 tapped none passante nudo                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5416 |    64 ms | V   1662.1
+M12 tapped none passante piastra+vite            | stato NoError  | comp 1 | genere 1 (att. 1) | tri   5100 |   122 ms | V  11940.5
+M12 tapped none cieco nudo                       | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5500 |    60 ms | V   1750.5
+M12 tapped none cieco piastra+vite               | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5510 |   127 ms | V  17263.1 | Piastra alzata a 21,13 mm perché il foro cieco non la attraversi.
+M12 tapped counterbore passante nudo             | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5602 |    63 ms | V   4994.7
+M12 tapped counterbore passante piastra+vite     | stato NoError  | comp 1 | genere 1 (att. 1) | tri   1242 |    90 ms | V   9869.9
+M12 tapped counterbore cieco nudo                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5686 |    66 ms | V   5083.0
+M12 tapped counterbore cieco piastra+vite        | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5702 |   147 ms | V  25000.5 | Piastra alzata a 33,43 mm perché il foro cieco non la attraversi.
+M12 tapped countersink passante nudo             | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5604 |    69 ms | V   4040.1
+M12 tapped countersink passante piastra+vite     | stato NoError  | comp 1 | genere 1 (att. 1) | tri   2838 |   105 ms | V  10281.6
+M12 tapped countersink cieco nudo                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5688 |    80 ms | V   4128.4
+M12 tapped countersink cieco piastra+vite        | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5702 |   135 ms | V  21536.8 | Piastra alzata a 28,57 mm perché il foro cieco non la attraversi.
+M12 tapped hex passante nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5434 |    65 ms | V   3895.3
+M12 tapped hex passante piastra+vite             | stato NoError  | comp 1 | genere 1 (att. 1) | tri   2586 |   102 ms | V  10497.3
+M12 tapped hex cieco nudo                        | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5518 |    69 ms | V   3983.6
+M12 tapped hex cieco piastra+vite                | stato NoError  | comp 1 | genere 0 (att. 0) | tri   5534 |   131 ms | V  21959.9 | Piastra alzata a 28,83 mm perché il foro cieco non la attraversi.
+M12 clearance none passante nudo                 | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V   2456.0
+M12 clearance none passante piastra+vite         | stato NoError  | comp 1 | genere 1 (att. 1) | tri    208 |    51 ms | V  11197.5
+M12 clearance none cieco nudo                    | stato NoError  | comp 1 | genere 0 (att. 0) | tri    188 |     0 ms | V   2456.0
+M12 clearance none cieco piastra+vite            | stato NoError  | comp 1 | genere 0 (att. 0) | tri    204 |    53 ms | V  13744.0 | Piastra alzata a 18 mm perché il foro cieco non la attraversi.
+M12 clearance counterbore passante nudo          | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     1 ms | V   5788.6
+M12 clearance counterbore passante piastra+vite  | stato NoError  | comp 1 | genere 1 (att. 1) | tri    400 |    54 ms | V   9753.0
+M12 clearance counterbore cieco nudo             | stato NoError  | comp 1 | genere 0 (att. 0) | tri    380 |     2 ms | V   5788.6
+M12 clearance counterbore cieco piastra+vite     | stato NoError  | comp 1 | genere 0 (att. 0) | tri    396 |    56 ms | V  21481.4 | Piastra alzata a 30,3 mm perché il foro cieco non la attraversi.
+M12 clearance countersink passante nudo          | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V   4834.0
+M12 clearance countersink passante piastra+vite  | stato NoError  | comp 1 | genere 1 (att. 1) | tri    304 |    53 ms | V   9946.4
+M12 clearance countersink cieco nudo             | stato NoError  | comp 1 | genere 0 (att. 0) | tri    382 |     2 ms | V   4834.0
+M12 clearance countersink cieco piastra+vite     | stato NoError  | comp 1 | genere 0 (att. 0) | tri    300 |    53 ms | V  18046.8 | Piastra alzata a 25,44 mm perché il foro cieco non la attraversi.
+M12 clearance hex passante nudo                  | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     1 ms | V   4689.2
+M12 clearance hex passante piastra+vite          | stato NoError  | comp 1 | genere 1 (att. 1) | tri    232 |    53 ms | V  10146.3
+M12 clearance hex cieco nudo                     | stato NoError  | comp 1 | genere 0 (att. 0) | tri    212 |     1 ms | V   4689.2
+M12 clearance hex cieco piastra+vite             | stato NoError  | comp 1 | genere 0 (att. 0) | tri    228 |    57 ms | V  18440.8 | Piastra alzata a 25,7 mm perché il foro cieco non la attraversi.
+
+=== E. Volumi contro formula (48 segmenti)
+M3 testa cylinder              | V    70.32 | formula    71.27 | scarto  -1.33% | cilindro dk^2*pi/4*k (senza smusso né poligonazione)
+M3 testa button                | V    26.34 | formula    26.47 | scarto  -0.48% | calotta sferica + bordo
+M3 testa hex                   | V    51.92 | formula    52.39 | scarto  -0.91% | prisma esagonale (senza smusso)
+M3 testa countersunk           | V    36.09 | formula    36.19 | scarto  -0.29% | tronco di cono (con poligonazione)
+M3 fusto filettato L=16        | V    90.69 | cilindro al diametro medio    89.94 | scarto   0.83%
+M3 fusto liscio (d nominale)   | V   112.77 | formula   113.10 | scarto  -0.29% (solo poligonazione a 48 lati)
+M5 testa cylinder              | V   279.72 | formula   283.73 | scarto  -1.41% | cilindro dk^2*pi/4*k (senza smusso né poligonazione)
+M5 testa button                | V   121.95 | formula   122.53 | scarto  -0.48% | calotta sferica + bordo
+M5 testa hex                   | V   192.52 | formula   193.99 | scarto  -0.76% | prisma esagonale (senza smusso)
+M5 testa countersunk           | V   167.06 | formula   167.54 | scarto  -0.29% | tronco di cono (con poligonazione)
+M5 fusto filettato L=16        | V   254.15 | cilindro al diametro medio   252.26 | scarto   0.75%
+M5 fusto liscio (d nominale)   | V   313.26 | formula   314.16 | scarto  -0.29% (solo poligonazione a 48 lati)
+M8 testa cylinder              | V  1053.87 | formula  1061.86 | scarto  -0.75% | cilindro dk^2*pi/4*k (senza smusso né poligonazione)
+M8 testa button                | V   427.17 | formula   429.23 | scarto  -0.48% | calotta sferica + bordo
+M8 testa hex                   | V   769.39 | formula   775.70 | scarto  -0.81% | prisma esagonale (senza smusso)
+M8 testa countersunk           | V   684.29 | formula   686.25 | scarto  -0.29% | tronco di cono (con poligonazione)
+M8 fusto filettato L=16        | V   653.89 | cilindro al diametro medio   649.29 | scarto   0.71%
+M8 fusto liscio (d nominale)   | V   801.95 | formula   804.25 | scarto  -0.29% (solo poligonazione a 48 lati)
+M12 testa cylinder             | V  3038.00 | formula  3053.63 | scarto  -0.51% | cilindro dk^2*pi/4*k (senza smusso né poligonazione)
+M12 testa button               | V  1441.68 | formula  1448.66 | scarto  -0.48% | calotta sferica + bordo
+M12 testa hex                  | V  2087.69 | formula  2104.44 | scarto  -0.80% | prisma esagonale (senza smusso)
+M12 testa countersunk          | V  2309.49 | formula  2316.10 | scarto  -0.29% | tronco di cono (con poligonazione)
+M12 fusto filettato L=16       | V  1491.77 | cilindro al diametro medio  1482.98 | scarto   0.59%
+M12 fusto liscio (d nominale)  | V  1804.39 | formula  1809.56 | scarto  -0.29% (solo poligonazione a 48 lati)
+
+=== G. Gioco massimo del foro che tiene ancora l agganciamento (vite nominale, bisezione, ingaggio della madrevite = vite spostata di P/2 che entra nel dado)
+M3 P 0.5 | gioco massimo con ingaggio nel dado > 0: 0.189 mm (0.378 P) | ingaggio dado a 0,15: 0.086 mm3 | a 0.189: 0.0000 mm3 | sovrapp. radiale cresta vite - nucleo foro a quel gioco: 0.082 mm
+M4 P 0.7 | gioco massimo con ingaggio nel dado > 0: 0.265 mm (0.378 P) | ingaggio dado a 0,15: 0.839 mm3 | a 0.265: 0.0000 mm3 | sovrapp. radiale cresta vite - nucleo foro a quel gioco: 0.114 mm
+M5 P 0.8 | gioco massimo con ingaggio nel dado > 0: 0.303 mm (0.379 P) | ingaggio dado a 0,15: 2.536 mm3 | a 0.303: 0.0000 mm3 | sovrapp. radiale cresta vite - nucleo foro a quel gioco: 0.130 mm
+M6 P 1 | gioco massimo con ingaggio nel dado > 0: 0.379 mm (0.379 P) | ingaggio dado a 0,15: 5.303 mm3 | a 0.379: 0.0000 mm3 | sovrapp. radiale cresta vite - nucleo foro a quel gioco: 0.163 mm
+M8 P 1.25 | gioco massimo con ingaggio nel dado > 0: 0.473 mm (0.379 P) | ingaggio dado a 0,15: 14.319 mm3 | a 0.473: 0.0000 mm3 | sovrapp. radiale cresta vite - nucleo foro a quel gioco: 0.203 mm
+M10 P 1.5 | gioco massimo con ingaggio nel dado > 0: 0.568 mm (0.379 P) | ingaggio dado a 0,15: 30.176 mm3 | a 0.568: 0.0000 mm3 | sovrapp. radiale cresta vite - nucleo foro a quel gioco: 0.244 mm
+M12 P 1.75 | gioco massimo con ingaggio nel dado > 0: 0.663 mm (0.379 P) | ingaggio dado a 0,15: 64.593 mm3 | a 0.663: 0.0000 mm3 | sovrapp. radiale cresta vite - nucleo foro a quel gioco: 0.285 mm
+
+=== RISULTATO: nessuna anomalia | RSS finale 182 MB
