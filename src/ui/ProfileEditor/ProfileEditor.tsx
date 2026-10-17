@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { samplePaths, selfIntersections } from '../../scene/bezier';
+import { ImportError } from '../../import/types';
+import { readSvgPaths } from '../../import/svgPaths';
+import { MAX_PATH_CONTOURS, samplePaths, selfIntersections } from '../../scene/bezier';
 import { hasBoundDimension } from '../../scene/resize';
 import { pathNaturalBox } from '../../scene/shapes2d';
 import { useSceneStore } from '../../scene/store';
@@ -12,7 +14,7 @@ import type { GridSettings, Tool } from './DrawingCanvas';
 import { clearDraft, flushDrafts, loadDraft, saveDraft } from './draft';
 import { createHistory } from './history';
 import type { History } from './history';
-import { canCloseContour, closeContour, deleteNodes, draftContours, draftFromNode, dropLastNode, emptyDraft, moveHandle, moveNodes, pathCenter, setNodeKind, trimDuplicateTail } from './model';
+import { canCloseContour, closeContour, contourHoles, deleteNodes, draftContours, draftFromNode, dropLastNode, emptyDraft, moveHandle, moveNodes, pathCenter, setNodeKind, trimDuplicateTail } from './model';
 import type { Draft, NodeRef } from './model';
 import { useProfileEditor } from './profileEditorStore';
 import type { ProfileTarget } from './profileEditorStore';
@@ -134,6 +136,8 @@ function Editor({ target }: { target: ProfileTarget }) {
   const [flipX, setFlipX] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>('normal');
   const [fitSignal, setFitSignal] = useState(0);
+  // Adatta la vista del disegno (dopo un import)
+  const [fitRequest, setFitRequest] = useState(0);
   const [, setSettled] = useState(0);
 
   useEffect(() => {
@@ -304,6 +308,27 @@ function Editor({ target }: { target: ProfileTarget }) {
     dispatch({ type: 'tool', tool: next });
   };
 
+  // --- Importa SVG ----------------------------------------------------------------------------------------------------
+  /** Importa SVG: i contorni si accodano al disegno in un solo passo locale e restano selezionati; la vista li inquadra. */
+  const importSvg = async (file: File) => {
+    try {
+      const imported = readSvgPaths(await file.text(), file.name.replace(/\.svg$/i, ''));
+      // Un contorno della Penna in corso si conclude prima. `stateRef` si aggiorna solo al render successivo: se c'era un contorno
+      // in corso la base è l'ultimo disegno concluso (`committed`, già aggiornato da `finishPen`), altrimenti lo stato attuale
+      const penning = stateRef.current.pen !== null;
+      finishPen();
+      const base = penning ? committed.current.paths : stateRef.current.draft.paths;
+      if (base.length + imported.length > MAX_PATH_CONTOURS) {
+        notify.error(`Con i ${imported.length} contorni del file il disegno supererebbe il massimo di ${MAX_PATH_CONTOURS} contorni`);
+        return;
+      }
+      commitPaths([...base, ...imported], imported.flatMap((c, i) => c.nodes.map((_, node) => ({ path: base.length + i, node }))));
+      setFitRequest((n) => n + 1);
+    } catch (error) {
+      notify.error(error instanceof ImportError ? error.message : 'Impossibile leggere il file SVG');
+    }
+  };
+
   // --- Chiusura -------------------------------------------------------------------------------------------------------
   /** Annulla o Esc: se c'è qualcosa di non salvato chiede conferma; una richiesta alla volta. */
   const askClose = async () => {
@@ -320,6 +345,7 @@ function Editor({ target }: { target: ProfileTarget }) {
 
   const contours = useMemo(() => draftContours(draft), [draft]);
   const crossings = useMemo(() => selfIntersections(contours), [contours]);
+  const holes = useMemo(() => contourHoles(draft), [draft]);
   const sampling = useMemo(() => {
     const sampled = samplePaths(draft.paths, draft.tolerance);
     return { points: sampled.contours.reduce((n, c) => n + c.points.length, 0), tolerance: sampled.tolerance, capped: sampled.capped };
@@ -384,6 +410,9 @@ function Editor({ target }: { target: ProfileTarget }) {
     if (key === 'v') changeTool('select');
     else if (key === 'p') changeTool('pen');
     else if (key === 'h') changeTool('pan');
+    else if (key === 'r') changeTool('rect');
+    else if (key === 'c') changeTool('ellipse');
+    else if (key === 'g') changeTool('polygon');
     else if (key === 'enter') {
       // Invio termina il contorno della Penna (sui pulsanti conserva il suo significato)
       if (penIndex !== null && !(e.target instanceof HTMLButtonElement)) {
@@ -451,6 +480,7 @@ function Editor({ target }: { target: ProfileTarget }) {
             draft={draft}
             contours={contours}
             crossings={crossings}
+            holes={holes}
             selection={selection}
             grid={grid}
             spaceDown={spaceDown}
@@ -470,11 +500,16 @@ function Editor({ target }: { target: ProfileTarget }) {
             onPenClose={closePen}
             onPenFinish={finishPen}
             onPenLimit={() => notify.info('Limite raggiunto: al massimo 500 nodi per contorno e 100 contorni. Termina il contorno (Invio) o chiudilo')}
+            onShapeLimit={() => notify.info('Limite raggiunto: al massimo 100 contorni. Elimina un contorno per disegnarne un altro')}
+            onShapeCancel={() => dispatch({ type: 'replace', draft: committed.current, selection: [] })}
+            onImportSvg={(file) => void importSvg(file)}
+            fitRequest={fitRequest}
           />
           <ProfilePreview {...preview} mode={previewMode} onMode={setPreviewMode} fitSignal={fitSignal} onFit={() => setFitSignal((n) => n + 1)} />
           <Sidebar
             draft={draft}
             selection={selection}
+            holes={holes}
             grid={grid}
             sampling={sampling}
             boundFields={init.boundFields}

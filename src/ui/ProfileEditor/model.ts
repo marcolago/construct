@@ -1,4 +1,5 @@
-import { MAX_PATH_CONTOURS, MAX_PATH_NODES, PATH_DEFAULT_TOLERANCE, cubicPoint, segmentOf, splitCubic } from '../../scene/bezier';
+import { MAX_PATH_CONTOURS, MAX_PATH_NODES, PATH_DEFAULT_TOLERANCE, bboxOf, cubicPoint, samplePaths, segmentOf, signedArea, splitCubic } from '../../scene/bezier';
+import { ellipseContour, polygonContour, regularPolygon } from '../../scene/pathShapes';
 import { REVOLVE_DEFAULT_ANGLE, REVOLVE_DEFAULT_SEGMENTS, pathContours, pathNaturalBox } from '../../scene/shapes2d';
 import { hasBoundDimension } from '../../scene/resize';
 import { shape2dDefaults } from '../../scene/defaults';
@@ -191,6 +192,16 @@ export function nearestSegment(paths: PathContour[], tol: number, p: Vec2): { pa
   return best;
 }
 
+/** Vero se il punto `p` sta dentro il poligono (regola pari-dispari: un raggio verso destra che attraversa un numero dispari di lati). */
+export function pointInPolygon(poly: Vec2[], p: Vec2): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [a, b] = [poly[i], poly[j]];
+    if (a[1] > p[1] !== b[1] > p[1] && p[0] < ((b[0] - a[0]) * (p[1] - a[1])) / (b[1] - a[1]) + a[0]) inside = !inside;
+  }
+  return inside;
+}
+
 /**
  * Vero se il punto `p` sta dentro il contorno (regola pari-dispari sul contorno campionato). Un contorno aperto si considera
  * chiuso da un tratto retto, come fa l'estrusione lineare; sotto i 3 nodi non c'è area.
@@ -205,12 +216,47 @@ export function contourContains(c: PathContour, p: Vec2): boolean {
     if (!straight) for (let k = 1; k < 16; k++) poly.push(cubicPoint(cubic, k / 16));
   }
   if (!c.closed) poly.push(c.nodes[c.nodes.length - 1].p);
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [a, b] = [poly[i], poly[j]];
-    if (a[1] > p[1] !== b[1] > p[1] && p[0] < ((b[0] - a[0]) * (p[1] - a[1])) / (b[1] - a[1]) + a[0]) inside = !inside;
-  }
-  return inside;
+  return pointInPolygon(poly, p);
+}
+
+/**
+ * Quali contorni sono fori: un elemento per contorno, nello stesso ordine di `d.paths` (`true` foro, `false` contorno,
+ * `null` senza area, che il kernel scarta). Si parte dagli stessi poligoni del kernel (stesso campionamento; in rotazione un
+ * contorno aperto si chiude sull'asse, a x = 0 nel sistema dell'editor, come in `pathContours`). Un contorno ha tanti
+ * livelli di annidamento quanti sono gli altri poligoni che contengono il suo primo punto: con riempimento pari-dispari
+ * un livello dispari è un foro.
+ */
+export function contourHoles(d: Pick<Draft, 'paths' | 'tolerance' | 'extrusion'>): (boolean | null)[] {
+  const rotational = d.extrusion === 'rotate';
+  // Poligono di ogni contorno (null se il kernel lo scarta: meno di 2 punti, o senza area)
+  const polygons = samplePaths(d.paths, d.tolerance).contours.map((c): Vec2[] | null => {
+    const points = c.points.slice();
+    if (points.length < 2) return null;
+    if (rotational && !c.closed) {
+      // Dall'ultimo punto all'asse e dall'asse al primo, senza punti doppi
+      const [first, last] = [points[0], points[points.length - 1]];
+      for (const q of [[0, last[1]], [0, first[1]]] as Vec2[]) {
+        const tail = points[points.length - 1];
+        if (q[0] !== tail[0] || q[1] !== tail[1]) points.push(q);
+      }
+      const end = points[points.length - 1];
+      if (end[0] === first[0] && end[1] === first[1]) points.pop();
+    }
+    return points.length >= 3 && Math.abs(signedArea(points)) > 1e-8 ? points : null;
+  });
+  // Riquadri: se il primo punto sta fuori dal riquadro di un poligono non serve provare i lati
+  const boxes = polygons.map((poly) => (poly ? bboxOf([poly]) : null));
+  return polygons.map((poly, i) => {
+    if (!poly) return null;
+    const probe = poly[0];
+    let depth = 0;
+    polygons.forEach((other, j) => {
+      const box = boxes[j];
+      if (j === i || !other || !box || probe[0] < box.minX || probe[0] > box.maxX || probe[1] < box.minY || probe[1] > box.maxY) return;
+      if (pointInPolygon(other, probe)) depth++;
+    });
+    return depth % 2 === 1;
+  });
 }
 
 /**
@@ -375,6 +421,45 @@ export function gridStep(base: number, pxPerMm: number): number {
   let step = base;
   while (step * pxPerMm < 10) step *= 5;
   return step;
+}
+
+/** Limiti del numero di lati del poligono regolare e valore iniziale. */
+export const POLYGON_SIDES = { min: 3, max: 24, default: 6 };
+
+/**
+ * Forma base trascinata dal centro con uno strumento della modale: `center` è il punto premuto, `to` il puntatore (entrambi
+ * già agganciati). Rettangolo ed ellisse hanno per semiassi le distanze in X e in Y; il poligono ha per raggio la distanza e il
+ * primo vertice verso il puntatore. Con `shift`: quadrato e cerchio (lato maggiore) o, per il poligono, l'angolo a multipli di 15°.
+ */
+export interface BaseShape {
+  tool: 'rect' | 'ellipse' | 'polygon';
+  center: Vec2;
+  to: Vec2;
+  shift: boolean;
+  /** Lati del poligono (3-24). */
+  sides: number;
+}
+
+/** Misura minima (mm) sotto cui una forma base non esiste: un clic senza trascinamento non crea nulla. */
+const MIN_SHAPE = 1e-6;
+
+/** Contorno chiuso della forma base, con le sue coordinate nel sistema dell'editor; null se la misura è nulla. */
+export function baseShapeContour(s: BaseShape): PathContour | null {
+  const [dx, dy] = sub(s.to, s.center);
+  if (s.tool === 'polygon') {
+    const radius = Math.hypot(dx, dy);
+    if (radius <= MIN_SHAPE) return null;
+    const angle = Math.atan2(dy, dx);
+    // Con Maiusc il primo vertice sta a multipli di 15 gradi
+    const first = s.shift ? Math.round(angle / (Math.PI / 12)) * (Math.PI / 12) : angle;
+    return polygonContour(regularPolygon(Math.min(POLYGON_SIDES.max, Math.max(POLYGON_SIDES.min, Math.round(s.sides))), radius, first, s.center));
+  }
+  // Semiassi: con Maiusc il maggiore dei due (quadrato, cerchio)
+  const [hx, hy] = s.shift ? [Math.max(Math.abs(dx), Math.abs(dy)), Math.max(Math.abs(dx), Math.abs(dy))] : [Math.abs(dx), Math.abs(dy)];
+  if (hx <= MIN_SHAPE || hy <= MIN_SHAPE) return null;
+  if (s.tool === 'ellipse') return ellipseContour(s.center[0], s.center[1], hx, hy);
+  const [cx, cy] = s.center;
+  return polygonContour([[cx - hx, cy - hy], [cx + hx, cy - hy], [cx + hx, cy + hy], [cx - hx, cy + hy]]);
 }
 
 /** Centro del riquadro naturale del disegno (le sole curve), o l'origine se è vuoto: è il punto che finisce nell'origine del nodo. */

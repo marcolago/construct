@@ -1467,3 +1467,386 @@ test('Altezza legata a un parametro: nella modale lo slider è disattivato (gli 
   expect(node.height).toBe(12);
   expect(node.exprs.height).toBeDefined();
 });
+
+// --- Converti in profilo (fase 3) ---------------------------------------------------------------------------------------
+
+/** Aggiunge una forma 2D di prova (esagono di raggio 12) e la lascia selezionata. */
+async function addHexagon(page: Page): Promise<string> {
+  const id = await page.evaluate(() => {
+    const s = window.__construct!.store.getState();
+    s.addShape2D('circle');
+    const id = window.__construct!.store.getState().scene.rootIds[0];
+    window.__construct!.store.getState().updateNode(id, { segments: 6, radius: 12 });
+    return id;
+  });
+  await settled(page);
+  return id;
+}
+
+test('Converti in profilo dal menu contestuale: un solo passo, stesso solido, Ctrl+Z riporta il cerchio', async ({ page }) => {
+  const id = await addHexagon(page);
+  const before = await volume(page);
+  const steps = await history(page);
+  const menu = page.getByRole('menu', { name: 'Comandi per la selezione' });
+  const spot = await page.evaluate(() => {
+    const s = window.__r3f!;
+    const V = s.camera.position.constructor as new (x: number, y: number, z: number) => { project(c: unknown): { x: number; y: number } };
+    const v = new V(0, 0, 5).project(s.camera);
+    const r = s.gl.domElement.getBoundingClientRect();
+    return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+  });
+  await page.mouse.click(spot.x, spot.y, { button: 'right' });
+  await menu.getByRole('menuitem', { name: 'Converti in profilo' }).click();
+  await settled(page);
+  expect(await history(page)).toBe(steps + 1);
+  expect(await page.evaluate(() => window.__construct!.store.getState().op)).toBe('Converti in profilo');
+  const scene = await sceneState(page);
+  expect(scene.rootIds).toEqual([id]);
+  expect(scene.nodes[id]).toMatchObject({ kind: 'path' });
+  expect(scene.nodes[id].paths[0].nodes).toHaveLength(6);
+  // Il solido non è cambiato
+  expect(Math.abs((await volume(page)) - before) / before).toBeLessThan(1e-3);
+  // Il comando non c'è più (è già un Profilo) e Modifica profilo apre la modale con i 6 spigoli
+  await page.keyboard.press('Shift+P');
+  await expect(editor(page).locator('[data-node]')).toHaveCount(6);
+  await page.keyboard.press('Escape');
+  await expect(editor(page)).toHaveCount(0);
+  await page.keyboard.press('Control+z');
+  expect(await history(page)).toBe(steps);
+  expect((await sceneState(page)).nodes[id]).toMatchObject({ kind: 'circle', segments: 6, radius: 12 });
+});
+
+test('Converti in profilo dalle Proprietà: il pulsante c\'è per le forme 2D, non per il testo, ed è disattivato se bloccate', async ({ page }) => {
+  const id = await addHexagon(page);
+  const action = page.locator('.properties__action', { hasText: 'Converti in profilo' });
+  await page.evaluate((nodeId) => window.__construct!.store.getState().updateNode(nodeId, { locked: true }), id);
+  await expect(action).toBeDisabled();
+  await page.evaluate((nodeId) => window.__construct!.store.getState().updateNode(nodeId, { locked: false }), id);
+  await action.click();
+  await settled(page);
+  expect((await sceneState(page)).nodes[id]).toMatchObject({ kind: 'path' });
+  // Ora è un Profilo: compare Modifica profilo e non più Converti
+  await expect(action).toHaveCount(0);
+  await expect(page.locator('.properties__action', { hasText: 'Modifica profilo' })).toBeVisible();
+  // Il testo non si converte
+  await page.evaluate(() => window.__construct!.store.getState().addShape2D('text'));
+  await settled(page);
+  await expect(action).toHaveCount(0);
+});
+
+// --- Fori (fase 3) ------------------------------------------------------------------------------------------------------
+
+/** Rettangolo 40 × 20 con un quadrato 10 × 10 al centro (un foro per la regola pari-dispari). */
+const WITH_HOLE = [
+  ...RECT,
+  {
+    closed: true,
+    nodes: [
+      { p: [15, 5], kind: 'corner' },
+      { p: [25, 5], kind: 'corner' },
+      { p: [25, 15], kind: 'corner' },
+      { p: [15, 15], kind: 'corner' },
+    ],
+  },
+];
+
+test('fori: il contorno dentro un altro ha il badge Foro e la curva tratteggiata; il volume è quello del solido con il vuoto', async ({ page }) => {
+  const id = await addPath(page, WITH_HOLE);
+  // 40 × 20 × 5 meno 10 × 10 × 5
+  expect(await volume(page)).toBeCloseTo(3500, 0);
+  await openEditor(page, id);
+  const rows = editor(page).locator('[data-path]');
+  await expect(rows.nth(0)).not.toContainText('Foro');
+  await expect(rows.nth(1)).toContainText('Foro');
+  await expect(editor(page).locator('.profile-editor__curve')).toHaveCount(2);
+  await expect(editor(page).locator('.profile-editor__curve--hole')).toHaveCount(1);
+  // Eliminando il contorno esterno quello interno non è più un foro
+  await rows.nth(0).getByRole('button', { name: 'Elimina il percorso 1' }).click();
+  await expect(editor(page).locator('.profile-editor__curve--hole')).toHaveCount(0);
+  await expect(editor(page).locator('[data-path="0"]')).not.toContainText('Foro');
+});
+
+test('fori: la Penna nel riempimento apre un nuovo contorno che diventa un foro; Ctrl+Z locale lo toglie e l\'OK lo scrive nel solido', async ({ page }) => {
+  const id = await addPath(page, RECT);
+  await openEditor(page, id);
+  const k = await pixelsPerMm(page);
+  const origin = await center(node(page, '0:0'));
+  await editor(page).getByRole('button', { name: 'Penna' }).click();
+  // Quattro clic dentro il rettangolo (da 10 a 30 mm in X, da 5 a 15 in Y) e un clic sul primo nodo
+  const spots: [number, number][] = [[10, 5], [30, 5], [30, 15], [10, 15]];
+  for (const [x, y] of spots) await page.mouse.click(origin.x + x * k, origin.y - y * k);
+  await page.mouse.click(origin.x + 10 * k, origin.y - 5 * k);
+  await expect(editor(page).locator('[data-path="1"]')).toContainText('Chiuso');
+  await expect(editor(page).locator('[data-path="1"]')).toContainText('Foro');
+  await expect(editor(page).locator('[data-path="0"]')).not.toContainText('Foro');
+  await expect(editor(page).locator('.profile-editor__curve--hole')).toHaveCount(1);
+  // Annulla locale: il contorno sparisce e con lui il badge
+  await page.keyboard.press('Control+z');
+  await expect(editor(page).locator('[data-path]')).toHaveCount(1);
+  await page.keyboard.press('Control+Shift+z');
+  await expect(editor(page).locator('[data-path="1"]')).toContainText('Foro');
+  await okButton(page).click();
+  await expect(editor(page)).toHaveCount(0);
+  await settled(page);
+  // 40 × 20 × 5 meno il foro di circa 20 × 10 × 5 (le misure dipendono dall'aggancio alla griglia dei clic: più o meno 1 mm)
+  const v = await volume(page);
+  expect(v).toBeGreaterThan(2600);
+  expect(v).toBeLessThan(3400);
+});
+
+// --- Forme base (fase 3) -----------------------------------------------------------------------------------------------
+
+/** Apre la modale su un Profilo nuovo, con il fuoco nel disegno (i tasti R, C, G sono della modale). */
+async function openNewDrawing(page: Page) {
+  await page.evaluate(() => window.__construct!.profileEditor.getState().open({ new: true }));
+  await expect(editor(page)).toBeVisible();
+  await canvas(page).focus();
+}
+
+const toolButton = (page: Page, name: string) => editor(page).getByRole('button', { name, exact: true });
+const selectedCount = (page: Page) => editor(page).locator('.profile-editor__node--selected');
+
+/** Larghezza e profondità di ogni contorno di un Profilo (dai nodi). */
+const extents = (paths: { nodes: { p: [number, number] }[] }[]) =>
+  paths.map((c) => ({ w: Math.max(...c.nodes.map((n) => n.p[0])) - Math.min(...c.nodes.map((n) => n.p[0])), d: Math.max(...c.nodes.map((n) => n.p[1])) - Math.min(...c.nodes.map((n) => n.p[1])) }));
+
+test('Rettangolo (R): trascinando dal centro nasce un contorno di 4 spigoli selezionato, un solo passo locale; Maiusc un quadrato; un clic senza trascinare non crea nulla', async ({ page }) => {
+  await openNewDrawing(page);
+  await page.keyboard.press('r');
+  await expect(toolButton(page, 'Rettangolo')).toHaveAttribute('aria-pressed', 'true');
+  await drag(page, await at(page, -150, -20), await at(page, -50, 60));
+  await expect(nodes(page)).toHaveCount(4);
+  await expect(editor(page).locator('[data-path="0"]')).toContainText('Chiuso');
+  // Il contorno nuovo resta selezionato e lo strumento resta attivo
+  await expect(selectedCount(page)).toHaveCount(4);
+  await expect(toolButton(page, 'Rettangolo')).toHaveAttribute('aria-pressed', 'true');
+  expect(await nodes(page).evaluateAll((els) => els.every((el) => el.getAttribute('data-kind') === 'corner'))).toBe(true);
+  // Un solo passo locale: Ctrl+Z toglie tutto il rettangolo
+  await page.keyboard.press('Control+z');
+  await expect(nodes(page)).toHaveCount(0);
+  await page.keyboard.press('Control+Shift+z');
+  await expect(nodes(page)).toHaveCount(4);
+  // Maiusc: quadrato (lato maggiore)
+  await page.keyboard.down('Shift');
+  await drag(page, await at(page, 100, -20), await at(page, 150, 60));
+  await page.keyboard.up('Shift');
+  await expect(nodes(page)).toHaveCount(8);
+  // Un clic senza trascinare non crea nulla
+  const click = await at(page, 150, 120);
+  await page.mouse.click(click.x, click.y);
+  await expect(nodes(page)).toHaveCount(8);
+  await okButton(page).click();
+  await expect(editor(page)).toHaveCount(0);
+  await settled(page);
+  const scene = await sceneState(page);
+  const created = scene.nodes[scene.rootIds[0]] as unknown as { paths: { nodes: { p: [number, number] }[] }[] };
+  expect(created.paths).toHaveLength(2);
+  const [a, b] = extents(created.paths);
+  // Il primo ha le due misure diverse, il secondo (Maiusc) è un quadrato
+  expect(Math.abs(a.w - a.d)).toBeGreaterThan(1);
+  expect(b.w).toBeCloseTo(b.d, 6);
+});
+
+test('Ellisse (C): quattro nodi simmetrici; Maiusc un cerchio (semiasse maggiore)', async ({ page }) => {
+  await openNewDrawing(page);
+  await page.keyboard.press('c');
+  await expect(toolButton(page, 'Ellisse')).toHaveAttribute('aria-pressed', 'true');
+  await drag(page, await at(page, -100, 0), await at(page, -20, 40));
+  await expect(nodes(page)).toHaveCount(4);
+  expect(await nodes(page).evaluateAll((els) => els.every((el) => el.getAttribute('data-kind') === 'symmetric'))).toBe(true);
+  await page.keyboard.down('Shift');
+  await drag(page, await at(page, 100, 0), await at(page, 180, 30));
+  await page.keyboard.up('Shift');
+  await expect(nodes(page)).toHaveCount(8);
+  await okButton(page).click();
+  await settled(page);
+  const scene = await sceneState(page);
+  const created = scene.nodes[scene.rootIds[0]] as unknown as { paths: { nodes: { p: [number, number]; kind: string }[] }[] };
+  expect(created.paths.every((c) => c.nodes.length === 4 && c.nodes.every((n) => n.kind === 'symmetric'))).toBe(true);
+  const [a, b] = extents(created.paths);
+  expect(Math.abs(a.w - a.d)).toBeGreaterThan(1);
+  expect(b.w).toBeCloseTo(b.d, 3);
+});
+
+test('Poligono (G): il campo Lati compare solo con lo strumento, i tasti R, C, G non agiscono mentre si scrive, 5 lati danno 5 spigoli', async ({ page }) => {
+  await openNewDrawing(page);
+  const sides = editor(page).locator('.profile-editor__sides input');
+  await expect(sides).toHaveCount(0);
+  await page.keyboard.press('g');
+  await expect(toolButton(page, 'Poligono')).toHaveAttribute('aria-pressed', 'true');
+  await expect(sides).toHaveValue('6');
+  // Scrivendo nel campo le lettere non cambiano strumento
+  await sides.focus();
+  await page.keyboard.type('rc');
+  await expect(toolButton(page, 'Poligono')).toHaveAttribute('aria-pressed', 'true');
+  await sides.fill('5');
+  await sides.press('Enter');
+  await expect(sides).toHaveValue('5');
+  await drag(page, await at(page, 0, 0), await at(page, 90, 0));
+  await expect(nodes(page)).toHaveCount(5);
+  await expect(editor(page).locator('[data-path="0"]')).toContainText('Chiuso');
+  // Cambiando strumento il campo sparisce
+  await canvas(page).focus();
+  await page.keyboard.press('v');
+  await expect(sides).toHaveCount(0);
+  await okButton(page).click();
+  await settled(page);
+  const scene = await sceneState(page);
+  const created = scene.nodes[scene.rootIds[0]] as unknown as { paths: { nodes: { kind: string }[] }[] };
+  expect(created.paths[0].nodes).toHaveLength(5);
+  expect(created.paths[0].nodes.every((n) => n.kind === 'corner')).toBe(true);
+});
+
+test('un\'ellisse disegnata dentro un rettangolo è un foro: badge, tratteggio e il volume cala', async ({ page }) => {
+  const id = await addPath(page, RECT);
+  await openEditor(page, id);
+  await canvas(page).focus();
+  const k = await pixelsPerMm(page);
+  const origin = await center(node(page, '0:0'));
+  await page.keyboard.press('c');
+  // Dal centro del rettangolo (20, 10) con semiassi 10 e 5 mm
+  await drag(page, { x: origin.x + 20 * k, y: origin.y - 10 * k }, { x: origin.x + 30 * k, y: origin.y - 15 * k });
+  await expect(editor(page).locator('[data-path="1"]')).toContainText('Foro');
+  await expect(editor(page).locator('.profile-editor__curve--hole')).toHaveCount(1);
+  await okButton(page).click();
+  await settled(page);
+  // 40 × 20 × 5 meno l'ellisse (π · 10 · 5) × 5, entro l'approssimazione del campionamento
+  expect(Math.abs((await volume(page)) - (4000 - Math.PI * 50 * 5))).toBeLessThan(20);
+});
+
+test('forme base: con 100 contorni compare l\'avviso e non nasce nulla', async ({ page }) => {
+  const contour = (i: number) => ({ closed: false, nodes: [{ p: [i, 0], kind: 'corner' }, { p: [i, 5], kind: 'corner' }] });
+  const draft = { paths: Array.from({ length: 100 }, (_, i) => contour(i)), tolerance: 0.05, extrusion: 'linear', height: 5, twist: 0, scaleTop: 1, revolveAngle: 360, revolveSegments: 64 };
+  await page.evaluate((d) => localStorage.setItem('construct:profile-draft:new', JSON.stringify({ v: 1, draft: d })), draft);
+  await page.evaluate(() => window.__construct!.profileEditor.getState().open({ new: true }));
+  await confirmBox(page).getByRole('button', { name: 'Ripristina' }).click();
+  await expect(editor(page).locator('[data-path]')).toHaveCount(100);
+  await toolButton(page, 'Rettangolo').click();
+  await drag(page, await at(page, 0, 120), await at(page, 60, 160));
+  await expect(page.getByText('Limite raggiunto: al massimo 100 contorni')).toBeVisible();
+  await expect(editor(page).locator('[data-path]')).toHaveCount(100);
+});
+
+test('forme base: il doppio clic su un nodo non cambia il tipo e il disegno vuoto suggerisce le forme', async ({ page }) => {
+  await page.evaluate(() => window.__construct!.profileEditor.getState().open({ new: true }));
+  await expect(editor(page)).toBeVisible();
+  await expect(editor(page).getByText('oppure parti da una forma base (R, C, G) o da un SVG')).toBeVisible();
+  await toolButton(page, 'Rettangolo').click();
+  await expect(editor(page).getByText('Premi sul centro e trascina per disegnare la forma')).toBeVisible();
+  await drag(page, await at(page, -80, -40), await at(page, 80, 40));
+  await expect(nodes(page)).toHaveCount(4);
+  const c = await center(node(page, '0:0'));
+  await page.mouse.dblclick(c.x, c.y);
+  await expect(nodes(page)).toHaveCount(4);
+  expect(await node(page, '0:0').getAttribute('data-kind')).toBe('corner');
+});
+
+// --- Importa SVG (fase 3) ----------------------------------------------------------------------------------------------
+
+const svgFile = (page: Page, name: string, content: string) => editor(page).locator('input[type="file"]').setInputFiles({ name, mimeType: 'image/svg+xml', buffer: Buffer.from(content) });
+
+/** Un tracciato con una cubica (C), un arco (A: una semicirconferenza, due pezzi) e un lato dritto. */
+const SVG_WITH_CURVES = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10 10 C30 0 50 0 70 10 A20 20 0 0 1 70 50 L10 50 Z"/></svg>';
+
+test('Importa SVG: i contorni arrivano con le curve (C e A), selezionati e inquadrati, in un solo passo locale; l\'OK li scrive nel Profilo', async ({ page }) => {
+  await openNewDrawing(page);
+  await svgFile(page, 'curve.svg', SVG_WITH_CURVES);
+  // Nodi: partenza, fine della cubica, metà dell'arco, fine dell'arco, lato dritto
+  await expect(nodes(page)).toHaveCount(5);
+  await expect(editor(page).locator('[data-path="0"]')).toContainText('Chiuso');
+  await expect(selectedCount(page)).toHaveCount(5);
+  // La metà dell'arco è un nodo con le maniglie opposte e uguali: simmetrico
+  expect(await nodes(page).evaluateAll((els) => els.map((el) => el.getAttribute('data-kind')).filter((k) => k !== 'corner'))).toContain('symmetric');
+  // La vista inquadra il disegno: tutti i nodi stanno dentro l'area
+  const area = (await canvas(page).boundingBox())!;
+  for (const handle of await nodes(page).all()) {
+    const box = (await handle.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(area.x);
+    expect(box.y).toBeGreaterThanOrEqual(area.y);
+    expect(box.x + box.width).toBeLessThanOrEqual(area.x + area.width);
+    expect(box.y + box.height).toBeLessThanOrEqual(area.y + area.height);
+  }
+  // Un solo passo locale
+  await canvas(page).focus();
+  await page.keyboard.press('Control+z');
+  await expect(nodes(page)).toHaveCount(0);
+  await page.keyboard.press('Control+Shift+z');
+  await expect(nodes(page)).toHaveCount(5);
+  await okButton(page).click();
+  await expect(editor(page)).toHaveCount(0);
+  await settled(page);
+  const scene = await sceneState(page);
+  const created = scene.nodes[scene.rootIds[0]] as unknown as { kind: string; paths: { closed: boolean; nodes: { p: [number, number]; in?: unknown; out?: unknown }[] }[] };
+  expect(created.kind).toBe('path');
+  expect(created.paths[0].closed).toBe(true);
+  expect(created.paths[0].nodes).toHaveLength(5);
+  // Le curve sono rimaste curve: ci sono maniglie
+  expect(created.paths[0].nodes.some((n) => n.in || n.out)).toBe(true);
+  // Il fondo del disegno è a y = 0 (il file ha Y verso il basso)
+  expect(Math.min(...created.paths[0].nodes.map((n) => n.p[1]))).toBeCloseTo(0, 3);
+  expect(Math.min(...created.paths[0].nodes.map((n) => n.p[0]))).toBeCloseTo(10, 3);
+});
+
+test('Importa SVG su un disegno esistente: i contorni si accodano e un foro dentro un altro contorno è riconosciuto', async ({ page }) => {
+  const id = await addPath(page, RECT);
+  await openEditor(page, id);
+  // Un cerchio di 10 mm di diametro: nel file sta a x 15..25; il fondo va a y = 0, quindi dentro il rettangolo (0..20)
+  await svgFile(page, 'cerchio.svg', '<svg xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="5" r="5"/></svg>');
+  await expect(editor(page).locator('[data-path]')).toHaveCount(2);
+  await expect(nodes(page)).toHaveCount(8);
+  await expect(editor(page).locator('[data-path="1"]')).toContainText('Foro');
+  // Lo stesso file si può importare di nuovo
+  await svgFile(page, 'cerchio.svg', '<svg xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="5" r="5"/></svg>');
+  await expect(editor(page).locator('[data-path]')).toHaveCount(3);
+});
+
+test('Importa SVG: un file rotto o senza tracciati utilizzabili dà un avviso e non cambia il disegno', async ({ page }) => {
+  await openNewDrawing(page);
+  await svgFile(page, 'rotto.svg', 'questo non è xml <<<');
+  await expect(page.getByText('"rotto" non è un file SVG valido.')).toBeVisible();
+  await svgFile(page, 'vuoto.svg', '<svg xmlns="http://www.w3.org/2000/svg"><rect width="5" height="5" fill="none"/></svg>');
+  await expect(page.getByText('"vuoto" non contiene tracciati utilizzabili')).toBeVisible();
+  await expect(nodes(page)).toHaveCount(0);
+  await expect(okButton(page)).toBeDisabled();
+});
+
+test('Importa SVG con un contorno della Penna in corso: il contorno valido resta (passo a parte), quello con un solo nodo non lascia un percorso spurio', async ({ page }) => {
+  // Tre nodi in corso: il contorno si conclude e resta, l'import è un passo a parte
+  await openNewWithPen(page);
+  await clicks(page, [[-100, 80], [100, 80], [100, -80]]);
+  await svgFile(page, 'curve.svg', SVG_WITH_CURVES);
+  await expect(editor(page).locator('[data-path]')).toHaveCount(2);
+  await expect(nodes(page)).toHaveCount(8);
+  await expect(editor(page).locator('[data-path="0"]')).toContainText('Aperto');
+  await canvas(page).focus();
+  await page.keyboard.press('Control+z');
+  await expect(editor(page).locator('[data-path]')).toHaveCount(1);
+  await expect(nodes(page)).toHaveCount(3);
+  await page.keyboard.press('Control+z');
+  await expect(nodes(page)).toHaveCount(0);
+  // Un solo nodo in corso: non è un contorno, l'import lascia solo i suoi
+  await clicks(page, [[-100, 80]]);
+  await expect(nodes(page)).toHaveCount(1);
+  await svgFile(page, 'curve.svg', SVG_WITH_CURVES);
+  await expect(editor(page).locator('[data-path]')).toHaveCount(1);
+  await expect(nodes(page)).toHaveCount(5);
+});
+
+test('forme base: una forma trascinata e riportata sul centro prima del rilascio non lascia modifiche (Esc chiude senza conferma)', async ({ page }) => {
+  await openNewDrawing(page);
+  await page.keyboard.press('r');
+  const from = await at(page, 0, 0);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 5; i++) await page.mouse.move(from.x + 20 * i, from.y + 10 * i);
+  // La forma è visibile durante il trascinamento
+  await expect(nodes(page)).toHaveCount(4);
+  await page.mouse.move(from.x, from.y);
+  await expect(nodes(page)).toHaveCount(0);
+  await page.mouse.up();
+  await expect(nodes(page)).toHaveCount(0);
+  await canvas(page).focus();
+  await page.keyboard.press('Escape');
+  await expect(editor(page)).toHaveCount(0);
+  await expect(confirmBox(page)).toHaveCount(0);
+});
